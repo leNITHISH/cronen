@@ -223,6 +223,11 @@ func isQuit(msg tea.Msg) bool {
 
 func TestFlagsAndBanner(t *testing.T) {
 	m := loaded(t, fixtureOptions(), 100, 30)
+	// The banner arrived after the window size: the panes must have shrunk
+	// to make room for it.
+	if bh := m.bodyHeight(); m.detail.Height() != bh || m.newsView.Height() != bh {
+		t.Errorf("viewport heights %d, %d; want body height %d", m.detail.Height(), m.newsView.Height(), bh)
+	}
 	if n := len(m.result.Interventions); n != 1 {
 		t.Fatalf("interventions = %d, want 1", n)
 	}

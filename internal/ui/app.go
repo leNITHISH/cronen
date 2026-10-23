@@ -441,12 +441,9 @@ func (m *Model) changed() tea.Cmd {
 		Now:        m.now(),
 	})
 
-	m.rebuildUpdates()
-	m.updates.scroll(m.bodyHeight())
 	m.newsPane.move(0, len(m.newsItems))
-	m.newsPane.scroll(m.bodyHeight())
-	m.refreshNewsView()
-	return m.refreshDetail()
+	// The banner may have appeared or gone, changing the body height.
+	return m.layout()
 }
 
 // chromeHeight is the number of lines outside the body: header, optional
@@ -483,9 +480,10 @@ func (m Model) paneWidth() int {
 	return max(0, w-m.listWidth()-1)
 }
 
-// layout resizes the viewports to the current body and re-renders their
-// content.
+// layout rebuilds the updates list, resizes the viewports to the current
+// body and re-renders their content.
 func (m *Model) layout() tea.Cmd {
+	m.rebuildUpdates()
 	pw, bh := m.paneWidth(), m.bodyHeight()
 	w, _ := m.size()
 	m.help.SetWidth(w)

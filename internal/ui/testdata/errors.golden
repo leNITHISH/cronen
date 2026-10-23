@@ -1,18 +1,18 @@
  cronen (demo)                                                             last upgrade: 2 days ago 
 ────────────────────────────────────────┬───────────────────────────────────────────────────────────
  NEEDS ATTENTION (0)                    │ paru                                                      
-   ✗ news unavailable; news rules skipp…│ 2.1.0-1 → 2.1.0-2                                     AUR 
- REPO (0)                               │                                                           
-   ✗ checkupdates failed: checkupdates:…│ Links:                                                    
- AUR (5)                                │  • upstream   https://github.com/morganamilo/paru         
-▸ paru                2.1.0-1→2.1.0-2   │  • changelog                                              
-  visual-studio-code… 1.105.0→1.105.1   │    https://aur.archlinux.org/cgit/aur.git/log/?h=paru     
+   ✗ news unavailable; news rules       │ 2.1.0-1 → 2.1.0-2                                     AUR 
+     skipped                            │                                                           
+ REPO (0)                               │ Links:                                                    
+   ✗ checkupdates failed:               │  • upstream   https://github.com/morganamilo/paru         
+     checkupdates: exit status 1: ==>   │  • changelog                                              
+     ERROR: Cannot fetch updates        │    https://aur.archlinux.org/cgit/aur.git/log/?h=paru     
+ AUR (5)                                │                                                           
+▸ paru                2.1.0-1→2.1.0-2   │                                                           
+  visual-studio-code… 1.105.0→1.105.1   │                                                           
   gnome-shell-extension-l… not in AUR ? │                                                           
   python-pywal               orphaned ? │                                                           
   ttf-ms-fonts            out of date ? │                                                           
-                                        │                                                           
-                                        │                                                           
-                                        │                                                           
                                         │                                                           
                                         │                                                           
                                         │                                                           

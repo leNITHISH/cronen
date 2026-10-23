@@ -155,7 +155,14 @@ func (m *Model) rebuildUpdates() {
 		}
 	}
 	note := func(text string, spin, err bool) {
-		p.rows = append(p.rows, row{kind: rowNote, text: text, spin: spin, err: err})
+		if !err {
+			p.rows = append(p.rows, row{kind: rowNote, text: text, spin: spin})
+			return
+		}
+		// Errors wrap rather than truncate: the end often says what to do.
+		for l := range strings.SplitSeq(wrapIndent(text, m.listWidth()-3, 2), "\n") {
+			p.rows = append(p.rows, row{kind: rowNote, text: l, err: true})
+		}
 	}
 
 	p.rows = append(p.rows, row{kind: rowSection, text: "NEEDS ATTENTION (" + itoa(len(flagged)) + ")"})
@@ -330,9 +337,9 @@ func (m *Model) refreshDetail() tea.Cmd {
 		}
 		content = m.detailContent(e, m.detail.Width())
 	case m.repoSec.loading || m.aurSec.loading:
-		content = m.styles.Subtle.Render("Checking for updates…")
+		content = " " + m.styles.Subtle.Render("Checking for updates…")
 	default:
-		content = "Nothing to update."
+		content = " Nothing to update."
 	}
 
 	m.detail.SetContent(content)

@@ -1,11 +1,11 @@
  cronen (demo)                                                                      last upgrade: ⠋ 
 ────────────────────────────────────────┬───────────────────────────────────────────────────────────
-                                        │Checking for updates…                                      
-                                        │                                                           
-                                        │                                                           
-                                        │                                                           
-                                        │                                                           
-                                        │                                                           
+ NEEDS ATTENTION (0)                    │ Checking for updates…                                     
+   ⠋ checking news…                     │                                                           
+ REPO                                   │                                                           
+   ⠋ running checkupdates…              │                                                           
+ AUR                                    │                                                           
+   ⠋ querying the AUR…                  │                                                           
                                         │                                                           
                                         │                                                           
                                         │                                                           
