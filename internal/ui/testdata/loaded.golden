@@ -1,0 +1,30 @@
+ cronen (demo)                                                             last upgrade: 2 days ago 
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────┬───────────────────────────────────────────────────────────
+ NEEDS ATTENTION (11)                   │ linux-firmware                                            
+▸ linux-firmware    20251011→20251021 ‼ │ 20251011-1 → 20251021-1                                   
+  nvidia-utils          580.95→590.44 ⚠ │                                                           
+  python                    3.13→3.14 ⚠ │ Why flagged:                                              
+  ripgrep                   14.1→15.0 ⚠ │  • Manual intervention in news: 'linux-firmware >=        
+  glibc 2.42+r17+g6f0cf3d0b5b0→2.42+… ℹ │    20251021-1 upgrade requires manual intervention'       
+  linux                     6.17→6.18 ℹ │    (yesterday)                                            
+  linux-api-headers       6.16→6.16.1 ℹ │  • On your watchlist (linux*)                             
+  linux-headers             6.17→6.18 ℹ │                                                           
+  mesa                  25.2.4→25.2.5 ℹ │ Links:                                                    
+  systemd                 258.1→258.2 ℹ │  • not found on archlinux.org                             
+  vulkan-icd-loader   1.4.328→1.4.330 ℹ │                                                           
+ REPO (5)                               │                                                           
+  firefox               144.0→144.0.1   │                                                           
+  gnupg             2.4.8-1→1:2.4.8-2   │                                                           
+  openssh               10.0p1→10.2p1   │                                                           
+  vim               9.1.1800→9.1.1850   │                                                           
+  zstd                1.5.7-2→1.5.7-3   │                                                           
+ AUR (5)                                │                                                           
+  paru                2.1.0-1→2.1.0-2   │                                                           
+  visual-studio-code… 1.105.0→1.105.1   │                                                           
+  gnome-shell-extension-l… not in AUR ? │                                                           
+  python-pywal               orphaned ? │                                                           
+  ttf-ms-fonts            out of date ? │                                                           
+                                        │                                                           
+────────────────────────────────────────┴───────────────────────────────────────────────────────────
+ 18 updates · 11 flagged · 2 unread news · 1 .pacnew                                 ? help  q quit 
