@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/leNITHISH/cronen/internal/config"
 	"github.com/leNITHISH/cronen/internal/fixtures"
 	"github.com/leNITHISH/cronen/internal/system"
 	"github.com/leNITHISH/cronen/internal/ui"
@@ -73,16 +75,20 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, teaOpts .
 		return 1
 	}
 
-	uiOpts := ui.Options{
-		Demo:    o.demo,
-		Runner:  system.ExecRunner{},
-		Fetcher: system.NewHTTPClient(""),
-		FS:      system.OSFS{},
-	}
+	var uiOpts ui.Options
 	if o.demo {
-		uiOpts.Runner = fixtures.Runner()
-		uiOpts.Fetcher = fixtures.Fetcher()
-		uiOpts.FS = fixtures.FS()
+		// Fixture data only: no config, state or cache is read or written.
+		uiOpts = ui.Options{
+			Demo:     true,
+			Context:  ctx,
+			Runner:   fixtures.Runner(),
+			Fetcher:  fixtures.Fetcher(),
+			FS:       fixtures.FS(),
+			Now:      func() time.Time { return fixtures.Now },
+			Location: time.UTC,
+		}
+	} else {
+		uiOpts = realOptions(ctx, stderr)
 	}
 
 	opts := append([]tea.ProgramOption{tea.WithContext(ctx), tea.WithOutput(stdout)}, teaOpts...)
@@ -91,4 +97,33 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, teaOpts .
 		return 1
 	}
 	return 0
+}
+
+// realOptions wires the TUI to the real system. Problems with the config or
+// state file are reported on stderr and fall back to defaults; they never
+// stop cronen from starting.
+func realOptions(ctx context.Context, stderr io.Writer) ui.Options {
+	fsys := system.OSFS{}
+	opts := ui.Options{
+		Context: ctx,
+		Runner:  system.ExecRunner{},
+		FS:      fsys,
+	}
+	cfg := config.Default()
+	paths, err := config.ResolvePaths(os.Getenv)
+	if err != nil {
+		_, _ = fmt.Fprintln(stderr, "cronen:", err)
+		opts.Fetcher = system.NewHTTPClient("")
+		opts.Config = &cfg
+		return opts
+	}
+	if cfg, err = config.Load(fsys, paths.Config); err != nil {
+		_, _ = fmt.Fprintln(stderr, "cronen:", err)
+	}
+	opts.Config = &cfg
+	if opts.State, err = config.LoadState(fsys, paths.State); err != nil {
+		_, _ = fmt.Fprintln(stderr, "cronen:", err)
+	}
+	opts.Fetcher = system.NewHTTPClient(paths.CacheDir)
+	return opts
 }
