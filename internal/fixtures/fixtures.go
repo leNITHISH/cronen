@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/leNITHISH/cronen/internal/system"
 )
@@ -45,6 +46,11 @@ const (
 	PacmanLogPath     = "/var/log/pacman.log"
 	vercmpCommandName = "vercmp"
 )
+
+// Now is the time the fixture data describes: a few days after the last
+// full upgrade in pacman.log, with two unread news items. Tests and --demo
+// use it as the current time so relative dates stay stable.
+var Now = time.Date(2026, 10, 23, 12, 0, 0, 0, time.UTC)
 
 // Bytes returns the contents of a fixture file. It panics if the file does
 // not exist, since that is a programming error.
