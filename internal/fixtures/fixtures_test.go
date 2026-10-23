@@ -96,8 +96,11 @@ func TestRunner(t *testing.T) {
 	if out, code, err := r.Run(ctx, "checkupdates"); err != nil || code != 0 || len(out) == 0 {
 		t.Fatalf("checkupdates: %d, %v", code, err)
 	}
-	if _, _, err := r.Run(ctx, "pacman", "-Qi", "python-pywal"); err != nil {
-		t.Fatalf("pacman -Qi: %v", err)
+	for name := range qm(t) {
+		out, _, err := r.Run(ctx, "pacman", "-Qi", name)
+		if err != nil || !strings.Contains(string(out), "Depends On") {
+			t.Errorf("pacman -Qi %s: %v", name, err)
+		}
 	}
 	if out, _, err := r.Run(ctx, "pacdiff", "-o"); err != nil || !strings.Contains(string(out), ".pacnew") {
 		t.Fatalf("pacdiff: %q, %v", out, err)

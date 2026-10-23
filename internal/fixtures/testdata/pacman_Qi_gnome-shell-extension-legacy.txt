@@ -1,0 +1,22 @@
+Name            : gnome-shell-extension-legacy
+Version         : 3.2.0-1
+Description     : A GNOME Shell extension removed from the AUR
+Architecture    : any
+URL             : https://example.org/legacy
+Licenses        : GPL-2.0-or-later
+Groups          : None
+Provides        : None
+Depends On      : gnome-shell
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 1.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon 01 Sep 2025 10:00:00 AM UTC
+Install Date    : Mon 01 Sep 2025 10:01:00 AM UTC
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : None
+
