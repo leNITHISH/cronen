@@ -1,0 +1,6 @@
+gnome-shell-extension-legacy 3.2.0-1
+paru 2.1.0-1
+python-pywal 3.3.0-9
+spotify 1:1.2.74.477-1
+ttf-ms-fonts 2.0-12
+visual-studio-code-bin 1.105.0-1

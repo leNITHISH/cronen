@@ -1,0 +1,27 @@
+[2019-01-01 12:00] [PACMAN] Running 'pacman -Syu'
+[2019-01-01 12:00] [PACMAN] synchronizing package lists
+[2019-01-01 12:00] [PACMAN] starting full system upgrade
+[2019-01-01 12:01] [ALPM] upgraded linux (4.20.arch1-1 -> 4.20.1.arch1-1)
+[2019-01-01 12:01] [ALPM] transaction completed
+[2019-03-14 08:30] [PACMAN] Running 'pacman -Syu'
+[2019-03-14 08:30] [PACMAN] starting full system upgrade
+[2019-03-14 08:31] [ALPM] upgraded systemd (240.34-3 -> 241.7-2)
+[2019-03-14 08:31] [ALPM] transaction completed
+[2026-09-30T21:15:42+0530] [PACMAN] Running 'pacman -Syu'
+[2026-09-30T21:15:42+0530] [PACMAN] synchronizing package lists
+[2026-09-30T21:15:44+0530] [PACMAN] starting full system upgrade
+[2026-09-30T21:16:10+0530] [ALPM] transaction started
+[2026-09-30T21:16:12+0530] [ALPM] upgraded mesa (1:25.2.3-1 -> 1:25.2.4-1)
+[2026-09-30T21:16:20+0530] [ALPM] transaction completed
+[2026-10-20T19:02:05+0530] [PACMAN] Running 'pacman -Syu'
+[2026-10-20T19:02:05+0530] [PACMAN] synchronizing package lists
+[2026-10-20T19:02:11+0530] [PACMAN] starting full system upgrade
+[2026-10-20T19:02:30+0530] [ALPM] transaction started
+[2026-10-20T19:02:31+0530] [ALPM] upgraded firefox (143.0.4-1 -> 144.0-1)
+[2026-10-20T19:02:33+0530] [ALPM] upgraded linux (6.17.3.arch1-1 -> 6.17.4.arch1-1)
+[2026-10-20T19:02:40+0530] [ALPM-SCRIPTLET] ==> Starting build: '6.17.4-arch1-1'
+[2026-10-20T19:02:58+0530] [ALPM] transaction completed
+[2026-10-21T09:12:00+0530] [PACMAN] Running 'pacman -S ripgrep'
+[2026-10-21T09:12:03+0530] [ALPM] transaction started
+[2026-10-21T09:12:04+0530] [ALPM] reinstalled ripgrep (14.1.1-1)
+[2026-10-21T09:12:04+0530] [ALPM] transaction completed

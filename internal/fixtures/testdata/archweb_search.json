@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "limit": 250,
+  "valid": true,
+  "results": [
+    {"pkgname": "linux", "pkgbase": "linux", "repo": "core", "arch": "x86_64", "pkgver": "6.18.1.arch1", "pkgrel": "1", "epoch": 0, "pkgdesc": "The Linux kernel and modules", "url": "https://github.com/archlinux/linux", "packager": "Jan Alexander Steffens (heftig) <heftig@archlinux.org>"},
+    {"pkgname": "linux-headers", "pkgbase": "linux", "repo": "core", "arch": "x86_64", "pkgver": "6.18.1.arch1", "pkgrel": "1", "epoch": 0, "pkgdesc": "Headers and scripts for building modules for the Linux kernel", "url": "https://github.com/archlinux/linux", "packager": "Jan Alexander Steffens (heftig) <heftig@archlinux.org>"},
+    {"pkgname": "nvidia-utils", "pkgbase": "nvidia-utils", "repo": "extra", "arch": "x86_64", "pkgver": "590.44.01", "pkgrel": "1", "epoch": 0, "pkgdesc": "NVIDIA drivers utilities", "url": "https://www.nvidia.com/", "packager": "Peter Jung <ptr1337@archlinux.org>"},
+    {"pkgname": "python", "pkgbase": "python", "repo": "core", "arch": "x86_64", "pkgver": "3.14.0", "pkgrel": "1", "epoch": 0, "pkgdesc": "The Python programming language", "url": "https://www.python.org/", "packager": "Robin Candau <antiz@archlinux.org>"}
+  ],
+  "num_pages": 1,
+  "page": 1
+}
