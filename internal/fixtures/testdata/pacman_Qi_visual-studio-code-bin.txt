@@ -1,0 +1,22 @@
+Name            : visual-studio-code-bin
+Version         : 1.105.0-1
+Description     : Visual Studio Code (vscode)
+Architecture    : x86_64
+URL             : https://code.visualstudio.com/
+Licenses        : custom: commercial
+Groups          : None
+Provides        : None
+Depends On      : libxkbfile  gnupg  gtk3  libsecret  nss
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 1.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon 01 Sep 2025 10:00:00 AM UTC
+Install Date    : Mon 01 Sep 2025 10:01:00 AM UTC
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : None
+

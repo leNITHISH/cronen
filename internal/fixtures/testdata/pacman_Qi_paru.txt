@@ -1,0 +1,23 @@
+Name            : paru
+Version         : 2.1.0-1
+Description     : Feature packed AUR helper
+Architecture    : x86_64
+URL             : https://github.com/morganamilo/paru
+Licenses        : GPL-3.0-or-later
+Groups          : None
+Provides        : None
+Depends On      : git  pacman  libalpm.so=15-64
+Optional Deps   : bat: colored pkgbuild printing
+                  devtools: build in chroot and downloading pkgbuilds
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 8.12 MiB
+Packager        : Unknown Packager
+Build Date      : Sat 05 Jul 2025 09:00:00 AM UTC
+Install Date    : Sat 05 Jul 2025 09:02:00 AM UTC
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : None
+

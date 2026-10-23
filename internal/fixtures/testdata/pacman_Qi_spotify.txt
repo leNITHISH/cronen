@@ -1,0 +1,22 @@
+Name            : spotify
+Version         : 1:1.2.74.477-1
+Description     : A proprietary music streaming service
+Architecture    : x86_64
+URL             : https://www.spotify.com
+Licenses        : custom
+Groups          : None
+Provides        : None
+Depends On      : alsa-lib  gtk3  nss
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 1.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon 01 Sep 2025 10:00:00 AM UTC
+Install Date    : Mon 01 Sep 2025 10:01:00 AM UTC
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : None
+
