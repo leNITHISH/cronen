@@ -1,12 +1,7 @@
 package ui
 
 import (
-	"bufio"
-	"bytes"
 	"context"
-	"errors"
-	"fmt"
-	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -15,6 +10,7 @@ import (
 	"github.com/leNITHISH/cronen/internal/aur"
 	"github.com/leNITHISH/cronen/internal/news"
 	"github.com/leNITHISH/cronen/internal/pacman"
+	"github.com/leNITHISH/cronen/internal/summary"
 	"github.com/leNITHISH/cronen/internal/system"
 )
 
@@ -68,17 +64,7 @@ func loadRepo(ctx context.Context, r system.Runner, gen int) tea.Cmd {
 
 func loadAUR(ctx context.Context, r system.Runner, f system.Fetcher, gen int, fresh bool) tea.Cmd {
 	return func() tea.Msg {
-		installed, err := pacman.ForeignPackages(ctx, r)
-		if err != nil {
-			return aurMsg{gen: gen, err: err}
-		}
-		c := aur.NewClient(f, r)
-		// Every installed name tells debug splits of repo packages apart.
-		// Without it, only splits of foreign packages are recognized.
-		if all, err := pacman.InstalledNames(ctx, r); err == nil {
-			c.Installed = all
-		}
-		pkgs, err := c.Check(ctx, installed, fresh)
+		pkgs, err := summary.LoadAUR(ctx, r, f, fresh)
 		return aurMsg{gen: gen, pkgs: pkgs, err: err}
 	}
 }
@@ -92,29 +78,15 @@ func loadNews(ctx context.Context, f system.Fetcher, gen int, fresh bool) tea.Cm
 
 func loadLog(fsys system.FS, loc *time.Location, gen int) tea.Cmd {
 	return func() tea.Msg {
-		last, err := pacman.ReadLastFullUpgrade(fsys, pacman.LogPath, loc)
-		if errors.Is(err, pacman.ErrNoFullUpgrade) {
-			// Not an error worth showing: the time is just unknown.
-			err = nil
-		}
+		last, err := summary.LoadLastUpgrade(fsys, loc)
 		return logMsg{gen: gen, last: last, err: err}
 	}
 }
 
 func loadPacnew(ctx context.Context, r system.Runner, gen int) tea.Cmd {
 	return func() tea.Msg {
-		out, _, err := r.Run(ctx, "pacdiff", "-o")
-		if err != nil {
-			return pacnewMsg{gen: gen, err: fmt.Errorf("pacdiff: %w", err)}
-		}
-		var files []string
-		sc := bufio.NewScanner(bytes.NewReader(out))
-		for sc.Scan() {
-			if line := strings.TrimSpace(sc.Text()); line != "" {
-				files = append(files, line)
-			}
-		}
-		return pacnewMsg{gen: gen, files: files}
+		files, err := summary.LoadPacnew(ctx, r)
+		return pacnewMsg{gen: gen, files: files, err: err}
 	}
 }
 

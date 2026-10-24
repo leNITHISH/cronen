@@ -18,6 +18,7 @@ import (
 	"github.com/leNITHISH/cronen/internal/news"
 	"github.com/leNITHISH/cronen/internal/pacman"
 	"github.com/leNITHISH/cronen/internal/risk"
+	"github.com/leNITHISH/cronen/internal/summary"
 	"github.com/leNITHISH/cronen/internal/system"
 )
 
@@ -391,11 +392,7 @@ func (m *Model) activeViewport() *viewport.Model {
 // lastFullUpgrade is the later of pacman.log's last full upgrade and the
 // last upgrade cronen ran, or zero if both are unknown.
 func (m Model) lastFullUpgrade() time.Time {
-	t := m.lastUpgrade
-	if m.opts.State.LastUpgrade.After(t) {
-		t = m.opts.State.LastUpgrade
-	}
-	return t
+	return summary.LastUpgrade(m.lastUpgrade, m.opts.State)
 }
 
 // changed re-runs the risk rules after any data arrived and rebuilds
@@ -405,17 +402,7 @@ func (m *Model) changed() tea.Cmd {
 	// would look unread and raise flags that vanish a moment later. While
 	// either reloads, the previous decision stands.
 	if !m.newsSec.loading && !m.logSec.loading {
-		read := map[string]bool{}
-		for _, g := range m.opts.State.ReadNews() {
-			read[g] = true
-		}
-		rs := news.ReadState{
-			LastUpgrade:   m.lastFullUpgrade(),
-			Read:          read,
-			Now:           m.now(),
-			UnknownWindow: time.Duration(m.cfg.NewsDays) * 24 * time.Hour,
-		}
-		m.unreadNews = rs.Unread(m.newsItems)
+		m.unreadNews = summary.Unread(m.newsItems, m.lastFullUpgrade(), m.opts.State, m.cfg, m.now())
 		m.unread = map[string]bool{}
 		for _, it := range m.unreadNews {
 			m.unread[it.GUID] = true
@@ -423,25 +410,7 @@ func (m *Model) changed() tea.Cmd {
 		m.newsDecided = true
 	}
 
-	var updates []risk.Update
-	for _, u := range m.repo {
-		updates = append(updates, risk.Update{Name: u.Name, OldVersion: u.OldVersion, NewVersion: u.NewVersion})
-	}
-	for _, p := range m.aurPkgs {
-		if p.Pending && p.Info != nil {
-			updates = append(updates, risk.Update{
-				Name: p.Name, Base: p.Info.PackageBase,
-				OldVersion: p.InstalledVersion, NewVersion: p.Info.Version, AUR: true,
-			})
-		}
-	}
-	m.result = risk.Assess(risk.Input{
-		Updates:     updates,
-		UnreadNews:  m.unreadNews,
-		Watchlist:   m.cfg.EffectiveWatchlist(),
-		IgnoreMajor: m.cfg.IgnoreMajor,
-		Now:         m.now(),
-	})
+	m.result = summary.Assess(summary.Updates(m.repo, m.aurPkgs), m.unreadNews, m.cfg, m.now())
 
 	m.newsPane.move(0, len(m.newsItems))
 	// The banner may have appeared or gone, changing the body height.
