@@ -1,4 +1,4 @@
-# Maintainer: leNITHISH
+# Maintainer: blafortree (leNITHISH) <blafortree at gmail dot com>
 
 pkgname=cronen-git
 _pkgname=cronen
