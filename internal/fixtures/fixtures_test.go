@@ -87,6 +87,28 @@ func TestAURFixtureCoversEdgeCases(t *testing.T) {
 	if missing == 0 {
 		t.Error("want a pacman -Qm package missing from the AUR")
 	}
+
+	// Debug splits and VCS packages need their own handling.
+	all := map[string]bool{}
+	for line := range strings.Lines(string(Bytes(PacmanQq))) {
+		all[strings.TrimSpace(line)] = true
+	}
+	var debugForeignBase, debugRepoBase, vcs bool
+	for name := range installed {
+		if !all[name] {
+			t.Errorf("%s is in pacman -Qm but not pacman -Qq", name)
+		}
+		if base, ok := strings.CutSuffix(name, "-debug"); ok && all[base] {
+			_, foreign := installed[base]
+			debugForeignBase = debugForeignBase || foreign
+			debugRepoBase = debugRepoBase || !foreign
+		}
+		vcs = vcs || strings.HasSuffix(name, "-git")
+	}
+	if !debugForeignBase || !debugRepoBase || !vcs {
+		t.Errorf("want debug splits of a foreign and a repo package and a VCS package; got %v %v %v",
+			debugForeignBase, debugRepoBase, vcs)
+	}
 }
 
 func TestRunner(t *testing.T) {

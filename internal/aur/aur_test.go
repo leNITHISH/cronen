@@ -26,7 +26,13 @@ func installedFixture(t *testing.T) []pacman.Package {
 func TestCheckFixture(t *testing.T) {
 	ctx := context.Background()
 	runner := fixtures.Runner()
-	c := NewClient(fixtures.Fetcher(), runner)
+	fetcher := fixtures.Fetcher()
+	c := NewClient(fetcher, runner)
+	all, err := pacman.InstalledNames(ctx, runner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Installed = all
 
 	installed := installedFixture(t)
 	got, err := c.Check(ctx, installed, false)
@@ -38,21 +44,26 @@ func TestCheckFixture(t *testing.T) {
 	}
 
 	type status struct {
+		kind                                  Kind
 		pending, missing, orphaned, outOfDate bool
 	}
 	want := map[string]status{
 		"gnome-shell-extension-legacy": {missing: true},
+		"neovim-git":                   {kind: KindVCS},
 		"paru":                         {pending: true},
+		"paru-debug":                   {kind: KindDebug},
 		"python-pywal":                 {orphaned: true},
 		"spotify":                      {},
 		"ttf-ms-fonts":                 {outOfDate: true},
 		"visual-studio-code-bin":       {pending: true},
+		// zstd is a repo package: only pacman -Qq knows it is installed.
+		"zstd-debug": {kind: KindDebug},
 	}
 	for i, p := range got {
 		if p.Name != installed[i].Name || p.InstalledVersion != installed[i].Version {
 			t.Errorf("package %d = %s %s, want %s %s (input order)", i, p.Name, p.InstalledVersion, installed[i].Name, installed[i].Version)
 		}
-		s := status{pending: p.Pending, missing: p.Missing()}
+		s := status{kind: p.Kind, pending: p.Pending, missing: p.Missing()}
 		if p.Info != nil {
 			s.orphaned = p.Info.Orphaned()
 			s.outOfDate = p.Info.FlaggedOutOfDate()
@@ -77,10 +88,85 @@ func TestCheckFixture(t *testing.T) {
 		t.Errorf("ttf-ms-fonts OutOfDate = %v, want %v", byName["ttf-ms-fonts"].Info.OutOfDate, want)
 	}
 
+	if vcs := byName["neovim-git"]; vcs.Info == nil || vcs.Info.URL != "https://github.com/neovim/neovim" {
+		t.Errorf("neovim-git should still carry its AUR info, got %+v", vcs.Info)
+	}
+
 	for _, call := range runner.Calls() {
 		if strings.Contains(call, "gnome-shell-extension-legacy") || strings.Contains(call, "3.2.0-1") {
 			t.Errorf("missing package should not be compared: %q", call)
 		}
+		// The AUR has a newer neovim-git snapshot, but VCS packages are
+		// never compared against it.
+		if strings.HasPrefix(call, "vercmp") && strings.Contains(call, "0.12.0.r") {
+			t.Errorf("VCS package should not be compared: %q", call)
+		}
+	}
+	for _, call := range fetcher.Calls() {
+		if strings.Contains(call.URL, "-debug") {
+			t.Errorf("debug split looked up in the AUR: %s", call.URL)
+		}
+	}
+}
+
+func TestClassify(t *testing.T) {
+	installed := func(names ...string) func(string) bool {
+		return func(n string) bool {
+			for _, x := range names {
+				if x == n {
+					return true
+				}
+			}
+			return false
+		}
+	}
+	tests := []struct {
+		name      string
+		installed []string
+		want      Kind
+	}{
+		{"paru-debug", []string{"paru"}, KindDebug},
+		{"zstd-debug", []string{"zstd"}, KindDebug},
+		{"foo-git-debug", []string{"foo-git"}, KindDebug},
+		// Without its base installed, -debug is just part of the name.
+		{"lua-debug", nil, KindRegular},
+		{"-debug", []string{""}, KindRegular},
+		{"neovim-git", nil, KindVCS},
+		{"foo-svn", nil, KindVCS},
+		{"foo-hg", nil, KindVCS},
+		{"foo-bzr", nil, KindVCS},
+		{"foo-fossil", nil, KindVCS},
+		{"foo-darcs", nil, KindVCS},
+		{"foo-cvs", nil, KindVCS},
+		{"-git", nil, KindRegular},
+		{"legit", nil, KindRegular},
+		{"git-extras", nil, KindRegular},
+		{"visual-studio-code-bin", nil, KindRegular},
+	}
+	for _, tt := range tests {
+		if got := Classify(tt.name, installed(tt.installed...)); got != tt.want {
+			t.Errorf("Classify(%q) = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// A -debug package whose base isn't installed is looked up like any other,
+// and reported missing if the AUR doesn't have it.
+func TestCheckDebugWithoutBase(t *testing.T) {
+	ctx := context.Background()
+	f := system.NewFakeFetcher()
+	f.Handler = func(string) (system.FakeResponse, bool) {
+		return system.FakeResponse{Body: []byte(`{"type":"multiinfo","version":5,"resultcount":0,"results":[]}`)}, true
+	}
+	got, err := NewClient(f, system.NewFakeRunner()).Check(ctx, []pacman.Package{{Name: "orphan-debug", Version: "1-1"}}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Kind != KindRegular || !got[0].Missing() {
+		t.Fatalf("got %+v, want a regular, missing package", got)
+	}
+	if len(f.Calls()) != 1 {
+		t.Errorf("want one AUR lookup, got %d", len(f.Calls()))
 	}
 }
 

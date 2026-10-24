@@ -55,3 +55,25 @@ func ForeignPackages(ctx context.Context, r system.Runner) ([]Package, error) {
 	}
 	return nil, fmt.Errorf("listing foreign packages: %w", err)
 }
+
+// ParseQq parses `pacman -Qq` output, one package name per line, into a set.
+func ParseQq(data []byte) map[string]bool {
+	names := map[string]bool{}
+	sc := bufio.NewScanner(bytes.NewReader(data))
+	for sc.Scan() {
+		if name := strings.TrimSpace(sc.Text()); name != "" {
+			names[name] = true
+		}
+	}
+	return names
+}
+
+// InstalledNames runs `pacman -Qq` and returns the names of every installed
+// package.
+func InstalledNames(ctx context.Context, r system.Runner) (map[string]bool, error) {
+	out, _, err := r.Run(ctx, "pacman", "-Qq")
+	if err != nil {
+		return nil, fmt.Errorf("listing installed packages: %w", err)
+	}
+	return ParseQq(out), nil
+}

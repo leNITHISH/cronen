@@ -1,6 +1,24 @@
 {
-  "resultcount": 5,
+  "resultcount": 6,
   "results": [
+    {
+      "Depends": ["libuv", "luajit", "msgpack-c", "tree-sitter", "unibilium"],
+      "Description": "Fork of Vim aiming to improve user experience, plugins, and GUIs (git version)",
+      "FirstSubmitted": 1394000000,
+      "ID": 1700010,
+      "LastModified": 1761000000,
+      "License": ["Apache-2.0", "custom:vim"],
+      "Maintainer": "neovim-bot",
+      "Name": "neovim-git",
+      "NumVotes": 650,
+      "OutOfDate": null,
+      "PackageBase": "neovim-git",
+      "PackageBaseID": 110010,
+      "Popularity": 3.2,
+      "URL": "https://github.com/neovim/neovim",
+      "URLPath": "/cgit/aur.git/snapshot/neovim-git.tar.gz",
+      "Version": "0.12.0.r1300.g1234567-1"
+    },
     {
       "Depends": ["git", "pacman"],
       "Description": "Feature packed AUR helper",
