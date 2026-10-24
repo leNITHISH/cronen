@@ -139,3 +139,21 @@ func TestSaveStateOSFS(t *testing.T) {
 		t.Fatalf("got %+v, %v", got, err)
 	}
 }
+
+func TestStateClone(t *testing.T) {
+	var s State
+	s.LastUpgrade = time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC)
+	s.MarkRead("a")
+	c := s.Clone()
+	s.MarkRead("b")
+	c.MarkRead("c")
+	if got := c.ReadNews(); !reflect.DeepEqual(got, []string{"a", "c"}) {
+		t.Errorf("clone read = %q, want [a c]", got)
+	}
+	if got := s.ReadNews(); !reflect.DeepEqual(got, []string{"a", "b"}) {
+		t.Errorf("original read = %q, want [a b]", got)
+	}
+	if !c.LastUpgrade.Equal(s.LastUpgrade) {
+		t.Errorf("clone LastUpgrade = %v", c.LastUpgrade)
+	}
+}

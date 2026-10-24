@@ -46,6 +46,14 @@ func (s *State) MarkRead(guids ...string) {
 	}
 }
 
+// Clone returns a deep copy of s, safe to hand to another goroutine while
+// s keeps changing.
+func (s State) Clone() State {
+	c := State{LastUpgrade: s.LastUpgrade}
+	c.MarkRead(s.ReadNews()...)
+	return c
+}
+
 // ReadNews returns the GUIDs marked read, sorted.
 func (s *State) ReadNews() []string {
 	out := make([]string, 0, len(s.readNews))
