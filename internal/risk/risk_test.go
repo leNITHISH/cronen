@@ -222,13 +222,20 @@ func TestMajorBumpRule(t *testing.T) {
 		old, new string
 		want     string
 	}{
-		{"580.95.05-1", "590.44.01-1", "Major version bump (580 → 590)"},
 		{"14.1.1-1", "15.0.0-1", "Major version bump (14 → 15)"},
 		{"1.9-1", "2.0-1", "Major version bump (1 → 2)"},
 		{"1:1.9-1", "1:2.0-1", "Major version bump (1 → 2)"},
 		{"1.9-1", "1:2.0-1", "Major version bump (1 → 2)"},
 		{"9.0-1", "10.0-1", "Major version bump (9 → 10)"},
-		{"2024.1-1", "2025.1-1", "Major version bump (2024 → 2025)"},
+		{"48.2-1", "49.0-1", "Major version bump (48 → 49)"},
+		{"49.1-1", "50.0-1", "Major version bump (49 → 50)"},
+
+		{"50.0-1", "51.0-1", ""},                   // at the cap
+		{"141.0.7390.65-1", "142.0.7444.59-1", ""}, // chromium
+		{"126-1", "127-1", ""},                     // polkit
+		{"580.95.05-1", "590.44.01-1", ""},         // nvidia
+		{"2024.1-1", "2025.1-1", ""},               // year version
+		{"99999999999999999999-1", "1:1-1", ""},    // doesn't fit an int
 
 		{"2.4.8-1", "1:2.4.8-2", ""},               // epoch only
 		{"1.0-1", "1:0.5-1", ""},                   // epoch restarts numbering lower
@@ -244,13 +251,40 @@ func TestMajorBumpRule(t *testing.T) {
 		{"", "2.0-1", ""},                          // missing version
 	}
 	for _, tt := range tests {
-		f, ok := majorBumpFlag(Update{Name: "pkg", OldVersion: tt.old, NewVersion: tt.new})
+		f, ok := majorBumpFlag(Update{Name: "pkg", OldVersion: tt.old, NewVersion: tt.new}, nil)
 		if got := map[bool]string{true: f.Reason}[ok]; got != tt.want {
 			t.Errorf("%s → %s: got %q, want %q", tt.old, tt.new, got, tt.want)
 		}
 		if ok && f.Severity != Warn {
 			t.Errorf("%s → %s: severity = %v", tt.old, tt.new, f.Severity)
 		}
+	}
+}
+
+func TestIgnoreMajor(t *testing.T) {
+	u := Update{Name: "ripgrep-all", Base: "ripgrep", OldVersion: "1.0-1", NewVersion: "2.0-1"}
+	tests := []struct {
+		ignore []string
+		want   bool
+	}{
+		{nil, true},
+		{[]string{"firefox"}, true},
+		{[]string{"ripgrep-all"}, false},
+		{[]string{"ripgrep"}, false}, // pkgbase
+		{[]string{"rip*"}, false},
+		{[]string{"[bad"}, true}, // malformed patterns never match
+	}
+	for _, tt := range tests {
+		if _, got := majorBumpFlag(u, tt.ignore); got != tt.want {
+			t.Errorf("ignore %q: flagged = %v, want %v", tt.ignore, got, tt.want)
+		}
+	}
+	// Ignoring the major bump leaves the other rules alone.
+	p := assessOne(Update{Name: "linux", OldVersion: "6.17-1", NewVersion: "7.0-1"}, Input{
+		Watchlist: []string{"linux*"}, IgnoreMajor: []string{"linux"},
+	})
+	if got := summary(p); got != "watchlist/info kernel/info" {
+		t.Errorf("linux flags = %q", got)
 	}
 }
 
@@ -343,7 +377,7 @@ func TestFixtureSystem(t *testing.T) {
 				"linux-firmware":    "news/critical watchlist/info",
 				"linux-headers":     "watchlist/info",
 				"mesa":              "watchlist/info",
-				"nvidia-utils":      "news/warn major-bump/warn watchlist/info",
+				"nvidia-utils":      "news/warn watchlist/info",
 				"python":            "python-bump/warn watchlist/info",
 				"ripgrep":           "major-bump/warn",
 				"systemd":           "watchlist/info",
@@ -358,7 +392,7 @@ func TestFixtureSystem(t *testing.T) {
 			want: map[string]string{
 				"linux":          "kernel/info",
 				"linux-firmware": "news/critical",
-				"nvidia-utils":   "news/warn major-bump/warn",
+				"nvidia-utils":   "news/warn",
 				"python":         "python-bump/warn",
 				"ripgrep":        "major-bump/warn",
 			},

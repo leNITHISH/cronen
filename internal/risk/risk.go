@@ -123,6 +123,9 @@ type Input struct {
 	// Watchlist holds glob patterns (path.Match syntax) matched against
 	// package names and pkgbases. Malformed patterns never match.
 	Watchlist []string
+	// IgnoreMajor holds glob patterns (path.Match syntax) of packages whose
+	// major version bumps are not flagged.
+	IgnoreMajor []string
 	// PythonDependents lists installed foreign packages that depend on
 	// python, for the Python bump warning. It may be empty.
 	PythonDependents []string
@@ -179,7 +182,7 @@ func Assess(in Input) Result {
 		if f, ok := pythonFlag(u, in.PythonDependents); ok {
 			flags = append(flags, f)
 		}
-		if f, ok := majorBumpFlag(u); ok {
+		if f, ok := majorBumpFlag(u, in.IgnoreMajor); ok {
 			flags = append(flags, f)
 		}
 		if f, ok := watchlistFlag(u, in.Watchlist); ok {
@@ -296,15 +299,23 @@ func ago(t, now time.Time) string {
 }
 
 func watchlistFlag(u Update, patterns []string) (Flag, bool) {
+	if p, ok := matchGlob(u, patterns); ok {
+		return Flag{Rule: RuleWatchlist, Severity: Info, Reason: fmt.Sprintf("On your watchlist (%s)", p)}, true
+	}
+	return Flag{}, false
+}
+
+// matchGlob returns the first pattern matching u's name or pkgbase.
+func matchGlob(u Update, patterns []string) (string, bool) {
 	for _, p := range patterns {
 		for _, name := range []string{u.Name, u.base()} {
 			// path.Match only fails on malformed patterns, which never match.
 			if ok, err := path.Match(p, name); err == nil && ok {
-				return Flag{Rule: RuleWatchlist, Severity: Info, Reason: fmt.Sprintf("On your watchlist (%s)", p)}, true
+				return p, true
 			}
 		}
 	}
-	return Flag{}, false
+	return "", false
 }
 
 // upstreamVersion strips the epoch and pkgrel from an Arch version:
@@ -330,21 +341,27 @@ func leadingNumber(v string) (string, bool) {
 	return v[:n], n > 0
 }
 
-// calendarDigits is the length from which a leading number is taken to be a
-// date (20251021) rather than a major version.
-const calendarDigits = 8
+// MajorVersionCap is the leading version component from which bumps aren't
+// flagged. Packages versioned like that (chromium 141, polkit 126, NVIDIA
+// 580, dates like 20251021) bump it on every release, so a change says
+// nothing about compatibility.
+const MajorVersionCap = 50
 
-func majorBumpFlag(u Update) (Flag, bool) {
+func majorBumpFlag(u Update, ignore []string) (Flag, bool) {
+	if _, ok := matchGlob(u, ignore); ok {
+		return Flag{}, false
+	}
 	oldS, ok1 := leadingNumber(upstreamVersion(u.OldVersion))
 	newS, ok2 := leadingNumber(upstreamVersion(u.NewVersion))
-	if !ok1 || !ok2 || len(oldS) >= calendarDigits || len(newS) >= calendarDigits {
+	if !ok1 || !ok2 {
 		return Flag{}, false
 	}
 	oldN, err1 := strconv.Atoi(oldS)
 	newN, err2 := strconv.Atoi(newS)
 	// An epoch bump can restart upstream numbering lower; that isn't a
-	// major bump.
-	if err1 != nil || err2 != nil || newN <= oldN {
+	// major bump. The cap applies to the installed version, so a 49 → 50
+	// bump is still flagged.
+	if err1 != nil || err2 != nil || newN <= oldN || oldN >= MajorVersionCap {
 		return Flag{}, false
 	}
 	return Flag{Rule: RuleMajorBump, Severity: Warn, Reason: fmt.Sprintf("Major version bump (%d → %d)", oldN, newN)}, true

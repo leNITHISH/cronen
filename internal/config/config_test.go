@@ -90,6 +90,8 @@ upgrade_command = ""
 watchlist = ["linux*", "nvidia*", "mesa", "glibc", "systemd"]
 watchlist_mode = "replace"
 news_days = 14
+ignore_major = ["chromium", "electron*"]
+show_debug = true
 `,
 			want: Config{
 				AUR:           false,
@@ -97,6 +99,8 @@ news_days = 14
 				Watchlist:     []string{"linux*", "nvidia*", "mesa", "glibc", "systemd"},
 				WatchlistMode: WatchlistReplace,
 				NewsDays:      14,
+				IgnoreMajor:   []string{"chromium", "electron*"},
+				ShowDebug:     true,
 			},
 		},
 		{
@@ -134,6 +138,13 @@ news_days = 14
 			want:    Config{AUR: true, Watchlist: []string{"firefox"}, WatchlistMode: WatchlistExtend, NewsDays: 30},
 			wantErr: `"[a-"`,
 		},
+		{
+			name:    "bad ignore_major glob dropped, good kept",
+			toml:    `ignore_major = ["polkit", "[x"]`,
+			want:    Config{AUR: true, IgnoreMajor: []string{"polkit"}, WatchlistMode: WatchlistExtend, NewsDays: 30},
+			wantErr: `ignore_major pattern "[x"`,
+		},
+		{name: "wrong type for show_debug", toml: `show_debug = "yes"`, want: def, wantErr: "show_debug"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
