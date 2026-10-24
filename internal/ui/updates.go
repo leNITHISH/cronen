@@ -168,8 +168,8 @@ func (m *Model) rebuildUpdates() {
 		}
 	}
 	note := func(text string, spin, err bool) {
-		if !err {
-			p.rows = append(p.rows, row{kind: rowNote, text: text, spin: spin})
+		if !err || ansi.StringWidth(text) <= m.listWidth()-1 {
+			p.rows = append(p.rows, row{kind: rowNote, text: text, spin: spin, err: err})
 			return
 		}
 		// Errors wrap rather than truncate: the end often says what to do.
@@ -184,7 +184,7 @@ func (m *Model) rebuildUpdates() {
 	case m.newsSec.loading || m.logSec.loading:
 		note("checking news", true, false)
 	case m.newsSec.err != nil:
-		note("✗ news unavailable; news rules skipped", false, true)
+		note(newsErrorNote, false, true)
 	case len(flagged) == 0 && !m.repoSec.loading && !m.aurSec.loading:
 		note("nothing flagged", false, false)
 	}

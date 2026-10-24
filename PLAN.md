@@ -53,7 +53,7 @@ All system access goes through interfaces (see Architecture) so it can be faked 
 - Command: `checkupdates` (from `pacman-contrib`). It syncs a **temporary** copy of the database, so it's safe and won't cause partial upgrades.
 - Output lines: `name oldver -> newver`
 - Exit codes: `0` means updates are available, `2` means no updates, `1` means an error. Treat 2 as "empty list", not an error.
-- If `checkupdates` isn't installed, the section shows exactly one line: `checkupdates not found — install pacman-contrib`.
+- If `checkupdates` isn't installed, the error is the single line `checkupdates not found — install pacman-contrib`. The list pane widens to fit a section error on one line as long as the detail pane keeps 40 columns (from 91 columns for this one); narrower terminals wrap it rather than cut it.
 
 ### 2. Pending AUR updates
 - Installed foreign packages: `pacman -Qm` (prints `name version`).
@@ -154,8 +154,8 @@ Loading behaviour: render immediately with spinners per section. Repo updates, A
 Theme: respect terminal background (light/dark). Keep colors subtle; use them for severity only.
 
 Layout rules:
-- **Version column.** Versions are right-aligned against the severity icon. When a row is too narrow, truncate the old version first, then the package name; never truncate the new version. If the new version can't fit at all, show the name alone. The list drops epochs, pkgrels and git commit hashes (`+g6f0cf3d`); the detail pane shows full versions.
-- **URLs.** URLs in the detail and news panes are never wrapped. A URL that doesn't fit is truncated with `…`, and every URL is an OSC 8 hyperlink to the full address, so it stays clickable. Strip control characters from URLs first, because they come from the network.
+- **Version column.** Versions are right-aligned against the severity icon. When a row is too narrow, truncate the old version first, then the package name; never truncate the new version. If the new version can't fit at all, show the name alone. To keep the column compact, the list shows versions without epoch, pkgrel or git commit hash (`+g6f0cf3d`), and only their first two components (`590.44.01-1` → `590.44`) unless those are equal on both sides; the detail pane shows full versions.
+- **URLs.** The upstream and changelog links in the detail pane, and the link under a news post's title, are never wrapped. A URL that doesn't fit is truncated with `…`, and it is an OSC 8 hyperlink to the full address, so it stays clickable. Strip control characters from URLs first, because they come from the network. (Links inside a news post's body are laid out by Glamour, which may still break a long URL.)
 
 ---
 

@@ -11,6 +11,7 @@ import (
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/leNITHISH/cronen/internal/aur"
 	"github.com/leNITHISH/cronen/internal/config"
@@ -473,7 +474,33 @@ func (m Model) bodyHeight() int {
 func (m Model) listWidth() int {
 	w, _ := m.size()
 	lw := clamp(w*2/5, min(28, w/2), 56)
+	// Widen the list so a section error fits on one line, as long as the
+	// detail pane keeps minDetailWidth. Narrower terminals wrap it.
+	for _, note := range m.errorNotes() {
+		lw = max(lw, min(1+ansi.StringWidth(note), w-1-minDetailWidth))
+	}
 	return max(0, lw)
+}
+
+// minDetailWidth is the narrowest the right pane gets to make room for an
+// error in the list.
+const minDetailWidth = 40
+
+// newsErrorNote is the attention section's note when the news failed.
+const newsErrorNote = "✗ news unavailable; news rules skipped"
+
+// errorNotes returns the error notes the updates list shows.
+func (m Model) errorNotes() []string {
+	var notes []string
+	if m.newsSec.err != nil && !m.newsSec.loading {
+		notes = append(notes, newsErrorNote)
+	}
+	for _, s := range []section{m.repoSec, m.aurSec} {
+		if s.err != nil && !s.loading {
+			notes = append(notes, "✗ "+s.err.Error())
+		}
+	}
+	return notes
 }
 
 func (m Model) paneWidth() int {

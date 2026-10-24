@@ -416,19 +416,30 @@ func TestCheckupdatesMissing(t *testing.T) {
 	r := fixtures.Runner()
 	r.Set("checkupdates", system.FakeResult{Err: system.ErrCommandNotFound})
 	opts.Runner = r
-	m := loaded(t, opts, 140, 30)
-	var notes []string
-	for _, row := range m.updates.rows {
-		if row.kind == rowNote && row.err {
-			notes = append(notes, row.text)
+	const hint = "✗ checkupdates not found — install pacman-contrib"
+	// The list widens to fit the hint from 91 columns; narrower terminals
+	// wrap it rather than cut it.
+	for _, size := range [][2]int{{91, 24}, {100, 30}, {140, 30}} {
+		m := loaded(t, opts, size[0], size[1])
+		var notes []string
+		for _, row := range m.updates.rows {
+			if row.kind == rowNote && row.err {
+				notes = append(notes, row.text)
+			}
 		}
+		if len(notes) != 1 || notes[0] != hint {
+			t.Errorf("%dx%d: error notes = %q, want the one-line hint", size[0], size[1], notes)
+		}
+		if !strings.Contains(plain(m), "\n "+hint) {
+			t.Errorf("%dx%d: hint not on one line:\n%s", size[0], size[1], plain(m))
+		}
+		checkSize(t, m, size[0], size[1])
 	}
-	if len(notes) != 1 || notes[0] != "✗ checkupdates not found — install pacman-contrib" {
-		t.Fatalf("error notes = %q, want the one-line pacman-contrib hint", notes)
+	m := loaded(t, opts, 80, 24)
+	if !strings.Contains(plain(m), "install") || !strings.Contains(plain(m), "pacman-contrib") {
+		t.Errorf("80x24: hint lost:\n%s", plain(m))
 	}
-	if !strings.Contains(plain(m), " ✗ checkupdates not found — install pacman-contrib ") {
-		t.Errorf("hint not on one line:\n%s", plain(m))
-	}
+	checkSize(t, m, 80, 24)
 }
 
 func TestDetailLinks(t *testing.T) {
