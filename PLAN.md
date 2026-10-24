@@ -53,6 +53,7 @@ All system access goes through interfaces (see Architecture) so it can be faked 
 - Command: `checkupdates` (from `pacman-contrib`). It syncs a **temporary** copy of the database, so it's safe and won't cause partial upgrades.
 - Output lines: `name oldver -> newver`
 - Exit codes: `0` means updates are available, `2` means no updates, `1` means an error. Treat 2 as "empty list", not an error.
+- If `checkupdates` isn't installed, the section shows exactly one line: `checkupdates not found — install pacman-contrib`.
 
 ### 2. Pending AUR updates
 - Installed foreign packages: `pacman -Qm` (prints `name version`).
@@ -62,6 +63,8 @@ All system access goes through interfaces (see Architecture) so it can be faked 
 - Compare versions with `vercmp old new` (ships with pacman). Do **not** hand-roll Arch version comparison, because epochs and pkgrel make it hard to get right.
 - Packages that are installed locally but missing from the AUR get flagged as "not in AUR (orphaned/removed?)".
 - From the RPC response, also surface `OutOfDate` (flagged out of date) and `Maintainer == null` (orphaned).
+- **Debug splits.** `<name>-debug` is a makepkg debug split when `<name>` is installed (check against `pacman -Qq`, so splits of locally rebuilt repo packages count too). Debug splits are never on the AUR: don't look them up, never flag them "not in AUR", and hide them from the list unless `show_debug = true`. A `-debug` package whose base isn't installed is treated like any other package.
+- **VCS packages.** Names ending in `-git`, `-svn`, `-hg`, `-bzr`, `-fossil`, `-darcs` or `-cvs` are built from upstream's latest source, so the RPC version is only a stale snapshot. Look them up (for links, orphaned and out-of-date status) but never compare versions, so they are never pending. List them with a `VCS` tag and leave them out of every update count.
 
 ### 3. Arch news
 - RSS: `https://archlinux.org/feeds/news/`
@@ -93,7 +96,7 @@ A pending update is **flagged** if any of these hold:
 2. **Manual intervention.** An unread news item whose title or body contains "manual intervention", "intervention required", or "requires manual". These raise a **global banner** even if no pending package matches.
 3. **Watchlist.** The package matches the watchlist (configurable, with glob support). Default:
    `linux*`, `nvidia*`, `mesa`, `vulkan-*`, `glibc`, `systemd`, `grub`, `pacman`, `openssl`, `python`, `gcc*`
-4. **Major version bump.** The leading version component changes (`1.x → 2.x`), ignoring epoch-only changes.
+4. **Major version bump.** The leading version component changes (`1.x → 2.x`), ignoring epoch-only changes. Skip it when the installed version's leading component is ≥ 50 (chromium 141, polkit 126, NVIDIA 580 and date versions bump it every release), and for packages matching `ignore_major` (globs, matched against name and pkgbase).
 5. **Python minor bump.** `python 3.X → 3.Y`. Warn that AUR packages depending on Python likely need rebuilding, and list installed foreign packages that depend on `python` (`pacman -Qi` on each `pacman -Qm` package, then read "Depends On"). Mark this part as a stretch goal if it gets slow.
 6. **Kernel updated.** If `linux*` is in the update list, show a "reboot after upgrade" note.
 
@@ -150,6 +153,10 @@ Loading behaviour: render immediately with spinners per section. Repo updates, A
 
 Theme: respect terminal background (light/dark). Keep colors subtle; use them for severity only.
 
+Layout rules:
+- **Version column.** Versions are right-aligned against the severity icon. When a row is too narrow, truncate the old version first, then the package name; never truncate the new version. If the new version can't fit at all, show the name alone. The list drops epochs, pkgrels and git commit hashes (`+g6f0cf3d`); the detail pane shows full versions.
+- **URLs.** URLs in the detail and news panes are never wrapped. A URL that doesn't fit is truncated with `…`, and every URL is an OSC 8 hyperlink to the full address, so it stays clickable. Strip control characters from URLs first, because they come from the network.
+
 ---
 
 ## Upgrade hand-off
@@ -180,6 +187,8 @@ Theme: respect terminal background (light/dark). Keep colors subtle; use them fo
   watchlist = ["linux*", "nvidia*", "mesa", "glibc", "systemd"]
   watchlist_mode = "extend"  # "extend" defaults or "replace"
   news_days = 30
+  ignore_major = []          # globs whose major version bumps aren't flagged
+  show_debug = false         # list makepkg <name>-debug splits
   ```
 - State: `$XDG_STATE_HOME/cronen/state.json`, which holds read news GUIDs and the last time cronen ran an upgrade.
 - Cache: `$XDG_CACHE_HOME/cronen/`, which holds the news feed and AUR responses with a 15 minute TTL. `r` bypasses the cache.
@@ -223,7 +232,7 @@ Rules:
 - **The dev environment may not be Arch.** Nothing in the test suite may require `pacman`, `checkupdates`, `vercmp`, or network access.
 - Fake `Runner` returns canned output from `internal/fixtures/`. Include fixtures for:
   - `checkupdates` with updates, with none (exit 2), and with an error
-  - `pacman -Qm` output
+  - `pacman -Qm` output, including debug splits (of a foreign and of a repo package) and a VCS package, plus `pacman -Qq` listing every installed package
   - AUR RPC responses, including an orphaned package, an out-of-date package, and a package missing from the AUR
   - news RSS containing a manual-intervention post and a post that mentions a package
   - `pacman.log` with both timestamp formats
@@ -276,6 +285,10 @@ Each milestone is sized to be **one cloud session**. M1, M2, and M3 can run **in
 ### M6: Polish and release
 - README with a demo GIF (recorded with `vhs` from a `.tape` file using `--demo`).
 - `PKGBUILD` (for an eventual `cronen` / `cronen-git` AUR package) and a `goreleaser` config.
+  - `depends=(pacman-contrib)`, which provides `checkupdates` and `pacdiff`.
+  - `optdepends=('xdg-utils: open upstream and changelog links' 'paru: AUR upgrades' 'yay: AUR upgrades')`
+  - `makedepends=(go)`
+  - The README must list these dependencies.
 - Man page or `--help` that's actually helpful.
 - **Done when:** a fresh clone builds with `makepkg -si` on Arch (verified manually by the maintainer).
 
