@@ -39,6 +39,7 @@ func TestFlags(t *testing.T) {
 		code int
 	}{
 		{[]string{"--help"}, 0},
+		{[]string{"--version"}, 0},
 		{[]string{"--waybar"}, 2},
 		{[]string{"--check", "--json"}, 2},
 		{[]string{"--bogus"}, 2},
@@ -51,6 +52,36 @@ func TestFlags(t *testing.T) {
 				t.Fatalf("exit code %d, want %d; stderr: %s", code, tt.code, stderr.String())
 			}
 		})
+	}
+}
+
+func TestHelp(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := run(context.Background(), []string{"--help"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit code %d; stderr: %s", code, stderr.String())
+	}
+	out := stdout.String()
+	for _, want := range []string{"--check", "--json", "--waybar", "--demo", "--version", "30  an unread news item", "config.toml", "cronen(1)"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("help does not mention %q:\n%s", want, out)
+		}
+	}
+	if stderr.Len() != 0 {
+		t.Errorf("help wrote to stderr: %q", stderr.String())
+	}
+}
+
+func TestVersion(t *testing.T) {
+	old := version
+	t.Cleanup(func() { version = old })
+	version = "1.2.3"
+
+	var stdout, stderr bytes.Buffer
+	if code := run(context.Background(), []string{"--version"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit code %d; stderr: %s", code, stderr.String())
+	}
+	if got := stdout.String(); got != "cronen 1.2.3\n" {
+		t.Errorf("got %q", got)
 	}
 }
 
