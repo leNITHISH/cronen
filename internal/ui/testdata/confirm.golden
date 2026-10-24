@@ -1,0 +1,30 @@
+ cronen                                                                    last upgrade: 2 days ago 
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Upgrade the system?                                                                                
+                                                                                                    
+ ‼ Read first: 1 unread news item requires manual intervention                                      
+   2026-10-22  linux-firmware >= 20251021-1 upgrade requires manual intervention                    
+   press esc, then n to read it                                                                     
+                                                                                                    
+ 18 updates · 11 flagged · kernel update: reboot afterwards                                         
+                                                                                                    
+ This runs: sudo pacman -Syu                                                                        
+                                                                                                    
+ Press y to upgrade, n or esc to cancel.                                                            
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Upgrade?                                                                   y upgrade  n/esc cancel 

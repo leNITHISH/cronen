@@ -52,7 +52,7 @@ func run(t *testing.T, m Model, cmd tea.Cmd) Model {
 		for _, c := range msg {
 			m = run(t, m, c)
 		}
-	case repoMsg, aurMsg, newsMsg, logMsg, pacnewMsg, archwebMsg:
+	case repoMsg, aurMsg, newsMsg, logMsg, pacnewMsg, archwebMsg, openedMsg, stateSavedMsg, upgradedMsg:
 		m = send(t, m, msg)
 	}
 	return m
@@ -68,6 +68,8 @@ func press(s string) tea.KeyPressMsg {
 		return tea.KeyPressMsg{Code: 'd', Mod: tea.ModCtrl}
 	case "ctrl+c":
 		return tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}
+	case "enter":
+		return tea.KeyPressMsg{Code: tea.KeyEnter}
 	}
 	r := []rune(s)[0]
 	return tea.KeyPressMsg{Code: r, Text: s}

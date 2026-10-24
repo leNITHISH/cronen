@@ -1,0 +1,30 @@
+ cronen (demo)                                                             last upgrade: 2 days ago 
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────┬───────────────────────────────────────────────────────────
+ NEEDS ATTENTION (4)                    │ linux-firmware                                            
+▸ linux-firmware    20251011→20251021 ‼ │ 20251011-1 → 20251021-1                                   
+  linux                     6.17→6.18 ℹ │                                                           
+  linux-api-headers       6.16→6.16.1 ℹ │ Why flagged:                                              
+  linux-headers             6.17→6.18 ℹ │  • Manual intervention in news: 'linux-firmware >=        
+ REPO (0)                               │    20251021-1 upgrade requires manual intervention'       
+   no matches                           │    (yesterday)                                            
+ AUR (0)                                │  • On your watchlist (linux*)                             
+   no matches                           │                                                           
+                                        │ Links:                                                    
+                                        │  • not found on archlinux.org                             
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+────────────────────────────────────────┴───────────────────────────────────────────────────────────
+ 18 updates · 11 flagged · 2 unread news · 1 .pacnew · filter: LINUX                 ? help  q quit 

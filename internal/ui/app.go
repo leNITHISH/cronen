@@ -9,6 +9,7 @@ import (
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -36,6 +37,14 @@ type Options struct {
 	Config *config.Config
 	// State is what cronen remembered from earlier runs.
 	State config.State
+	// StatePath is where changes to State are saved. Empty means they are
+	// kept in memory only, as in demo mode.
+	StatePath string
+
+	// Exec hands the terminal to the upgrade command and reports how it
+	// exited through done; the real one wraps tea.ExecProcess. Nil
+	// disables upgrading.
+	Exec func(argv []string, done tea.ExecCallback) tea.Cmd
 
 	// Context bounds every command and request. Nil means
 	// context.Background().
@@ -53,6 +62,7 @@ const (
 	screenUpdates screen = iota
 	screenNews
 	screenHelp
+	screenConfirm
 )
 
 type focus int
@@ -84,6 +94,13 @@ type Model struct {
 
 	help    help.Model
 	spinner spinner.Model
+	filter  textinput.Model
+	// filtering reports whether the filter input has the keyboard.
+	filtering bool
+	// flashMsg is shown in the status bar until the next key press.
+	flashMsg string
+	flashErr bool
+	upgrade  upgradeOutcome
 	// spinning reports whether a spinner tick is in flight.
 	spinning bool
 
@@ -127,6 +144,7 @@ func New(opts Options) Model {
 		isDark:   true,
 		help:     help.New(),
 		spinner:  spinner.New(spinner.WithSpinner(spinner.MiniDot)),
+		filter:   textinput.New(),
 		spinning: true,
 		gen:      1,
 		archweb:  map[string]archwebResult{},
@@ -134,6 +152,8 @@ func New(opts Options) Model {
 		detail:   viewport.New(),
 		newsView: viewport.New(),
 	}
+	m.filter.Prompt = "/"
+	m.filter.Placeholder = "filter packages"
 	m.setStyles(true)
 	m.markLoading()
 	m.layout()
@@ -145,6 +165,10 @@ func (m *Model) setStyles(isDark bool) {
 	m.styles = DefaultStyles(isDark)
 	m.help.Styles = m.styles.Help
 	m.spinner.Style = m.styles.Subtle
+	fs := textinput.DefaultStyles(isDark)
+	// A blinking cursor would keep a tick running for nothing.
+	fs.Cursor.Blink = false
+	m.filter.SetStyles(fs)
 }
 
 func (m Model) ctx() context.Context {
@@ -287,14 +311,49 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.refreshDetail()
 		return m, nil
 
+	case openedMsg:
+		m.handleOpened(msg)
+		return m, nil
+
+	case stateSavedMsg:
+		if msg.err != nil {
+			m.flash("couldn't save state: "+msg.err.Error(), true)
+		}
+		return m, nil
+
+	case upgradedMsg:
+		return m, m.handleUpgraded(msg)
+
 	case tea.KeyPressMsg:
+		m.flash("", false)
+		if m.filtering {
+			return m.handleFilterKey(msg)
+		}
 		return m.handleKey(msg)
+	}
+	if m.filtering {
+		// Pastes and the like.
+		var cmd tea.Cmd
+		m.filter, cmd = m.filter.Update(msg)
+		return m, tea.Batch(cmd, m.layout())
 	}
 	return m, nil
 }
 
 func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	k := m.keys
+	if m.screen == screenConfirm {
+		switch {
+		case key.Matches(msg, k.Confirm):
+			return m, m.startUpgrade()
+		case key.Matches(msg, k.Cancel):
+			m.screen = screenUpdates
+		case key.Matches(msg, k.Quit):
+			return m, tea.Quit
+		}
+		return m, nil
+	}
+
 	switch {
 	case key.Matches(msg, k.Quit):
 		return m, tea.Quit
@@ -326,7 +385,27 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case key.Matches(msg, k.Back):
-		m.screen = screenUpdates
+		switch {
+		case m.screen != screenUpdates:
+			m.screen = screenUpdates
+		case m.filterQuery() != "":
+			m.clearFilter()
+			return m, m.layout()
+		case m.upgrade.done:
+			m.upgrade = upgradeOutcome{}
+			return m, m.layout()
+		}
+		return m, nil
+	case key.Matches(msg, k.Filter):
+		return m, m.startFilter()
+	case key.Matches(msg, k.MarkRead):
+		return m, m.markRead()
+	case key.Matches(msg, k.Upstream):
+		return m, m.openLink(false)
+	case key.Matches(msg, k.Changelog):
+		return m, m.openLink(true)
+	case key.Matches(msg, k.Upgrade):
+		m.requestUpgrade()
 		return m, nil
 	case key.Matches(msg, k.Focus):
 		if m.focus == focusList {
@@ -424,6 +503,9 @@ func (m Model) chromeHeight() int {
 	if len(m.result.Interventions) > 0 {
 		h++
 	}
+	if m.noticeText() != "" {
+		h++
+	}
 	return h
 }
 
@@ -502,12 +584,23 @@ func (m Model) View() tea.View {
 	if n := len(m.result.Interventions); n > 0 {
 		lines = append(lines, fitLine(m.styles.Banner.Render(bannerText(n)), w))
 	}
+	if notice := m.noticeText(); notice != "" {
+		style := m.styles.Bold
+		if m.upgrade.err != nil {
+			style = m.styles.Error
+		}
+		lines = append(lines, fitLine(" "+style.Render(notice), w))
+	}
 
 	lw, pw, bh := m.listWidth(), m.paneWidth(), m.bodyHeight()
 	switch m.screen {
-	case screenHelp:
+	case screenHelp, screenConfirm:
+		body := m.help.FullHelpView(m.keys.FullHelp())
+		if m.screen == screenConfirm {
+			body = m.confirmView(w)
+		}
 		lines = append(lines, m.styles.Rule.Render(strings.Repeat("─", w)))
-		lines = append(lines, fitBlock(m.help.FullHelpView(m.keys.FullHelp()), w, bh)...)
+		lines = append(lines, fitBlock(body, w, bh)...)
 		lines = append(lines, m.styles.Rule.Render(strings.Repeat("─", w)))
 	default:
 		lines = append(lines, m.rule(lw, pw, "┬"))
@@ -561,6 +654,22 @@ func bannerText(n int) string {
 }
 
 func (m Model) statusLine(w int) string {
+	if m.filtering {
+		hints := helpHint(m.keys.Accept) + "  esc clear"
+		return spread(" "+m.filter.View(), m.styles.Subtle.Render(hints)+" ", w)
+	}
+	if m.screen == screenConfirm {
+		hints := helpHint(m.keys.Confirm) + "  " + helpHint(m.keys.Cancel)
+		return spread(" Upgrade?", m.styles.Subtle.Render(hints)+" ", w)
+	}
+	if m.flashMsg != "" {
+		style := m.styles.Subtle
+		if m.flashErr {
+			style = m.styles.Error
+		}
+		return spread(" "+style.Render(m.flashMsg), m.styles.Subtle.Render(helpHint(m.keys.Help))+" ", w)
+	}
+
 	var parts []string
 	switch {
 	case m.repoSec.loading || m.aurSec.loading:
@@ -577,6 +686,9 @@ func (m Model) statusLine(w int) string {
 	}
 	if n := len(m.pacnew); n > 0 {
 		parts = append(parts, plural(n, ".pacnew", ".pacnew"))
+	}
+	if q := m.filter.Value(); strings.TrimSpace(q) != "" {
+		parts = append(parts, "filter: "+q)
 	}
 	left := " " + strings.Join(parts, " · ")
 
