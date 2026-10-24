@@ -1,0 +1,30 @@
+ cronen                                                                      last upgrade: just now 
+ ✓ upgrade finished · reboot to run the new kernel · 1 .pacnew file to merge (run pacdiff)          
+────────────────────────────────────────┬───────────────────────────────────────────────────────────
+ NEEDS ATTENTION (11)                   │ python                                                    
+▸ python                    3.13→3.14 ⚠ │ 3.13.7-1 → 3.14.0-1                                  core 
+  ripgrep                   14.1→15.0 ⚠ │                                                           
+  glibc             2.42+r17→2.42+r33 ℹ │ Why flagged:                                              
+  linux                     6.17→6.18 ℹ │  • Python 3.13 → 3.14: AUR packages that use Python       
+  linux-api-headers       6.16→6.16.1 ℹ │    may need rebuilding                                    
+  linux-firmware    20251011→20251021 ℹ │  • On your watchlist (python)                             
+  linux-headers             6.17→6.18 ℹ │                                                           
+  mesa                  25.2.4→25.2.5 ℹ │ Links:                                                    
+  nvidia-utils          580.95→590.44 ℹ │  • upstream   https://www.python.org/                     
+  systemd                 258.1→258.2 ℹ │  • changelog  https://gitlab.archlinux.org/archlinux/pac… 
+  vulkan-icd-loader   1.4.328→1.4.330 ℹ │                                                           
+ REPO (5)                               │                                                           
+  firefox               144.0→144.0.1   │                                                           
+  gnupg             2.4.8-1→1:2.4.8-2   │                                                           
+  openssh               10.0p1→10.2p1   │                                                           
+  vim               9.1.1800→9.1.1850   │                                                           
+  zstd                1.5.7-2→1.5.7-3   │                                                           
+ AUR (5 + 1 VCS)                        │                                                           
+  paru                2.1.0-1→2.1.0-2   │                                                           
+  visual-studio-code… 1.105.0→1.105.1   │                                                           
+  gnome-shell-extension-l… not in AUR ? │                                                           
+  neovim-git                      VCS   │                                                           
+  python-pywal               orphaned ? │                                                           
+  ttf-ms-fonts            out of date ? │                                                           
+────────────────────────────────────────┴───────────────────────────────────────────────────────────
+ 18 updates · 11 flagged · 0 unread news · 1 .pacnew                                 ? help  q quit 

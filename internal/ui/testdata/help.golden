@@ -1,11 +1,11 @@
  cronen (demo)                                                             last upgrade: 2 days ago 
  ⚠ 1 news item requires manual intervention — press n to read                                       
 ────────────────────────────────────────────────────────────────────────────────────────────────────
-k/↑ up        ctrl+d half page down    n   news       ? help                                        
-j/↓ down      ctrl+u half page up      esc back       q quit                                        
-g   top       tab    switch pane       r   refresh                                                  
-G   bottom                                                                                          
-                                                                                                    
+k/↑ up        ctrl+d half page down     n news              U   upgrade                             
+j/↓ down      ctrl+u half page up       m mark news read    r   refresh                             
+g   top       tab    switch pane        o open upstream     esc back                                
+G   bottom    /      filter packages    c open changelog    ?   help                                
+                                                            q   quit                                
                                                                                                     
                                                                                                     
                                                                                                     

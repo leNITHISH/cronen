@@ -5,18 +5,29 @@ import "charm.land/bubbles/v2/key"
 // KeyMap holds every key binding in the app. It implements help.KeyMap, so
 // the help screen is generated from it.
 type KeyMap struct {
-	Up       key.Binding
-	Down     key.Binding
-	Top      key.Binding
-	Bottom   key.Binding
-	HalfDown key.Binding
-	HalfUp   key.Binding
-	Focus    key.Binding
-	News     key.Binding
-	Back     key.Binding
-	Refresh  key.Binding
-	Help     key.Binding
-	Quit     key.Binding
+	Up        key.Binding
+	Down      key.Binding
+	Top       key.Binding
+	Bottom    key.Binding
+	HalfDown  key.Binding
+	HalfUp    key.Binding
+	Focus     key.Binding
+	Filter    key.Binding
+	News      key.Binding
+	MarkRead  key.Binding
+	Upstream  key.Binding
+	Changelog key.Binding
+	Upgrade   key.Binding
+	Back      key.Binding
+	Refresh   key.Binding
+	Help      key.Binding
+	Quit      key.Binding
+
+	// Accept ends filter input, keeping the filter.
+	Accept key.Binding
+	// Confirm and Cancel answer the upgrade confirmation.
+	Confirm key.Binding
+	Cancel  key.Binding
 }
 
 // DefaultKeyMap returns the default, vim-style key bindings.
@@ -50,9 +61,29 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("tab"),
 			key.WithHelp("tab", "switch pane"),
 		),
+		Filter: key.NewBinding(
+			key.WithKeys("/"),
+			key.WithHelp("/", "filter packages"),
+		),
 		News: key.NewBinding(
 			key.WithKeys("n"),
 			key.WithHelp("n", "news"),
+		),
+		MarkRead: key.NewBinding(
+			key.WithKeys("m"),
+			key.WithHelp("m", "mark news read"),
+		),
+		Upstream: key.NewBinding(
+			key.WithKeys("o"),
+			key.WithHelp("o", "open upstream"),
+		),
+		Changelog: key.NewBinding(
+			key.WithKeys("c"),
+			key.WithHelp("c", "open changelog"),
+		),
+		Upgrade: key.NewBinding(
+			key.WithKeys("U"),
+			key.WithHelp("U", "upgrade"),
 		),
 		Back: key.NewBinding(
 			key.WithKeys("esc"),
@@ -70,6 +101,18 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("q", "ctrl+c"),
 			key.WithHelp("q", "quit"),
 		),
+		Accept: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("enter", "apply"),
+		),
+		Confirm: key.NewBinding(
+			key.WithKeys("y"),
+			key.WithHelp("y", "upgrade"),
+		),
+		Cancel: key.NewBinding(
+			key.WithKeys("n", "esc"),
+			key.WithHelp("n/esc", "cancel"),
+		),
 	}
 }
 
@@ -82,8 +125,8 @@ func (k KeyMap) ShortHelp() []key.Binding {
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Top, k.Bottom},
-		{k.HalfDown, k.HalfUp, k.Focus},
-		{k.News, k.Back, k.Refresh},
-		{k.Help, k.Quit},
+		{k.HalfDown, k.HalfUp, k.Focus, k.Filter},
+		{k.News, k.MarkRead, k.Upstream, k.Changelog},
+		{k.Upgrade, k.Refresh, k.Back, k.Help, k.Quit},
 	}
 }

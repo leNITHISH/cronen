@@ -159,6 +159,40 @@ func (m *Model) rebuildUpdates() {
 		})
 	}
 
+	// The filter hides entries but keeps the sections, so it's clear
+	// where the matches are and what is hidden.
+	q := m.filterQuery()
+	keep := func(es []entry) []entry {
+		if q == "" {
+			return es
+		}
+		var out []entry
+		for _, e := range es {
+			if strings.Contains(strings.ToLower(e.pkg.Name), q) {
+				out = append(out, e)
+			}
+		}
+		return out
+	}
+	hidden := map[string]bool{}
+	for name, es := range map[string][]entry{"flagged": flagged, "repo": repo, "aur": aurEntries} {
+		hidden[name] = len(keep(es)) < len(es)
+	}
+	flagged, repo = keep(flagged), keep(repo)
+	if q != "" {
+		vcs, debug = 0, 0
+		aurEntries = keep(aurEntries)
+		for _, e := range aurEntries {
+			switch {
+			case e.pending():
+			case e.aur.Kind == aur.KindVCS:
+				vcs++
+			case e.aur.Kind == aur.KindDebug:
+				debug++
+			}
+		}
+	}
+
 	p.entries = p.entries[:0:0]
 	p.rows = nil
 	addEntries := func(es []entry) {
@@ -185,11 +219,16 @@ func (m *Model) rebuildUpdates() {
 		note("checking news", true, false)
 	case m.newsSec.err != nil:
 		note(newsErrorNote, false, true)
+	case len(flagged) == 0 && hidden["flagged"]:
+		note("no matches", false, false)
 	case len(flagged) == 0 && !m.repoSec.loading && !m.aurSec.loading:
 		note("nothing flagged", false, false)
 	}
 
 	addSection := func(title string, s section, es []entry, count, loadingText, emptyText string) {
+		if len(es) == 0 && hidden[strings.ToLower(title)] {
+			emptyText = "no matches"
+		}
 		if s.loading && len(es) == 0 {
 			p.rows = append(p.rows, row{kind: rowSection, text: title})
 		} else {
@@ -400,6 +439,8 @@ func (m *Model) refreshDetail() tea.Cmd {
 			}
 		}
 		content = m.detailContent(e, m.detail.Width())
+	case m.filterQuery() != "":
+		content = " No packages match “" + m.filter.Value() + "”."
 	case m.repoSec.loading || m.aurSec.loading:
 		content = " " + m.styles.Subtle.Render("Checking for updates…")
 	default:
@@ -412,6 +453,26 @@ func (m *Model) refreshDetail() tea.Cmd {
 		m.detail.GotoTop()
 	}
 	return cmd
+}
+
+// links returns an entry's upstream and changelog URLs, either of which may
+// be empty. pending reports that a repo package's links are still being
+// looked up.
+func (m Model) links(e entry) (upstream, changelog string, pending bool) {
+	if e.aur != nil {
+		if e.aur.Info != nil {
+			return e.aur.Info.URL, e.aur.Info.ChangelogURL(), false
+		}
+		return "", "", false
+	}
+	r := m.archweb[e.pkg.Name]
+	if !r.done {
+		return "", "", true
+	}
+	if r.err != nil {
+		return "", "", false
+	}
+	return r.pkg.URL, r.pkg.ChangelogURL(), false
 }
 
 func (m Model) detailContent(e entry, w int) string {
@@ -427,7 +488,7 @@ func (m Model) detailContent(e entry, w int) string {
 
 	line(" " + s.Bold.Render(e.pkg.Name))
 	where := ""
-	var upstream, changelog string
+	upstream, changelog, _ := m.links(e)
 	if e.aur != nil {
 		where = "AUR"
 		switch e.aur.Kind {
@@ -436,12 +497,8 @@ func (m Model) detailContent(e entry, w int) string {
 		case aur.KindDebug:
 			where = "debug split"
 		}
-		if e.aur.Info != nil {
-			upstream, changelog = e.aur.Info.URL, e.aur.Info.ChangelogURL()
-		}
 	} else if r := m.archweb[e.pkg.Name]; r.done && r.err == nil {
 		where = r.pkg.Repo
-		upstream, changelog = r.pkg.URL, r.pkg.ChangelogURL()
 	}
 	version := "installed " + e.pkg.OldVersion
 	if e.pending() {

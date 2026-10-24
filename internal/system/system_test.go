@@ -281,3 +281,13 @@ func TestFakeFetcher(t *testing.T) {
 		t.Fatalf("calls = %+v", calls)
 	}
 }
+
+func TestInteractiveCommand(t *testing.T) {
+	cmd := InteractiveCommand([]string{"sudo", "pacman", "-Syu"})
+	if got := strings.Join(cmd.Args, " "); got != "sudo pacman -Syu" {
+		t.Errorf("args = %q", got)
+	}
+	if cmd.Stdin != nil || cmd.Stdout != nil || cmd.Stderr != nil {
+		t.Error("stdio must be left for Bubble Tea to hand over the terminal")
+	}
+}
