@@ -8,7 +8,7 @@ pkgdesc='TUI that shows pending updates, Arch news and risky packages before pac
 arch=('x86_64' 'aarch64')
 url='https://github.com/leNITHISH/cronen'
 license=('MIT')
-depends=('pacman-contrib')
+depends=('glibc' 'pacman' 'pacman-contrib')
 makedepends=('go' 'git')
 optdepends=('xdg-utils: open upstream and changelog links'
             'paru: AUR upgrades'
