@@ -106,3 +106,19 @@ func plural(n int, one, many string) string {
 	}
 	return itoa(n) + " " + many
 }
+
+// hyperlink shows url in at most w cells, truncated with "…" if needed, as
+// an OSC 8 hyperlink to the whole URL. Control characters are removed first:
+// URLs come from the network and must not smuggle in escape sequences.
+func hyperlink(url string, w int) string {
+	url = strings.Map(func(r rune) rune {
+		if r < 0x20 || (r >= 0x7f && r <= 0x9f) {
+			return -1
+		}
+		return r
+	}, url)
+	if w <= 0 || url == "" {
+		return ""
+	}
+	return ansi.SetHyperlink(url) + ansi.Truncate(url, w, "…") + ansi.ResetHyperlink()
+}

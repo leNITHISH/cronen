@@ -1,19 +1,19 @@
  cronen (demo)                                                             last upgrade: 2 days ago 
 ────────────────────────────────────────┬───────────────────────────────────────────────────────────
  NEEDS ATTENTION (0)                    │ paru                                                      
-   ✗ news unavailable; news rules       │ 2.1.0-1 → 2.1.0-2                                     AUR 
-     skipped                            │                                                           
+ ✗ news unavailable; news rules         │ 2.1.0-1 → 2.1.0-2                                     AUR 
+   skipped                              │                                                           
  REPO (0)                               │ Links:                                                    
-   ✗ checkupdates failed:               │  • upstream   https://github.com/morganamilo/paru         
-     checkupdates: exit status 1: ==>   │  • changelog                                              
-     ERROR: Cannot fetch updates        │    https://aur.archlinux.org/cgit/aur.git/log/?h=paru     
- AUR (5)                                │                                                           
+ ✗ checkupdates failed: checkupdates:   │  • upstream   https://github.com/morganamilo/paru         
+   exit status 1: ==> ERROR: Cannot     │  • changelog  https://aur.archlinux.org/cgit/aur.git/log… 
+   fetch updates                        │                                                           
+ AUR (5 + 1 VCS)                        │                                                           
 ▸ paru                2.1.0-1→2.1.0-2   │                                                           
   visual-studio-code… 1.105.0→1.105.1   │                                                           
   gnome-shell-extension-l… not in AUR ? │                                                           
+  neovim-git                      VCS   │                                                           
   python-pywal               orphaned ? │                                                           
   ttf-ms-fonts            out of date ? │                                                           
-                                        │                                                           
                                         │                                                           
                                         │                                                           
                                         │                                                           

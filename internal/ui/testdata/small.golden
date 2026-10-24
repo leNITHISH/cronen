@@ -2,13 +2,13 @@
  ⚠ 1 news item requires manual intervention — press n to re…
 ────────────────────────────┬───────────────────────────────
  NEEDS ATTENTION (11)       │ linux-firmware                
-▸ linux-firmw… 20251011→… ‼ │ 20251011-1 → 20251021-1       
-  nvidia-utils 580.95→59… ⚠ │                               
+▸ linux-fir… 20…→20251021 ‼ │ 20251011-1 → 20251021-1       
+  nvidia-ut… 580.…→590.44 ⚠ │                               
   python        3.13→3.14 ⚠ │ Why flagged:                  
   ripgrep       14.1→15.0 ⚠ │  • Manual intervention in     
-  glibc 2.42+r17+g6f0cf3… ℹ │    news: 'linux-firmware >=   
+  glibc 2.42+r17→2.42+r33 ℹ │    news: 'linux-firmware >=   
   linux         6.17→6.18 ℹ │    20251021-1 upgrade requires
-  linux-api-h… 6.16→6.16… ℹ │    manual intervention'       
+  linux-api-… 6.16→6.16.1 ℹ │    manual intervention'       
   linux-headers 6.17→6.18 ℹ │    (yesterday)                
   mesa      25.2.4→25.2.5 ℹ │  • On your watchlist          
   systemd     258.1→258.2 ℹ │    (linux*)                   

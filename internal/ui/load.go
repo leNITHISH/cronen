@@ -72,7 +72,13 @@ func loadAUR(ctx context.Context, r system.Runner, f system.Fetcher, gen int, fr
 		if err != nil {
 			return aurMsg{gen: gen, err: err}
 		}
-		pkgs, err := aur.NewClient(f, r).Check(ctx, installed, fresh)
+		c := aur.NewClient(f, r)
+		// Every installed name tells debug splits of repo packages apart.
+		// Without it, only splits of foreign packages are recognized.
+		if all, err := pacman.InstalledNames(ctx, r); err == nil {
+			c.Installed = all
+		}
+		pkgs, err := c.Check(ctx, installed, fresh)
 		return aurMsg{gen: gen, pkgs: pkgs, err: err}
 	}
 }

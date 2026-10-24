@@ -3,7 +3,7 @@
 ────────────────────────────────────────┬───────────────────────────────────────────────────────────
   ‼ 2026-10-22  linux-firmware >= 20251…│ NVIDIA 590 driver drops Pascal support                    
 ▸   2026-10-21  NVIDIA 590 driver drops…│ 2026-10-21 16:30 · unread                                 
-    2026-09-15  Python 3.14 is coming t…│ https://archlinux.org/news/nvidia-590-driver-drops-pascal-
+    2026-09-15  Python 3.14 is coming t…│ https://archlinux.org/news/nvidia-590-driver-drops-pasca… 
     2025-06-24  Transition to the new W…│                                                           
                                         │  The  nvidia  590 driver series no longer supports        
                                         │  Pascal (GTX 10xx) GPUs. If you own one, switch to        

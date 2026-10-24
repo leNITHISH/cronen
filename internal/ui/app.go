@@ -435,10 +435,11 @@ func (m *Model) changed() tea.Cmd {
 		}
 	}
 	m.result = risk.Assess(risk.Input{
-		Updates:    updates,
-		UnreadNews: m.unreadNews,
-		Watchlist:  m.cfg.EffectiveWatchlist(),
-		Now:        m.now(),
+		Updates:     updates,
+		UnreadNews:  m.unreadNews,
+		Watchlist:   m.cfg.EffectiveWatchlist(),
+		IgnoreMajor: m.cfg.IgnoreMajor,
+		Now:         m.now(),
 	})
 
 	m.newsPane.move(0, len(m.newsItems))
@@ -471,7 +472,7 @@ func (m Model) bodyHeight() int {
 // listWidth is the width of the left pane on both screens.
 func (m Model) listWidth() int {
 	w, _ := m.size()
-	lw := clamp(w*2/5, min(28, w/2), 50)
+	lw := clamp(w*2/5, min(28, w/2), 56)
 	return max(0, lw)
 }
 

@@ -3,6 +3,7 @@ package ui
 import (
 	"cmp"
 	"errors"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -133,10 +134,22 @@ func (m *Model) rebuildUpdates() {
 		return cmp.Compare(b.pkg.Severity(), a.pkg.Severity())
 	})
 	// Installed AUR packages with problems are worth showing even without
-	// a pending update.
+	// a pending update, and so are VCS packages, whose updates only the AUR
+	// helper can tell. Debug splits are hidden unless asked for.
+	var vcs, debug int
 	for i := range m.aurPkgs {
 		a := &m.aurPkgs[i]
-		if a.Pending || aurStatus(*a) == "" {
+		switch {
+		case a.Pending:
+			continue
+		case a.Kind == aur.KindVCS:
+			vcs++
+		case a.Kind == aur.KindDebug:
+			if !m.cfg.ShowDebug {
+				continue
+			}
+			debug++
+		case aurStatus(*a) == "":
 			continue
 		}
 		aurEntries = append(aurEntries, entry{
@@ -160,7 +173,7 @@ func (m *Model) rebuildUpdates() {
 			return
 		}
 		// Errors wrap rather than truncate: the end often says what to do.
-		for l := range strings.SplitSeq(wrapIndent(text, m.listWidth()-3, 2), "\n") {
+		for l := range strings.SplitSeq(wrapIndent(text, m.listWidth()-1, 2), "\n") {
 			p.rows = append(p.rows, row{kind: rowNote, text: l, err: true})
 		}
 	}
@@ -176,11 +189,11 @@ func (m *Model) rebuildUpdates() {
 		note("nothing flagged", false, false)
 	}
 
-	addSection := func(title string, s section, es []entry, loadingText, emptyText string) {
+	addSection := func(title string, s section, es []entry, count, loadingText, emptyText string) {
 		if s.loading && len(es) == 0 {
 			p.rows = append(p.rows, row{kind: rowSection, text: title})
 		} else {
-			p.rows = append(p.rows, row{kind: rowSection, text: title + " (" + itoa(len(es)) + ")"})
+			p.rows = append(p.rows, row{kind: rowSection, text: title + " (" + count + ")"})
 		}
 		addEntries(es)
 		switch {
@@ -192,9 +205,17 @@ func (m *Model) rebuildUpdates() {
 			note(emptyText, false, false)
 		}
 	}
-	addSection("REPO", m.repoSec, repo, "running checkupdates", "up to date")
+	addSection("REPO", m.repoSec, repo, itoa(len(repo)), "running checkupdates", "up to date")
 	if m.cfg.AUR {
-		addSection("AUR", m.aurSec, aurEntries, "querying the AUR", "up to date")
+		// VCS packages and debug splits are listed but aren't updates.
+		count := itoa(len(aurEntries) - vcs - debug)
+		if vcs > 0 {
+			count += " + " + itoa(vcs) + " VCS"
+		}
+		if debug > 0 {
+			count += " + " + itoa(debug) + " debug"
+		}
+		addSection("AUR", m.aurSec, aurEntries, count, "querying the AUR", "up to date")
 	}
 
 	p.sel = slices.IndexFunc(p.entries, func(e entry) bool { return e.key == p.selKey })
@@ -213,12 +234,30 @@ func aurStatus(p aur.Package) string {
 	switch {
 	case p.Missing():
 		return "not in AUR"
+	case p.Info == nil:
+		return ""
 	case p.Info.Orphaned():
 		return "orphaned"
 	case p.Info.FlaggedOutOfDate():
 		return "out of date"
 	}
 	return ""
+}
+
+// aurTag is what the list shows in place of versions for an AUR package that
+// isn't pending: its kind and any problem.
+func aurTag(p aur.Package) string {
+	var parts []string
+	switch p.Kind {
+	case aur.KindVCS:
+		parts = append(parts, "VCS")
+	case aur.KindDebug:
+		parts = append(parts, "debug")
+	}
+	if st := aurStatus(p); st != "" {
+		parts = append(parts, st)
+	}
+	return strings.Join(parts, " · ")
 }
 
 func (m Model) updatesListView(w, h int) string {
@@ -234,11 +273,12 @@ func (m Model) updatesListView(w, h int) string {
 			if r.spin {
 				text = m.spinner.View() + " " + text + "…"
 			}
-			style := m.styles.Subtle
+			indent, style := "   ", m.styles.Subtle
 			if r.err {
-				style = m.styles.Error
+				// Less indent, so a one-line error fits a wide pane whole.
+				indent, style = " ", m.styles.Error
 			}
-			lines = append(lines, "   "+style.Render(text))
+			lines = append(lines, indent+style.Render(text))
 		case rowEntry:
 			lines = append(lines, m.entryLine(p.entries[r.entry], r.entry == p.sel, w))
 		}
@@ -251,11 +291,13 @@ func (m Model) entryLine(e entry, selected bool, w int) string {
 	if selected {
 		cursor = "▸ "
 	}
-	var detail string
+	// newPart is never truncated; the old version and the name give way.
+	var oldPart, newPart string
 	if e.pending() {
-		detail = versionChange(e.pkg.OldVersion, e.pkg.NewVersion)
+		o, n := versionParts(e.pkg.OldVersion, e.pkg.NewVersion)
+		oldPart, newPart = o, "→"+n
 	} else if e.aur != nil {
-		detail = aurStatus(*e.aur)
+		newPart = aurTag(*e.aur)
 	}
 	sev := e.pkg.Severity()
 	icon := severityIcon(sev)
@@ -268,23 +310,39 @@ func (m Model) entryLine(e entry, selected bool, w int) string {
 	if selected && m.focus == focusList && m.screen == screenUpdates {
 		name = m.styles.Bold.Render(name)
 	}
-	// The name gets at least a few cells; the versions give way first.
-	rest := w - ansi.StringWidth(cursor) - ansi.StringWidth(icon)
-	nameWidth := min(ansi.StringWidth(name), 12)
-	if dw := ansi.StringWidth(detail); dw+1 > rest-nameWidth {
-		detail = ansi.Truncate(detail, max(0, rest-nameWidth-1), "…")
-	}
-	if detail == "" || detail == "…" {
-		return cursor + fitLine(name, max(0, rest)) + icon
-	}
-	nameWidth = rest - ansi.StringWidth(detail) - 1
-	return cursor + fitLine(name, nameWidth) + " " + detail + icon
+	rest := max(0, w-ansi.StringWidth(cursor)-ansi.StringWidth(icon))
+	return cursor + versionColumn(name, oldPart, newPart, rest) + icon
 }
 
-// versionChange formats a version change compactly for the list:
-// "580.95.05-1" → "590.44.01-1" becomes "580.95→590.44". If the short forms
-// are equal, the full upstream versions are used.
-func versionChange(oldV, newV string) string {
+// minNameWidth is how far a package name shrinks before the old version is
+// dropped altogether.
+const minNameWidth = 10
+
+// versionColumn lays out name on the left and oldPart+newPart right-aligned,
+// in exactly w cells. When they don't fit, the old version is truncated
+// first, then the name; newPart is never cut. If even newPart doesn't fit
+// beside a few cells of name, only the name is shown.
+func versionColumn(name, oldPart, newPart string, w int) string {
+	nw := ansi.StringWidth(newPart)
+	if newPart == "" || w < nw+1+4 {
+		return fitLine(name, w)
+	}
+	space := w - nw - 1 // for the name and the old version
+	nameW, oldW := ansi.StringWidth(name), ansi.StringWidth(oldPart)
+	if nameW+oldW <= space {
+		return fitLine(name, space-oldW) + " " + oldPart + newPart
+	}
+	nameGet := min(nameW, max(min(nameW, minNameWidth), space-oldW))
+	if oldGet := space - nameGet; oldGet >= 3 {
+		return fitLine(name, nameGet) + " " + ansi.Truncate(oldPart, oldGet, "…") + newPart
+	}
+	return fitLine(name, space) + " " + newPart
+}
+
+// versionParts shortens a version change for the list: "580.95.05-1" →
+// "590.44.01-1" becomes "580.95", "590.44". If the short forms are equal,
+// the full upstream versions are used, then the full versions.
+func versionParts(oldV, newV string) (string, string) {
 	o, n := shortVersion(oldV, 2), shortVersion(newV, 2)
 	if o == n {
 		o, n = shortVersion(oldV, -1), shortVersion(newV, -1)
@@ -292,11 +350,16 @@ func versionChange(oldV, newV string) string {
 	if o == n {
 		o, n = oldV, newV
 	}
-	return o + "→" + n
+	return o, n
 }
 
-// shortVersion strips the epoch and pkgrel and keeps the first parts
-// dot-separated components, or all of them if parts < 0.
+// gitHash matches the commit hash that git snapshot versions end with:
+// "2.42+r33+gc7ce5b4c0b7f" or "0.12.0.r1300.g1234567".
+var gitHash = regexp.MustCompile(`[.+]g[0-9a-f]{7,}$`)
+
+// shortVersion strips the epoch, the pkgrel and any trailing git commit
+// hash, and keeps the first parts dot-separated components, or all of them
+// if parts < 0.
 func shortVersion(v string, parts int) string {
 	if i := strings.IndexByte(v, ':'); i >= 0 {
 		v = v[i+1:]
@@ -304,6 +367,7 @@ func shortVersion(v string, parts int) string {
 	if i := strings.LastIndexByte(v, '-'); i >= 0 {
 		v = v[:i]
 	}
+	v = gitHash.ReplaceAllString(v, "")
 	if parts < 0 {
 		return v
 	}
@@ -366,6 +430,12 @@ func (m Model) detailContent(e entry, w int) string {
 	var upstream, changelog string
 	if e.aur != nil {
 		where = "AUR"
+		switch e.aur.Kind {
+		case aur.KindVCS:
+			where = "AUR · VCS"
+		case aur.KindDebug:
+			where = "debug split"
+		}
 		if e.aur.Info != nil {
 			upstream, changelog = e.aur.Info.URL, e.aur.Info.ChangelogURL()
 		}
@@ -396,10 +466,16 @@ func (m Model) detailContent(e entry, w int) string {
 
 	if e.aur != nil {
 		var notes []string
+		switch e.aur.Kind {
+		case aur.KindVCS:
+			notes = append(notes, "VCS package: built from upstream's latest source, so the AUR version isn't compared. Your AUR helper's devel mode (--devel) checks for new commits.")
+		case aur.KindDebug:
+			notes = append(notes, "Debug symbols split off by makepkg from "+strings.TrimSuffix(e.aur.Name, "-debug")+". Never on the AUR; updated with it.")
+		}
 		switch {
 		case e.aur.Missing():
 			notes = append(notes, "Not in the AUR (orphaned and removed, or renamed?)")
-		default:
+		case e.aur.Info != nil:
 			if e.aur.Info.Orphaned() {
 				notes = append(notes, "Orphaned: the AUR package has no maintainer")
 			}
@@ -410,8 +486,12 @@ func (m Model) detailContent(e entry, w int) string {
 		if len(notes) > 0 {
 			line("")
 			line(" AUR status:")
-			for _, n := range notes {
-				bullet(s.Warn.Render(n))
+			for i, n := range notes {
+				style := s.Warn
+				if e.aur.Kind != aur.KindRegular && i == 0 {
+					style = s.Subtle
+				}
+				bullet(style.Render(n))
 			}
 		}
 	}
@@ -428,11 +508,14 @@ func (m Model) detailContent(e entry, w int) string {
 	case upstream == "" && changelog == "":
 		bullet(s.Subtle.Render("none"))
 	default:
-		if upstream != "" {
-			bullet("upstream   " + upstream)
-		}
-		if changelog != "" {
-			bullet("changelog  " + changelog)
+		// URLs are never wrapped: one cut in two can't be copied or
+		// clicked. Long ones are truncated, and the link still opens the
+		// whole URL in terminals that support OSC 8.
+		for _, l := range [][2]string{{"upstream   ", upstream}, {"changelog  ", changelog}} {
+			if l[1] != "" {
+				prefix := "  • " + l[0]
+				b.WriteString(prefix + hyperlink(l[1], w-ansi.StringWidth(prefix)-1) + "\n")
+			}
 		}
 	}
 	return strings.TrimRight(b.String(), "\n")

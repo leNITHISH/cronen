@@ -101,7 +101,7 @@ func (m *Model) refreshNewsView() {
 	header := []string{
 		" " + m.styles.Bold.Render(wrapIndent(it.Title, w-1, 1)),
 		" " + m.styles.Subtle.Render(it.Published.In(m.location()).Format("2006-01-02 15:04")+" · "+status),
-		" " + m.styles.Subtle.Render(it.Link),
+		" " + m.styles.Subtle.Render(hyperlink(it.Link, w-2)),
 	}
 	if risk.RequiresManualIntervention(it) {
 		header = append(header, " "+m.styles.Critical.Render(severityIcon(risk.Critical)+" requires manual intervention"))

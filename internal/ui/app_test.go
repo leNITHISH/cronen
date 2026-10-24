@@ -12,7 +12,9 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/leNITHISH/cronen/internal/config"
 	"github.com/leNITHISH/cronen/internal/fixtures"
+	"github.com/leNITHISH/cronen/internal/risk"
 	"github.com/leNITHISH/cronen/internal/system"
 )
 
@@ -343,3 +345,162 @@ func TestBackgroundColor(t *testing.T) {
 type lightBackground struct{}
 
 func (lightBackground) RGBA() (r, g, b, a uint32) { return 0xffff, 0xffff, 0xffff, 0xffff }
+
+func entryNames(m Model) map[string]entry {
+	out := map[string]entry{}
+	for _, e := range m.updates.entries {
+		out[e.pkg.Name] = e
+	}
+	return out
+}
+
+func TestDebugSplits(t *testing.T) {
+	m := loaded(t, fixtureOptions(), 100, 30)
+	names := entryNames(m)
+	for _, n := range []string{"paru-debug", "zstd-debug"} {
+		if _, ok := names[n]; ok {
+			t.Errorf("%s listed, want debug splits hidden by default", n)
+		}
+	}
+	if strings.Contains(plain(m), "-debug") {
+		t.Errorf("debug split visible:\n%s", plain(m))
+	}
+
+	cfg := config.Default()
+	cfg.ShowDebug = true
+	opts := fixtureOptions()
+	opts.Config = &cfg
+	m = loaded(t, opts, 100, 30)
+	names = entryNames(m)
+	for _, n := range []string{"paru-debug", "zstd-debug"} {
+		e, ok := names[n]
+		if !ok {
+			t.Fatalf("%s not listed with show_debug", n)
+		}
+		if got := aurTag(*e.aur); got != "debug" {
+			t.Errorf("%s tag = %q, want \"debug\" (never \"not in AUR\")", n, got)
+		}
+		if e.pkg.Severity() != risk.None {
+			t.Errorf("%s flagged", n)
+		}
+	}
+	if out := plain(m); !strings.Contains(out, "AUR (5 + 1 VCS + 2 debug)") {
+		t.Errorf("AUR header should count debug splits apart:\n%s", out)
+	}
+}
+
+func TestVCSPackages(t *testing.T) {
+	m := loaded(t, fixtureOptions(), 100, 30)
+	e, ok := entryNames(m)["neovim-git"]
+	if !ok {
+		t.Fatal("neovim-git not listed")
+	}
+	if e.pending() || aurTag(*e.aur) != "VCS" {
+		t.Errorf("neovim-git: pending=%v tag=%q, want a non-pending VCS entry", e.pending(), aurTag(*e.aur))
+	}
+	for _, p := range m.result.Packages {
+		if p.Name == "neovim-git" {
+			t.Error("VCS package counted as an update")
+		}
+	}
+	out := plain(m)
+	// 16 repo + 2 regular AUR updates; the newer neovim-git snapshot on the
+	// AUR doesn't count.
+	if !strings.Contains(out, "18 updates") || !strings.Contains(out, "AUR (5 + 1 VCS)") {
+		t.Errorf("counts include the VCS package:\n%s", out)
+	}
+}
+
+func TestCheckupdatesMissing(t *testing.T) {
+	opts := fixtureOptions()
+	r := fixtures.Runner()
+	r.Set("checkupdates", system.FakeResult{Err: system.ErrCommandNotFound})
+	opts.Runner = r
+	m := loaded(t, opts, 140, 30)
+	var notes []string
+	for _, row := range m.updates.rows {
+		if row.kind == rowNote && row.err {
+			notes = append(notes, row.text)
+		}
+	}
+	if len(notes) != 1 || notes[0] != "✗ checkupdates not found — install pacman-contrib" {
+		t.Fatalf("error notes = %q, want the one-line pacman-contrib hint", notes)
+	}
+	if !strings.Contains(plain(m), " ✗ checkupdates not found — install pacman-contrib ") {
+		t.Errorf("hint not on one line:\n%s", plain(m))
+	}
+}
+
+func TestDetailLinks(t *testing.T) {
+	m := loaded(t, fixtureOptions(), 80, 30)
+	// Select paru, whose changelog URL is wider than the detail pane.
+	for e, _ := m.updates.selected(); e.pkg.Name != "paru"; e, _ = m.updates.selected() {
+		before := m.updates.sel
+		m = send(t, m, press("j"))
+		if m.updates.sel == before {
+			t.Fatal("paru not in the list")
+		}
+	}
+	const changelog = "https://aur.archlinux.org/cgit/aur.git/log/?h=paru"
+	content := m.View().Content
+	if !strings.Contains(content, ansi.SetHyperlink(changelog)) {
+		t.Errorf("no OSC 8 hyperlink to the full changelog URL")
+	}
+	out := plain(m)
+	var linkLines []string
+	for _, l := range strings.Split(out, "\n") {
+		if strings.Contains(l, "changelog") {
+			linkLines = append(linkLines, l)
+		}
+	}
+	if len(linkLines) != 1 || !strings.Contains(linkLines[0], "https://aur.archlinux.org/") || !strings.Contains(linkLines[0], "…") {
+		t.Errorf("want the changelog URL truncated on its own line, got %q", linkLines)
+	}
+	if strings.Contains(out, "?h=paru\n") && !strings.Contains(linkLines[0], "?h=paru") {
+		t.Errorf("URL wrapped onto the next line:\n%s", out)
+	}
+	checkSize(t, m, 80, 30)
+}
+
+func TestHyperlinkStripsControlCharacters(t *testing.T) {
+	got := hyperlink("https://evil.example/\x1b]52;c;aGk=\x07x", 80)
+	// Only the OSC 8 sequence itself may contain ESC and BEL.
+	want := ansi.SetHyperlink("https://evil.example/]52;c;aGk=x") + "https://evil.example/]52;c;aGk=x" + ansi.ResetHyperlink()
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestVersionColumn(t *testing.T) {
+	tests := []struct {
+		name, old, new string
+		w              int
+		want           string
+	}{
+		{"fits", "6.17", "→6.18", 20, "linux      6.17→6.18"},
+		{"old truncated first", "2.42+r17+g6f0cf3d0", "→2.42+r33", 26, "glibc 2.42+r17+g…→2.42+r33"},
+		{"then the name", "20251011", "→20251021", 23, "linux-fir… 20…→20251021"},
+		{"old dropped", "20251011", "→20251021", 18, "linux-f… →20251021"},
+		{"name only when new can't fit", "1", "→2.42+r33+gc7ce5b4", 20, "linux-firmware      "},
+		{"status tag", "", "not in AUR", 26, "gnome-shell-ex… not in AUR"},
+	}
+	names := map[string]string{
+		"fits": "linux", "old truncated first": "glibc", "then the name": "linux-firmware",
+		"old dropped": "linux-firmware", "name only when new can't fit": "linux-firmware",
+		"status tag": "gnome-shell-extension-legacy",
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := versionColumn(names[tt.name], tt.old, tt.new, tt.w)
+			if ansi.StringWidth(got) != tt.w {
+				t.Errorf("width %d, want %d: %q", ansi.StringWidth(got), tt.w, got)
+			}
+			if strings.TrimRight(got, " ") != strings.TrimRight(tt.want, " ") {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+			if strings.Contains(got, "→") && !strings.HasSuffix(got, tt.new) {
+				t.Errorf("new version %q cut or not right-aligned: %q", tt.new, got)
+			}
+		})
+	}
+}
