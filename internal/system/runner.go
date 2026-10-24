@@ -22,10 +22,15 @@ import (
 //     (checkupdates exits 2 when there are no updates), so callers should
 //     check the code before treating err as a failure.
 //   - the command could not be started, or ctx was cancelled: the code is -1
-//     and err describes why.
+//     and err describes why. If the command isn't installed, err matches
+//     ErrCommandNotFound.
 type Runner interface {
 	Run(ctx context.Context, name string, args ...string) ([]byte, int, error)
 }
+
+// ErrCommandNotFound reports a command that isn't installed. Runners wrap
+// it into the error they return, so callers can test with errors.Is.
+var ErrCommandNotFound = errors.New("command not found")
 
 // ExitError reports a command that ran but exited with a non-zero code.
 type ExitError struct {
@@ -66,6 +71,9 @@ func (ExecRunner) Run(ctx context.Context, name string, args ...string) ([]byte,
 			Code:    exitErr.ExitCode(),
 			Stderr:  stderr.Bytes(),
 		}
+	}
+	if errors.Is(err, exec.ErrNotFound) {
+		return stdout.Bytes(), -1, fmt.Errorf("%s: %w: %w", commandLine(name, args), ErrCommandNotFound, err)
 	}
 	return stdout.Bytes(), -1, fmt.Errorf("%s: %w", commandLine(name, args), err)
 }
