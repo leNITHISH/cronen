@@ -14,6 +14,7 @@ import (
 
 	"github.com/leNITHISH/cronen/internal/config"
 	"github.com/leNITHISH/cronen/internal/fixtures"
+	"github.com/leNITHISH/cronen/internal/summary"
 	"github.com/leNITHISH/cronen/internal/system"
 	"github.com/leNITHISH/cronen/internal/ui"
 )
@@ -39,10 +40,10 @@ func parseFlags(args []string, stderr io.Writer) (options, error) {
 		_, _ = fmt.Fprintln(stderr, "\nFlags:")
 		fs.PrintDefaults()
 	}
-	fs.BoolVar(&o.check, "check", false, "print a short summary and exit (exit code reflects status)")
+	fs.BoolVar(&o.check, "check", false, "print a short summary and exit with 0 (nothing to do), 10 (updates),\n20 (attention needed), 30 (manual intervention) or 1 (error)")
 	fs.BoolVar(&o.json, "json", false, "print a machine-readable JSON summary and exit")
-	fs.BoolVar(&o.waybar, "waybar", false, "with --json, print waybar custom module fields")
-	fs.BoolVar(&o.demo, "demo", false, "use bundled fixture data and touch nothing on the system")
+	fs.BoolVar(&o.waybar, "waybar", false, "with --json, print text, tooltip and class for a waybar custom module")
+	fs.BoolVar(&o.demo, "demo", false, "use bundled fixture data and touch nothing on the system\n(also works with --check and --json)")
 	if err := fs.Parse(args); err != nil {
 		return o, err
 	}
@@ -70,60 +71,123 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, teaOpts .
 		return 2
 	}
 
-	if o.check || o.json {
-		_, _ = fmt.Fprintln(stderr, "cronen: --check and --json are not implemented yet")
-		return 1
+	var e env
+	if o.demo {
+		e = demoEnv()
+	} else {
+		e = realEnv(stderr)
 	}
 
-	var uiOpts ui.Options
-	if o.demo {
-		// Fixture data only: no config, state or cache is read or written.
-		uiOpts = ui.Options{
-			Demo:     true,
-			Context:  ctx,
-			Runner:   fixtures.Runner(),
-			Fetcher:  fixtures.Fetcher(),
-			FS:       fixtures.FS(),
-			Now:      func() time.Time { return fixtures.Now },
-			Location: time.UTC,
+	if o.check || o.json {
+		s := summary.Gather(ctx, e.sources())
+		switch {
+		case o.check:
+			_, _ = io.WriteString(stdout, s.Text())
+			return s.ExitCode()
+		case o.waybar:
+			_, _ = fmt.Fprintf(stdout, "%s\n", s.Waybar())
+		default:
+			_, _ = fmt.Fprintf(stdout, "%s\n", s.JSON())
 		}
-	} else {
-		uiOpts = realOptions(ctx, stderr)
+		// The JSON carries any errors itself; a status bar only needs it
+		// printed.
+		return 0
 	}
 
 	opts := append([]tea.ProgramOption{tea.WithContext(ctx), tea.WithOutput(stdout)}, teaOpts...)
-	if _, err := tea.NewProgram(ui.New(uiOpts), opts...).Run(); err != nil {
+	if _, err := tea.NewProgram(ui.New(e.uiOptions(ctx)), opts...).Run(); err != nil {
 		_, _ = fmt.Fprintln(stderr, "cronen:", err)
 		return 1
 	}
 	return 0
 }
 
-// realOptions wires the TUI to the real system. Problems with the config or
+// env is the system cronen runs against: the real one, or the fixtures.
+type env struct {
+	demo      bool
+	runner    system.Runner
+	fetcher   system.Fetcher
+	fs        system.FS
+	cfg       config.Config
+	state     config.State
+	statePath string
+	now       func() time.Time
+	loc       *time.Location
+	exec      func(argv []string, done tea.ExecCallback) tea.Cmd
+}
+
+// demoEnv serves fixture data only: no config, state or cache is read or
+// written, and upgrading runs nothing.
+func demoEnv() env {
+	return env{
+		demo:    true,
+		runner:  fixtures.Runner(),
+		fetcher: fixtures.Fetcher(),
+		fs:      fixtures.FS(),
+		cfg:     config.Default(),
+		now:     func() time.Time { return fixtures.Now },
+		loc:     time.UTC,
+		exec: func(_ []string, done tea.ExecCallback) tea.Cmd {
+			return func() tea.Msg { return done(nil) }
+		},
+	}
+}
+
+// realEnv wires cronen to the real system. Problems with the config or
 // state file are reported on stderr and fall back to defaults; they never
 // stop cronen from starting.
-func realOptions(ctx context.Context, stderr io.Writer) ui.Options {
+func realEnv(stderr io.Writer) env {
 	fsys := system.OSFS{}
-	opts := ui.Options{
-		Context: ctx,
-		Runner:  system.ExecRunner{},
-		FS:      fsys,
+	e := env{
+		runner: system.ExecRunner{},
+		fs:     fsys,
+		cfg:    config.Default(),
+		exec: func(argv []string, done tea.ExecCallback) tea.Cmd {
+			return tea.ExecProcess(system.InteractiveCommand(argv), done)
+		},
 	}
-	cfg := config.Default()
 	paths, err := config.ResolvePaths(os.Getenv)
 	if err != nil {
 		_, _ = fmt.Fprintln(stderr, "cronen:", err)
-		opts.Fetcher = system.NewHTTPClient("")
-		opts.Config = &cfg
-		return opts
+		e.fetcher = system.NewHTTPClient("")
+		return e
 	}
-	if cfg, err = config.Load(fsys, paths.Config); err != nil {
+	if e.cfg, err = config.Load(fsys, paths.Config); err != nil {
 		_, _ = fmt.Fprintln(stderr, "cronen:", err)
 	}
-	opts.Config = &cfg
-	if opts.State, err = config.LoadState(fsys, paths.State); err != nil {
+	if e.state, err = config.LoadState(fsys, paths.State); err != nil {
 		_, _ = fmt.Fprintln(stderr, "cronen:", err)
 	}
-	opts.Fetcher = system.NewHTTPClient(paths.CacheDir)
-	return opts
+	e.statePath = paths.State
+	e.fetcher = system.NewHTTPClient(paths.CacheDir)
+	return e
+}
+
+func (e env) uiOptions(ctx context.Context) ui.Options {
+	cfg := e.cfg
+	return ui.Options{
+		Demo:      e.demo,
+		Context:   ctx,
+		Runner:    e.runner,
+		Fetcher:   e.fetcher,
+		FS:        e.fs,
+		Config:    &cfg,
+		State:     e.state,
+		StatePath: e.statePath,
+		Exec:      e.exec,
+		Now:       e.now,
+		Location:  e.loc,
+	}
+}
+
+func (e env) sources() summary.Sources {
+	return summary.Sources{
+		Runner:   e.runner,
+		Fetcher:  e.fetcher,
+		FS:       e.fs,
+		Config:   e.cfg,
+		State:    e.state,
+		Now:      e.now,
+		Location: e.loc,
+	}
 }

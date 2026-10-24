@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"slices"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/leNITHISH/cronen/internal/config"
 	"github.com/leNITHISH/cronen/internal/fixtures"
+	"github.com/leNITHISH/cronen/internal/summary"
 	"github.com/leNITHISH/cronen/internal/system"
 )
 
@@ -435,5 +437,22 @@ func TestUpgradeUnavailable(t *testing.T) {
 	m = send(t, m, press("y"))
 	if m.screen != screenUpdates || !m.flashErr {
 		t.Errorf("screen %v, flash %q", m.screen, m.flashMsg)
+	}
+}
+
+// The TUI and --check/--json read the same sources the same way, so their
+// counts must agree.
+func TestAgreesWithSummary(t *testing.T) {
+	opts := fixtureOptions()
+	m := loaded(t, opts, 100, 30)
+	s := summary.Gather(context.Background(), summary.Sources{
+		Runner: opts.Runner, Fetcher: opts.Fetcher, FS: opts.FS,
+		Config: config.Default(), Now: opts.Now, Location: opts.Location,
+	})
+	type counts struct{ updates, flagged, interventions, unread, pacnew int }
+	tui := counts{len(m.result.Packages), len(m.result.Flagged()), len(m.result.Interventions), len(m.unreadNews), len(m.pacnew)}
+	sum := counts{s.Updates(), len(s.Flagged), len(s.Interventions), s.UnreadNews, s.Pacnew}
+	if tui != sum {
+		t.Errorf("TUI %+v, summary %+v", tui, sum)
 	}
 }

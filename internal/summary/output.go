@@ -1,6 +1,7 @@
 package summary
 
 import (
+	"bytes"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -156,10 +157,14 @@ func plural(n int, one, many string) string {
 }
 
 func mustJSON(v any) []byte {
-	b, err := json.Marshal(v)
-	if err != nil {
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	// Keep "&", "<" and ">" readable; waybar output is Pango-escaped
+	// separately.
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
 		// Only plain strings, ints and bools are marshalled.
 		panic(err)
 	}
-	return b
+	return bytes.TrimSuffix(b.Bytes(), []byte("\n"))
 }
