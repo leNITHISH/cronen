@@ -6,7 +6,13 @@ BIN ?= bin/cronen
 GOLANGCI_LINT_VERSION := v2.15.0
 GOLANGCI_LINT         := $(CURDIR)/bin/golangci-lint-$(GOLANGCI_LINT_VERSION)
 
-.PHONY: all build test lint demo clean
+# Release and demo tooling, pinned the same way.
+GORELEASER_VERSION := v2.19.0
+GORELEASER         := $(CURDIR)/bin/goreleaser-$(GORELEASER_VERSION)
+VHS_VERSION        := v0.12.1
+VHS                := $(CURDIR)/bin/vhs-$(VHS_VERSION)
+
+.PHONY: all build test lint demo gif release-check snapshot clean
 
 all: build
 
@@ -26,6 +32,25 @@ $(GOLANGCI_LINT):
 
 demo:
 	$(GO) run ./cmd/cronen --demo
+
+# Records doc/demo.gif from doc/demo.tape. vhs also needs ttyd and ffmpeg.
+gif: build $(VHS)
+	$(VHS) doc/demo.tape
+
+release-check: $(GORELEASER)
+	$(GORELEASER) check
+
+# A local release build into dist/, without publishing anything.
+snapshot: $(GORELEASER)
+	$(GORELEASER) release --snapshot --clean
+
+$(GORELEASER):
+	GOBIN=$(CURDIR)/bin/.tools $(GO) install github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION)
+	mv $(CURDIR)/bin/.tools/goreleaser $@
+
+$(VHS):
+	GOBIN=$(CURDIR)/bin/.tools $(GO) install github.com/charmbracelet/vhs@$(VHS_VERSION)
+	mv $(CURDIR)/bin/.tools/vhs $@
 
 clean:
 	rm -rf bin
