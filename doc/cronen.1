@@ -1,0 +1,276 @@
+.TH CRONEN 1 2026-10-24 cronen "User Commands"
+.SH NAME
+cronen \- see what pacman \-Syu is about to do before you run it
+.SH SYNOPSIS
+.B cronen
+.RB [ \-\-demo ]
+.RB [ \-\-check " | " \-\-json " [" \-\-waybar ]]
+.br
+.B cronen
+.BR \-\-help " | " \-\-version
+.SH DESCRIPTION
+.B cronen
+is a terminal UI for Arch Linux that shows pending repo and AUR updates,
+the Arch news you haven't read, anything that needs manual intervention,
+and risky packages (kernel, GPU drivers, glibc, systemd), with links to
+upstream and the packaging changelog.
+When you're happy, it hands the terminal to
+.B sudo pacman \-Syu
+or your AUR helper.
+.PP
+cronen only reads.
+It never runs
+.BR "pacman \-Sy" ,
+so it can't cause a partial upgrade: pending updates come from
+.BR checkupdates (8),
+which syncs a temporary copy of the database.
+.PP
+An update is flagged when unread news mentions it or its pkgbase, when an
+unread post requires manual intervention, when it matches the watchlist,
+when its major version changes, when Python's minor version changes (AUR
+packages depending on it likely need rebuilding), or when it is a kernel
+(reboot afterwards).
+.SH OPTIONS
+.TP
+.B \-\-check
+Print a short plain-text summary, most important first, and exit with a
+status from
+.B EXIT STATUS
+below.
+.TP
+.B \-\-json
+Print a one-line JSON summary, for example
+.br
+.nf
+{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true}
+.fi
+.I updates
+counts repo and AUR updates together,
+.I critical
+counts unread news requiring manual intervention, and an
+.I errors
+array lists any source that failed.
+.TP
+.B \-\-waybar
+With
+.BR \-\-json ,
+print
+.IR text ,
+.IR tooltip ,
+.I class
+and
+.I alt
+for a waybar custom module.
+The class is one of
+.BR none ,
+.BR updates ,
+.BR attention ,
+.B critical
+or
+.BR error .
+.TP
+.B \-\-demo
+Use bundled sample data and touch nothing on the system: no config, state
+or cache is read or written, and upgrading runs nothing.
+Also works with
+.B \-\-check
+and
+.BR \-\-json .
+.TP
+.B \-\-version
+Print the version and exit.
+.TP
+.BR \-h ", " \-\-help
+Print a usage summary and exit.
+.SH KEYS
+.TP 14
+.BR j / k ", " \(da / \(ua
+Move.
+.TP
+.BR g / G
+Top / bottom.
+.TP
+.BR ctrl+d / ctrl+u
+Half a page down / up in the detail or news pane.
+.TP
+.B tab
+Switch focus between panes.
+.TP
+.B /
+Filter the package list;
+.B enter
+keeps the filter,
+.B esc
+clears it.
+.TP
+.B n
+News screen.
+.TP
+.B m
+Mark the selected news item read (on the updates screen: the news behind
+the selected package's flags).
+.TP
+.B o
+Open the upstream URL (on the news screen: the post) with
+.BR xdg\-open (1).
+.TP
+.B c
+Open the packaging changelog.
+.TP
+.B r
+Refresh everything, bypassing the cache.
+.TP
+.B U
+Upgrade: confirm with
+.BR y ,
+then cronen suspends and runs the upgrade command.
+Afterwards it reloads everything and shows the number of
+.I .pacnew
+files and whether to reboot.
+Only a successful upgrade (exit status 0) marks the news up to now as read.
+.TP
+.B ?
+Help.
+.TP
+.BR q ", " ctrl+c
+Quit.
+.SH CONFIGURATION
+The config file is TOML.
+A missing file is fine, every key is optional, and cronen never writes to
+it.
+.TP
+.BR aur " (default " true )
+Check the AUR for updates of foreign packages.
+.TP
+.BR aur_helper " (default " """""" )
+.B paru
+or
+.B yay
+to upgrade with
+.B paru \-Syu
+or
+.B yay \-Syu
+instead of
+.BR "sudo pacman \-Syu" .
+.TP
+.B upgrade_command
+A command line that overrides the above, split on whitespace.
+.TP
+.B watchlist
+Package globs to always flag.
+The defaults are
+.IR linux* ,
+.IR nvidia* ,
+.IR mesa ,
+.IR vulkan\-* ,
+.IR glibc ,
+.IR systemd ,
+.IR grub ,
+.IR pacman ,
+.IR openssl ,
+.I python
+and
+.IR gcc* .
+.TP
+.BR watchlist_mode " (default " extend )
+.B extend
+adds
+.B watchlist
+to the defaults;
+.B replace
+uses it alone.
+.TP
+.BR news_days " (default " 30 )
+When the last upgrade is unknown, news from this many days counts as
+unread.
+.TP
+.B ignore_major
+Globs, matched against name and pkgbase, whose major version bumps aren't
+flagged.
+.TP
+.BR show_debug " (default " false )
+List makepkg
+.I <name>\-debug
+splits.
+.PP
+Example:
+.PP
+.RS
+.nf
+aur_helper = "paru"
+watchlist = ["zfs*"]
+ignore_major = ["firefox"]
+.fi
+.RE
+.SH EXIT STATUS
+For
+.BR \-\-check :
+.TP 5
+.B 0
+Nothing to do.
+.TP
+.B 10
+Updates available.
+.TP
+.B 20
+Attention needed: at least one update is flagged.
+.TP
+.B 30
+An unread news item requires manual intervention.
+.TP
+.B 1
+Error: a source (checkupdates, the AUR, the news feed) failed.
+With a source missing, cronen can't tell
+.I nothing to do
+from
+.IR "didn't look" .
+An unreadable
+.I pacman.log
+is not an error.
+.PP
+.B \-\-json
+exits 0 once it has printed.
+Invalid flags exit 2.
+.SH FILES
+.TP
+.I $XDG_CONFIG_HOME/cronen/config.toml
+Config, default
+.IR ~/.config/cronen/config.toml .
+.TP
+.I $XDG_STATE_HOME/cronen/state.json
+Read news and the last upgrade cronen ran, default
+.IR ~/.local/state/cronen/state.json .
+.TP
+.I $XDG_CACHE_HOME/cronen/
+The news feed and AUR responses, kept for 15 minutes, default
+.IR ~/.cache/cronen/ .
+.TP
+.I /var/log/pacman.log
+Read for the time of the last full system upgrade.
+If it is unreadable, the last upgrade is unknown and news from the last
+.B news_days
+days counts as unread.
+.SH EXAMPLES
+A waybar module:
+.PP
+.RS
+.nf
+"custom/cronen": {
+    "exec": "cronen \-\-json \-\-waybar",
+    "return\-type": "json",
+    "interval": 1800,
+    "on\-click": "foot \-e cronen"
+}
+.fi
+.RE
+.PP
+checkupdates syncs a temporary database from your mirror on every run, so
+don't poll often.
+.SH SEE ALSO
+.BR pacman (8),
+.BR checkupdates (8),
+.BR pacdiff (8),
+.BR paru (8),
+.BR yay (8)
+.PP
+https://github.com/leNITHISH/cronen

@@ -11,6 +11,40 @@ cronen only reads. It never runs `pacman -Sy`, so it can't cause a partial
 upgrade: pending updates come from `checkupdates`, which syncs a temporary
 copy of the database.
 
+![cronen --demo: flagged updates, the news screen and the upgrade confirmation](doc/demo.gif)
+
+## Install
+
+cronen is for Arch Linux and its derivatives.
+
+From a clone, build and install the package with the bundled `PKGBUILD`
+(it builds the latest commit on `main` as `cronen-git`):
+
+```sh
+git clone https://github.com/leNITHISH/cronen.git
+cd cronen
+makepkg -si
+```
+
+Or with Go, which installs only the binary:
+
+```sh
+go install github.com/leNITHISH/cronen/cmd/cronen@latest
+```
+
+### Dependencies
+
+| | Package | For |
+|---|---|---|
+| depends | `pacman-contrib` | `checkupdates` (pending updates) and `pacdiff` (the `.pacnew` count) |
+| optdepends | `xdg-utils` | open upstream and changelog links |
+| optdepends | `paru` | AUR upgrades |
+| optdepends | `yay` | AUR upgrades |
+| makedepends | `go` | building |
+
+`makepkg` also needs `git` to fetch the source. `pacman` and `vercmp` come with
+every Arch install.
+
 ## Usage
 
 ```sh
@@ -19,7 +53,11 @@ cronen --demo     # the TUI on bundled sample data; touches nothing
 cronen --check    # one-shot summary for scripts
 cronen --json     # machine-readable summary
 cronen --json --waybar
+cronen --version
 ```
+
+`cronen --help` summarises the flags, exit codes and files, and `man cronen`
+documents everything, including the config keys.
 
 ### Keys
 
@@ -140,3 +178,15 @@ show_debug = false         # list makepkg <name>-debug splits
 cronen remembers read news and the last upgrade it ran in
 `$XDG_STATE_HOME/cronen/state.json`, and caches the news feed and AUR
 responses in `$XDG_CACHE_HOME/cronen/`.
+
+## Development
+
+`make test` and `make lint` are what CI runs. `make gif` re-records
+`doc/demo.gif` from `doc/demo.tape` with [vhs](https://github.com/charmbracelet/vhs)
+(it also needs `ttyd`, `ffmpeg` and Chromium). `make release-check` validates
+`.goreleaser.yaml`, and `make snapshot` builds release archives into `dist/`
+without publishing anything. Tool versions are pinned in the `Makefile`.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
