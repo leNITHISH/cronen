@@ -108,6 +108,11 @@ func TestExitCodes(t *testing.T) {
 			r.Set("pacman -Qm", system.FakeResult{Code: 1, Stderr: []byte("boom")})
 			src.Runner = r
 		}, ExitError, "error"},
+		{"no foreign packages is not an error", func(src *Sources) {
+			r := fixtures.Runner()
+			r.Set("pacman -Qm", system.FakeResult{Code: 1})
+			src.Runner = r
+		}, ExitIntervention, "critical"},
 		{"AUR disabled is not consulted", func(src *Sources) {
 			r := fixtures.Runner()
 			r.Set("pacman -Qm", system.FakeResult{Code: 1, Stderr: []byte("boom")})
