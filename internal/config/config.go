@@ -40,6 +40,12 @@ type Config struct {
 	// NewsDays is how far back news is considered when the last upgrade
 	// time is unknown.
 	NewsDays int `toml:"news_days"`
+	// IgnoreMajor holds package globs whose major version bumps are never
+	// flagged.
+	IgnoreMajor []string `toml:"ignore_major"`
+	// ShowDebug lists makepkg debug splits (<name>-debug) among the AUR
+	// packages. They are hidden by default.
+	ShowDebug bool `toml:"show_debug"`
 }
 
 // Default returns the configuration used when there is no config file.
@@ -106,17 +112,27 @@ func Parse(data []byte) (Config, error) {
 		cfg.NewsDays = def.NewsDays
 	}
 
-	var watchlist []string
-	for _, p := range cfg.Watchlist {
-		if _, err := path.Match(p, ""); err != nil || strings.TrimSpace(p) == "" {
-			errs = append(errs, fmt.Errorf("watchlist pattern %q is invalid and was ignored", p))
-			continue
-		}
-		watchlist = append(watchlist, p)
-	}
-	cfg.Watchlist = watchlist
+	var err1, err2 error
+	cfg.Watchlist, err1 = validGlobs("watchlist", cfg.Watchlist)
+	cfg.IgnoreMajor, err2 = validGlobs("ignore_major", cfg.IgnoreMajor)
+	errs = append(errs, err1, err2)
 
 	return cfg, errors.Join(errs...)
+}
+
+// validGlobs returns the well-formed, non-blank patterns, and an error
+// naming the others.
+func validGlobs(key string, patterns []string) ([]string, error) {
+	var ok []string
+	var errs []error
+	for _, p := range patterns {
+		if _, err := path.Match(p, ""); err != nil || strings.TrimSpace(p) == "" {
+			errs = append(errs, fmt.Errorf("%s pattern %q is invalid and was ignored", key, p))
+			continue
+		}
+		ok = append(ok, p)
+	}
+	return ok, errors.Join(errs...)
 }
 
 // EffectiveWatchlist returns the watchlist globs to apply: the user's

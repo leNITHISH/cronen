@@ -51,6 +51,9 @@ func TestExecRunner(t *testing.T) {
 		if errors.As(err, &exitErr) {
 			t.Fatalf("missing command should not be an *ExitError")
 		}
+		if !errors.Is(err, ErrCommandNotFound) {
+			t.Fatalf("missing command: %v should match ErrCommandNotFound", err)
+		}
 	})
 
 	t.Run("cancelled", func(t *testing.T) {

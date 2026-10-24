@@ -1,0 +1,22 @@
+Name            : zstd-debug
+Version         : 1.5.7-2
+Description     : Detached debugging symbols for zstd
+Architecture    : x86_64
+URL             : https://facebook.github.io/zstd/
+Licenses        : BSD-3-Clause  GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : None
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 3.10 MiB
+Packager        : Unknown Packager
+Build Date      : Mon 01 Sep 2025 10:00:00 AM UTC
+Install Date    : Mon 01 Sep 2025 10:04:00 AM UTC
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : None
+

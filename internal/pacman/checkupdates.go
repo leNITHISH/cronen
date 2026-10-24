@@ -4,11 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/leNITHISH/cronen/internal/system"
 )
+
+// ErrCheckupdatesNotFound reports that checkupdates isn't installed. Its
+// message is meant to be shown to the user as is.
+var ErrCheckupdatesNotFound = errors.New("checkupdates not found — install pacman-contrib")
 
 // Update is one pending repo update reported by checkupdates.
 type Update struct {
@@ -43,7 +48,8 @@ func ParseCheckupdates(data []byte) ([]Update, error) {
 // CheckUpdates runs checkupdates and returns the pending repo updates.
 // checkupdates syncs a temporary copy of the database, so this never causes
 // a partial upgrade. Exit code 2 means there are no updates and returns an
-// empty list; exit code 1, or any other failure, is an error.
+// empty list; exit code 1, or any other failure, is an error. A missing
+// checkupdates reports ErrCheckupdatesNotFound.
 func CheckUpdates(ctx context.Context, r system.Runner) ([]Update, error) {
 	out, code, err := r.Run(ctx, "checkupdates")
 	switch {
@@ -51,8 +57,10 @@ func CheckUpdates(ctx context.Context, r system.Runner) ([]Update, error) {
 		return ParseCheckupdates(out)
 	case code == 2:
 		return nil, nil
+	case errors.Is(err, system.ErrCommandNotFound):
+		return nil, ErrCheckupdatesNotFound
 	case code < 0:
-		return nil, fmt.Errorf("running checkupdates (is pacman-contrib installed?): %w", err)
+		return nil, fmt.Errorf("running checkupdates: %w", err)
 	default:
 		return nil, fmt.Errorf("checkupdates failed: %w", err)
 	}

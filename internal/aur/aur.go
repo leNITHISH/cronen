@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/leNITHISH/cronen/internal/pacman"
@@ -49,21 +50,68 @@ func (i Info) ChangelogURL() string {
 	return "https://aur.archlinux.org/cgit/aur.git/log/?h=" + url.QueryEscape(base)
 }
 
+// Kind says how an installed foreign package relates to the AUR.
+type Kind int
+
+// Package kinds.
+const (
+	// KindRegular is an ordinary AUR package, compared by version.
+	KindRegular Kind = iota
+	// KindDebug is a makepkg debug split (<name>-debug of an installed
+	// <name>). Debug splits are never on the AUR, so they aren't looked up.
+	KindDebug
+	// KindVCS is a package built from a VCS checkout (-git, -svn, ...).
+	// The AUR's version is just the last snapshot, so it isn't compared.
+	KindVCS
+)
+
+func (k Kind) String() string {
+	switch k {
+	case KindRegular:
+		return "regular"
+	case KindDebug:
+		return "debug"
+	case KindVCS:
+		return "vcs"
+	}
+	return fmt.Sprintf("Kind(%d)", int(k))
+}
+
+// vcsSuffixes are the package name suffixes of VCS packages.
+var vcsSuffixes = []string{"-git", "-svn", "-hg", "-bzr", "-fossil", "-darcs", "-cvs"}
+
+// Classify returns the kind of the foreign package name. installed reports
+// whether a package is installed; it decides whether <name>-debug is a debug
+// split.
+func Classify(name string, installed func(string) bool) Kind {
+	if base, ok := strings.CutSuffix(name, "-debug"); ok && base != "" && installed(base) {
+		return KindDebug
+	}
+	for _, suffix := range vcsSuffixes {
+		if strings.HasSuffix(name, suffix) && len(name) > len(suffix) {
+			return KindVCS
+		}
+	}
+	return KindRegular
+}
+
 // Package is the status of one installed foreign package.
 type Package struct {
 	Name             string
 	InstalledVersion string
+	Kind             Kind
 	// Info is the package's AUR record. It is nil if the package is not in
 	// the AUR.
 	Info *Info
 	// Pending reports whether the AUR has a newer version than the one
-	// installed.
+	// installed. It is always false for debug and VCS packages.
 	Pending bool
 }
 
 // Missing reports whether the package is installed but not in the AUR
-// (orphaned and deleted, renamed, or never from the AUR).
-func (p Package) Missing() bool { return p.Info == nil }
+// (orphaned and deleted, renamed, or never from the AUR). Debug splits are
+// never missing: they were never meant to be on the AUR.
+func (p Package) Missing() bool { return p.Info == nil && p.Kind != KindDebug }
 
 // Client queries the AUR RPC v5 interface.
 type Client struct {
@@ -74,6 +122,10 @@ type Client struct {
 	InfoURL string
 	// BatchSize defaults to DefaultBatchSize.
 	BatchSize int
+	// Installed holds the names of every installed package (pacman -Qq),
+	// used to recognize debug splits of repo packages. If nil, only the
+	// foreign packages passed to Check count as installed.
+	Installed map[string]bool
 }
 
 // NewClient returns a Client using the default endpoint and batch size.
@@ -170,15 +222,26 @@ func (c *Client) fetchBatch(ctx context.Context, names []string, fresh bool, int
 // their status, in the same order. Every package is returned, not only
 // pending ones, because missing, orphaned and out-of-date packages are
 // worth showing without a version bump. Versions are compared with vercmp;
-// a package installed at a newer version than the AUR's (common for -git
-// packages) is not pending.
+// a package installed at a newer version than the AUR's is not pending.
+// Debug splits aren't looked up, and VCS packages are looked up but never
+// compared; neither is ever pending.
 func (c *Client) Check(ctx context.Context, installed []pacman.Package, fresh bool) ([]Package, error) {
 	if c.Runner == nil {
 		return nil, errors.New("AUR check: no Runner for vercmp")
 	}
-	names := make([]string, len(installed))
+	foreign := map[string]bool{}
+	for _, p := range installed {
+		foreign[p.Name] = true
+	}
+	isInstalled := func(name string) bool { return foreign[name] || c.Installed[name] }
+
+	kinds := make([]Kind, len(installed))
+	var names []string
 	for i, p := range installed {
-		names[i] = p.Name
+		kinds[i] = Classify(p.Name, isInstalled)
+		if kinds[i] != KindDebug {
+			names = append(names, p.Name)
+		}
 	}
 	infos, err := c.Info(ctx, names, fresh)
 	if err != nil {
@@ -186,11 +249,13 @@ func (c *Client) Check(ctx context.Context, installed []pacman.Package, fresh bo
 	}
 
 	pkgs := make([]Package, 0, len(installed))
-	for _, p := range installed {
-		pkg := Package{Name: p.Name, InstalledVersion: p.Version}
+	for i, p := range installed {
+		pkg := Package{Name: p.Name, InstalledVersion: p.Version, Kind: kinds[i]}
 		if info, ok := infos[p.Name]; ok {
 			pkg.Info = &info
-			cmp, err := pacman.Vercmp(ctx, c.Runner, p.Version, info.Version)
+		}
+		if pkg.Info != nil && pkg.Kind == KindRegular {
+			cmp, err := pacman.Vercmp(ctx, c.Runner, p.Version, pkg.Info.Version)
 			if err != nil {
 				return nil, fmt.Errorf("AUR check %s: %w", p.Name, err)
 			}

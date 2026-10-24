@@ -1,0 +1,30 @@
+ cronen (demo)                                                             last upgrade: 2 days ago 
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────┬───────────────────────────────────────────────────────────
+  ‼ 2026-10-22  linux-firmware >= 20251…│ NVIDIA 590 driver drops Pascal support                    
+▸   2026-10-21  NVIDIA 590 driver drops…│ 2026-10-21 16:30 · unread                                 
+    2026-09-15  Python 3.14 is coming t…│ https://archlinux.org/news/nvidia-590-driver-drops-pasca… 
+    2025-06-24  Transition to the new W…│                                                           
+                                        │  The  nvidia  590 driver series no longer supports        
+                                        │  Pascal (GTX 10xx) GPUs. If you own one, switch to        
+                                        │   nvidia-580xx-dkms  from the AUR before upgrading        
+                                        │   nvidia-utils .                                          
+                                        │                                                           
+                                        │  Turing and newer cards are unaffected. See the wiki      
+                                        │  https://wiki.archlinux.org/title/NVIDIA for              
+                                        │  details.                                                 
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+                                        │                                                           
+────────────────────────────────────────┴───────────────────────────────────────────────────────────
+ 18 updates · 11 flagged · 2 unread news · 1 .pacnew                       esc back  ? help  q quit 

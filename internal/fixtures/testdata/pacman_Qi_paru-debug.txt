@@ -1,0 +1,22 @@
+Name            : paru-debug
+Version         : 2.1.0-1
+Description     : Detached debugging symbols for paru
+Architecture    : x86_64
+URL             : https://github.com/morganamilo/paru
+Licenses        : GPL-3.0-or-later
+Groups          : None
+Provides        : None
+Depends On      : None
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 21.70 MiB
+Packager        : Unknown Packager
+Build Date      : Sat 05 Jul 2025 09:00:00 AM UTC
+Install Date    : Sat 05 Jul 2025 09:02:00 AM UTC
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : None
+

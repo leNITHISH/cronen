@@ -106,10 +106,23 @@ func TestCheckUpdates(t *testing.T) {
 
 	t.Run("not installed", func(t *testing.T) {
 		r := system.NewFakeRunner()
-		r.Set("checkupdates", system.FakeResult{Err: errors.New("executable file not found")})
+		r.Set("checkupdates", system.FakeResult{Err: system.ErrCommandNotFound})
 		_, err := CheckUpdates(ctx, r)
-		if err == nil || !strings.Contains(err.Error(), "pacman-contrib") {
-			t.Fatalf("err = %v, want a pacman-contrib hint", err)
+		if !errors.Is(err, ErrCheckupdatesNotFound) {
+			t.Fatalf("err = %v, want ErrCheckupdatesNotFound", err)
+		}
+		// The message is shown as is, so it must be one short line.
+		if got, want := err.Error(), "checkupdates not found — install pacman-contrib"; got != want {
+			t.Fatalf("err = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("not runnable", func(t *testing.T) {
+		r := system.NewFakeRunner()
+		r.Set("checkupdates", system.FakeResult{Err: errors.New("permission denied")})
+		_, err := CheckUpdates(ctx, r)
+		if err == nil || errors.Is(err, ErrCheckupdatesNotFound) {
+			t.Fatalf("err = %v, want a plain error", err)
 		}
 	})
 
@@ -170,11 +183,14 @@ func TestForeignPackages(t *testing.T) {
 		}
 		want := []Package{
 			{Name: "gnome-shell-extension-legacy", Version: "3.2.0-1"},
+			{Name: "neovim-git", Version: "0.12.0.r1234.gabcdef0-1"},
 			{Name: "paru", Version: "2.1.0-1"},
+			{Name: "paru-debug", Version: "2.1.0-1"},
 			{Name: "python-pywal", Version: "3.3.0-9"},
 			{Name: "spotify", Version: "1:1.2.74.477-1"},
 			{Name: "ttf-ms-fonts", Version: "2.0-12"},
 			{Name: "visual-studio-code-bin", Version: "1.105.0-1"},
+			{Name: "zstd-debug", Version: "1.5.7-2"},
 		}
 		if !reflect.DeepEqual(got, want) {
 			t.Fatalf("got %+v, want %+v", got, want)
@@ -215,6 +231,28 @@ func TestForeignPackages(t *testing.T) {
 			t.Fatal("expected an error")
 		}
 	})
+}
+
+func TestInstalledNames(t *testing.T) {
+	ctx := context.Background()
+	got, err := InstalledNames(ctx, fixtures.Runner())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"zstd", "paru", "paru-debug", "linux"} {
+		if !got[name] {
+			t.Errorf("%s missing from pacman -Qq", name)
+		}
+	}
+	if got[""] {
+		t.Error("blank line parsed as a package")
+	}
+
+	r := system.NewFakeRunner()
+	r.Set("pacman -Qq", system.FakeResult{Code: 1, Stderr: []byte("error: could not open database\n")})
+	if _, err := InstalledNames(ctx, r); err == nil {
+		t.Fatal("expected an error")
+	}
 }
 
 func TestVercmpFixtureTable(t *testing.T) {

@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/leNITHISH/cronen/internal/system"
 )
@@ -28,6 +29,7 @@ const (
 	CheckupdatesNone   = "checkupdates_none.txt"
 	CheckupdatesStderr = "checkupdates_error.stderr"
 	PacmanQm           = "pacman_Qm.txt"
+	PacmanQq           = "pacman_Qq.txt"
 	PacmanQiPrefix     = "pacman_Qi_" // + pkgname + ".txt"
 	PacdiffO           = "pacdiff_o.txt"
 	Vercmp             = "vercmp.txt"
@@ -45,6 +47,11 @@ const (
 	PacmanLogPath     = "/var/log/pacman.log"
 	vercmpCommandName = "vercmp"
 )
+
+// Now is the time the fixture data describes: a few days after the last
+// full upgrade in pacman.log, with two unread news items. Tests and --demo
+// use it as the current time so relative dates stay stable.
+var Now = time.Date(2026, 10, 23, 12, 0, 0, 0, time.UTC)
 
 // Bytes returns the contents of a fixture file. It panics if the file does
 // not exist, since that is a programming error.
@@ -99,13 +106,16 @@ func VercmpTable() []VercmpCase {
 }
 
 // Runner returns a FakeRunner describing the fixture system: checkupdates
-// finds updates, pacman -Qm lists foreign packages, pacman -Qi answers for
+// finds updates, pacman -Qm lists foreign packages (including makepkg debug
+// splits and a VCS package), pacman -Qq lists every installed package,
+// pacman -Qi answers for
 // those with fixtures, pacdiff -o finds one .pacnew, and vercmp answers for
 // every pair in vercmp.txt (in both orders).
 func Runner() *system.FakeRunner {
 	r := system.NewFakeRunner()
 	r.Set("checkupdates", CheckupdatesResult())
 	r.Set("pacman -Qm", system.FakeResult{Stdout: Bytes(PacmanQm)})
+	r.Set("pacman -Qq", system.FakeResult{Stdout: Bytes(PacmanQq)})
 	r.Set("pacdiff -o", system.FakeResult{Stdout: Bytes(PacdiffO)})
 
 	entries, err := files.ReadDir("testdata")
