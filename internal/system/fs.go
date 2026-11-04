@@ -5,7 +5,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
+	"time"
 )
 
 // FS is the filesystem access cronen needs: reading pacman.log, and reading
@@ -19,6 +21,9 @@ type FS interface {
 	WriteFile(path string, data []byte, perm fs.FileMode) error
 	// MkdirAll creates a directory and any missing parents.
 	MkdirAll(path string, perm fs.FileMode) error
+	// Stat reports on a file or directory. Missing paths report an error
+	// matching fs.ErrNotExist.
+	Stat(path string) (fs.FileInfo, error)
 }
 
 // OSFS is the real FS, backed by package os.
@@ -62,6 +67,11 @@ func (OSFS) WriteFile(path string, data []byte, perm fs.FileMode) (err error) {
 // MkdirAll implements FS.
 func (OSFS) MkdirAll(path string, perm fs.FileMode) error {
 	return os.MkdirAll(path, perm)
+}
+
+// Stat implements FS.
+func (OSFS) Stat(path string) (fs.FileInfo, error) {
+	return os.Stat(path)
 }
 
 // FakeFS is an in-memory FS. It is safe for concurrent use.
@@ -111,3 +121,42 @@ func (f *FakeFS) WriteFile(path string, data []byte, _ fs.FileMode) error {
 func (f *FakeFS) MkdirAll(string, fs.FileMode) error {
 	return nil
 }
+
+// Stat implements FS. A path is a file if it was given to NewFakeFS or
+// WriteFile, and a directory if some file lies beneath it.
+func (f *FakeFS) Stat(path string) (fs.FileInfo, error) {
+	path = filepath.Clean(path)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if b, ok := f.files[path]; ok {
+		return fakeInfo{name: filepath.Base(path), size: int64(len(b))}, nil
+	}
+	prefix := path + string(filepath.Separator)
+	if path == string(filepath.Separator) {
+		prefix = path
+	}
+	for p := range f.files {
+		if strings.HasPrefix(p, prefix) {
+			return fakeInfo{name: filepath.Base(path), dir: true}, nil
+		}
+	}
+	return nil, &fs.PathError{Op: "stat", Path: path, Err: fs.ErrNotExist}
+}
+
+type fakeInfo struct {
+	name string
+	size int64
+	dir  bool
+}
+
+func (i fakeInfo) Name() string { return i.name }
+func (i fakeInfo) Size() int64  { return i.size }
+func (i fakeInfo) Mode() fs.FileMode {
+	if i.dir {
+		return fs.ModeDir | 0o755
+	}
+	return 0o644
+}
+func (i fakeInfo) ModTime() time.Time { return time.Time{} }
+func (i fakeInfo) IsDir() bool        { return i.dir }
+func (i fakeInfo) Sys() any           { return nil }

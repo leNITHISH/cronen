@@ -27,6 +27,10 @@ type FakeRunner struct {
 	mu      sync.Mutex
 	results map[string]FakeResult
 	calls   []string
+
+	// Handler, if set, answers command lines that have no exact result
+	// registered with Set. It reports false for lines it doesn't know.
+	Handler func(commandLine string) (FakeResult, bool)
 }
 
 // NewFakeRunner returns an empty FakeRunner.
@@ -55,7 +59,11 @@ func (f *FakeRunner) Run(ctx context.Context, name string, args ...string) ([]by
 	f.mu.Lock()
 	f.calls = append(f.calls, line)
 	r, ok := f.results[line]
+	handler := f.Handler
 	f.mu.Unlock()
+	if !ok && handler != nil {
+		r, ok = handler(line)
+	}
 
 	if err := ctx.Err(); err != nil {
 		return nil, -1, fmt.Errorf("%s: %w", line, err)

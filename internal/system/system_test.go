@@ -25,6 +25,15 @@ func TestExecRunner(t *testing.T) {
 		}
 	})
 
+	t.Run("locale", func(t *testing.T) {
+		t.Setenv("LC_ALL", "de_DE.UTF-8")
+		t.Setenv("LANGUAGE", "de")
+		out, _, err := r.Run(ctx, "sh", "-c", `printf %s "$LC_ALL"`)
+		if err != nil || string(out) != "C" {
+			t.Fatalf("LC_ALL = %q, %v; want C", out, err)
+		}
+	})
+
 	t.Run("non-zero exit", func(t *testing.T) {
 		out, code, err := r.Run(ctx, "sh", "-c", "echo partial; echo boom >&2; exit 2")
 		if code != 2 || string(out) != "partial\n" {
@@ -289,5 +298,37 @@ func TestInteractiveCommand(t *testing.T) {
 	}
 	if cmd.Stdin != nil || cmd.Stdout != nil || cmd.Stderr != nil {
 		t.Error("stdio must be left for Bubble Tea to hand over the terminal")
+	}
+}
+
+func TestFakeFSStat(t *testing.T) {
+	f := NewFakeFS(map[string][]byte{"/tmp/db/sync/core.db": []byte("x")})
+	for path, dir := range map[string]bool{"/tmp/db": true, "/tmp/db/sync": true, "/tmp/db/sync/core.db": false} {
+		fi, err := f.Stat(path)
+		if err != nil || fi.IsDir() != dir {
+			t.Errorf("Stat(%s) = %v, %v; want dir=%v", path, fi, err, dir)
+		}
+	}
+	for _, path := range []string{"/tmp/d", "/tmp/db/local"} {
+		if _, err := f.Stat(path); !errors.Is(err, fs.ErrNotExist) {
+			t.Errorf("Stat(%s) err = %v, want ErrNotExist", path, err)
+		}
+	}
+}
+
+func TestFakeRunnerHandler(t *testing.T) {
+	r := NewFakeRunner()
+	r.Set("a", FakeResult{Stdout: []byte("exact")})
+	r.Handler = func(line string) (FakeResult, bool) {
+		return FakeResult{Stdout: []byte("handled " + line)}, line == "b"
+	}
+	if out, _, _ := r.Run(context.Background(), "a"); string(out) != "exact" {
+		t.Errorf("a = %q", out)
+	}
+	if out, _, _ := r.Run(context.Background(), "b"); string(out) != "handled b" {
+		t.Errorf("b = %q", out)
+	}
+	if _, _, err := r.Run(context.Background(), "c"); !errors.Is(err, ErrUnexpectedCommand) {
+		t.Errorf("c: %v", err)
 	}
 }
