@@ -22,6 +22,9 @@ func (s Summary) Headline() string {
 		strconv.Itoa(len(s.Flagged)) + " flagged",
 		strconv.Itoa(s.UnreadNews) + " unread news",
 	}
+	if s.Acknowledged > 0 {
+		parts = append(parts, strconv.Itoa(s.Acknowledged)+" acknowledged")
+	}
 	if s.Pacnew > 0 {
 		parts = append(parts, plural(s.Pacnew, ".pacnew", ".pacnew"))
 	}
@@ -114,6 +117,7 @@ func (s Summary) JSON() []byte {
 		Updates       int           `json:"updates"`
 		AUR           int           `json:"aur"`
 		Flagged       int           `json:"flagged"`
+		Acknowledged  int           `json:"acknowledged"`
 		Critical      int           `json:"critical"`
 		UnreadNews    int           `json:"unread_news"`
 		Pacnew        int           `json:"pacnew"`
@@ -133,6 +137,7 @@ func (s Summary) JSON() []byte {
 		Updates:       s.Updates(),
 		AUR:           s.AUR,
 		Flagged:       len(s.Flagged),
+		Acknowledged:  s.Acknowledged,
 		Critical:      len(s.Interventions),
 		UnreadNews:    s.UnreadNews,
 		Pacnew:        s.Pacnew,

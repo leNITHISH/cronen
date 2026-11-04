@@ -144,3 +144,31 @@ type reviewError struct {
 
 func (e *reviewError) Error() string { return "AUR review of " + e.name + ": " + e.err.Error() }
 func (e *reviewError) Unwrap() error { return e.err }
+
+// AssessAcknowledgements moves the flags the user acknowledged, as recorded
+// in st, out of res's flagged packages. Run it last, after every rule has
+// added its flags.
+func AssessAcknowledgements(res risk.Result, st config.State) risk.Result {
+	return risk.Acknowledge(res, st.Acknowledged)
+}
+
+// Acknowledge records the acknowledgeable flags of p in st, for p's exact
+// new version, and reports whether st changed. For a flagged AUR
+// maintainer change it also records the current maintainers as the
+// accepted ones (rule 12), so the change doesn't come back as a new flag.
+// pkgs are the AUR packages, to find the maintainers in.
+func Acknowledge(st *config.State, p risk.Package, pkgs []aur.Package) bool {
+	rules := risk.AcknowledgeableRules(p)
+	if len(rules) == 0 {
+		return false
+	}
+	changed := st.Acknowledge(p.Name, p.NewVersion, rules...)
+	if p.AUR && slices.Contains(rules, risk.RuleMaintainer.String()) {
+		for _, a := range pkgs {
+			if a.Name == p.Name && RecordMaintainers(st, []aur.Package{a}, true) {
+				changed = true
+			}
+		}
+	}
+	return changed
+}

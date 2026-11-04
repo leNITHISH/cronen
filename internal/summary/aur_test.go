@@ -174,3 +174,43 @@ func TestGatherReviewModes(t *testing.T) {
 		}
 	}
 }
+
+func TestAcknowledgeMaintainerChange(t *testing.T) {
+	pkgs := fixtureAUR(t)
+	var st config.State
+	st.SetMaintainer(config.Maintainer{PkgBase: "visual-studio-code-bin", Maintainer: "someone-else", CoMaintainers: []string{"dallas"}})
+	res := AssessAcknowledgements(assessFixtures(t, pkgs, st, nil), st)
+	var p risk.Package
+	for _, q := range res.Packages {
+		if q.Name == "visual-studio-code-bin" {
+			p = q
+		}
+	}
+	if !slices.Contains(flagRules(res, p.Name), risk.RuleMaintainer) {
+		t.Fatal("setup: no maintainer flag")
+	}
+	if !Acknowledge(&st, p, pkgs) {
+		t.Fatal("nothing recorded")
+	}
+	if got := st.Acknowledged(p.Name, p.NewVersion); !slices.Contains(got, "aur-maintainer") {
+		t.Errorf("acknowledged rules = %v", got)
+	}
+	// The current maintainers are the accepted ones now.
+	if rec, _ := st.Maintainer("visual-studio-code-bin"); rec.Maintainer != "dcelasun" {
+		t.Errorf("recorded %+v", rec)
+	}
+	after := AssessAcknowledgements(assessFixtures(t, pkgs, st, nil), st)
+	for _, q := range after.Packages {
+		if q.Name == p.Name && slices.Contains(ruleSetOf(q.Flags), risk.RuleMaintainer) {
+			t.Error("flag survived the acknowledgement")
+		}
+	}
+}
+
+func ruleSetOf(fs []risk.Flag) []risk.Rule {
+	var out []risk.Rule
+	for _, f := range fs {
+		out = append(out, f.Rule)
+	}
+	return out
+}
