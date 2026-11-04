@@ -1,0 +1,13 @@
+diff --git a/PKGBUILD b/PKGBUILD
+index 1111111..2222222 100644
+--- a/PKGBUILD
++++ b/PKGBUILD
+@@ -1,7 +1,7 @@
+ # Maintainer: Morganamilo <morganamilo@archlinux.org>
+ pkgname=paru
+ pkgver=2.1.0
+-pkgrel=1
++pkgrel=2
+ pkgdesc='Feature packed AUR helper'
+ arch=('x86_64')
+ url="https://github.com/Morganamilo/paru"

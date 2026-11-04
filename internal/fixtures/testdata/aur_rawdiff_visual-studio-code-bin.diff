@@ -1,0 +1,12 @@
+diff --git a/PKGBUILD b/PKGBUILD
+index 1111111..2222222 100644
+--- a/PKGBUILD
++++ b/PKGBUILD
+@@ -10,10 +10,10 @@
+ depends=('libxkbfile' 'gtk3' 'nss')
+-source=("code-$pkgver.tar.gz::https://update.code.visualstudio.com/$pkgver/linux-x64/stable"
++source=("code-$pkgver.tar.gz::https://vscode.download.prss.microsoft.com/$pkgver/linux-x64/stable"
+         "code.desktop")
+-sha256sums=('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
++sha256sums=('cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'
+             'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')

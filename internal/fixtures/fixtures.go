@@ -59,11 +59,18 @@ const (
 	NewsURL          = "https://archlinux.org/feeds/news/"
 	AURInfoURL       = "https://aur.archlinux.org/rpc/v5/info"
 	ArchwebSearchURL = "https://archlinux.org/packages/search/json/"
+<<<<<<< HEAD
 	SecurityURL      = "https://security.archlinux.org/all.json"
 	// GitLabProjectsURL is the root of the GitLab project API; the project
 	// path follows, URL-escaped, then /issues.
 	GitLabProjectsURL = "https://gitlab.archlinux.org/api/v4/projects/"
 	PacmanLogPath     = "/var/log/pacman.log"
+=======
+	// AURAtomURL and AURRawdiffURL are the cgit feed and diff endpoints.
+	AURAtomURL    = "https://aur.archlinux.org/cgit/aur.git/atom/"
+	AURRawdiffURL = "https://aur.archlinux.org/cgit/aur.git/rawdiff/"
+	PacmanLogPath = "/var/log/pacman.log"
+>>>>>>> e528424 (aur: atom log, base commit choice, rawdiff review and PKGBUILD diff heuristics)
 	// SyncDBPath is where the fake checkupdates left its database.
 	SyncDBPath        = "/tmp/checkup-db-1000"
 	vercmpCommandName = "vercmp"
@@ -290,6 +297,22 @@ func handle(rawURL string) (system.FakeResponse, bool) {
 	switch base {
 	case AURInfoURL:
 		return filterResults(Bytes(AURInfo), "Name", u.Query()["arg[]"], "resultcount"), true
+	case AURAtomURL, AURRawdiffURL:
+		// aur_atom_<pkgbase>.xml and aur_rawdiff_<pkgbase>.diff exist for
+		// the demo's pending AUR packages. Any other base is a 404.
+		name := "aur_atom_%s.xml"
+		if base == AURRawdiffURL {
+			name = "aur_rawdiff_%s.diff"
+		}
+		h := u.Query().Get("h")
+		if h == "" || strings.ContainsAny(h, `/\`) {
+			return system.FakeResponse{}, false
+		}
+		body, err := files.ReadFile(path.Join("testdata", fmt.Sprintf(name, h)))
+		if err != nil {
+			return system.FakeResponse{Status: 404}, true
+		}
+		return system.FakeResponse{Body: body}, true
 	case ArchwebSearchURL:
 		return filterResults(Bytes(ArchwebSearch), "pkgname", u.Query()["name"], ""), true
 	}

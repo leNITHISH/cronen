@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='utf-8'?>
+<feed xmlns='http://www.w3.org/2005/Atom'>
+<title>aur.git - paru</title>
+<subtitle>[cgit] AUR Package Repositories</subtitle>
+<entry>
+<title>upgpkg: paru 2.1.0-2</title>
+<updated>2025-10-20T10:00:00+00:00</updated>
+<author><name>Morganamilo</name></author>
+<published>2025-10-20T10:00:00+00:00</published>
+<link rel='alternate' type='text/html' href='https://aur.archlinux.org/cgit/aur.git/commit/?h=paru&amp;id=458ead7339be968b3bc98bee9ed4276d91a75ec4'/>
+<id>458ead7339be968b3bc98bee9ed4276d91a75ec4</id>
+<content type='text'>commit message</content>
+</entry>
+<entry>
+<title>upgpkg: paru 2.1.0-1</title>
+<updated>2025-07-01T08:00:00+00:00</updated>
+<author><name>Morganamilo</name></author>
+<published>2025-07-01T08:00:00+00:00</published>
+<link rel='alternate' type='text/html' href='https://aur.archlinux.org/cgit/aur.git/commit/?h=paru&amp;id=b12d807c6b93d13a5287fb134db33a7ae335da10'/>
+<id>b12d807c6b93d13a5287fb134db33a7ae335da10</id>
+<content type='text'>commit message</content>
+</entry>
+<entry>
+<title>upgpkg: paru 2.0.4-1</title>
+<updated>2025-03-02T08:00:00+00:00</updated>
+<author><name>Morganamilo</name></author>
+<published>2025-03-02T08:00:00+00:00</published>
+<link rel='alternate' type='text/html' href='https://aur.archlinux.org/cgit/aur.git/commit/?h=paru&amp;id=10fab639ac79bcc9bcccf691b7ddd67438e166c5'/>
+<id>10fab639ac79bcc9bcccf691b7ddd67438e166c5</id>
+<content type='text'>commit message</content>
+</entry>
+</feed>
