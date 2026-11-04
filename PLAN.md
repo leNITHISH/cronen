@@ -2,7 +2,7 @@
 
 A Bubble Tea TUI that tells you what you're about to get into **before** you run `pacman -Syu`.
 
-> v1 (M0–M6) is shipped. **v2** (M7–M15, at the end of this file) turns cronen into a maintenance console and amends the Goals, Non-goals, config and exit codes below.
+> v1 (M0–M6) is shipped. **v2** (M7–M19, at the end of this file) turns cronen into a maintenance console and amends the Goals, Non-goals, config and exit codes below.
 
 It shows pending repo and AUR updates, pulls the Arch news feed, flags anything that needs manual intervention, highlights risky packages (kernel, GPU drivers, glibc, systemd…), and links to changelogs. When you're happy, it hands off to `sudo pacman -Syu` (or your AUR helper).
 
@@ -298,7 +298,7 @@ Each milestone is sized to be **one cloud session**. M1, M2, and M3 can run **in
 
 # v2: from pre-upgrade check to maintenance console
 
-v1 (M0–M6) is shipped. v2 keeps everything above and adds two things. First, it tells you much more about the upgrade before you run it: exactly what the transaction will do, what it will break, and whether your system is ready for it. Second, it adds a few **previewed, confirmed** write actions (removing packages, cleaning orphans, downgrading from the cache), handed off to pacman the same way the upgrade already is.
+v1 (M0–M6) is shipped. v2 keeps everything above and adds two things. First, it tells you much more about the upgrade before you run it: exactly what the transaction will do, what it will break, and whether your system is ready for it. Second, it adds a few **previewed, confirmed** write actions (removing packages, cleaning orphans, downgrading from the cache), handed off to pacman the same way the upgrade already is. Then the helpers: bandwidth, urgent installs, partial-upgrade detection and snapshots.
 
 Where this section contradicts v1 (Goals, Non-goals, config, exit codes), this section wins.
 
@@ -310,22 +310,26 @@ Where this section contradicts v1 (Goals, Non-goals, config, exit codes), this s
 - Make reviewing AUR updates realistic: maintainer changes, the commit log, and the PKGBUILD diff with suspicious changes highlighted.
 - Let the user understand and clean up what's installed: browse packages, see why each is installed, remove what they pick, clear out orphans, and go back to a cached version when an upgrade breaks something.
 - Keep the flagged list meaningful: flags can be acknowledged, so the list doesn't turn into noise.
+- Respect a limited connection. Say what an upgrade will cost in bytes and time before it starts, let the download happen early, and point out the big downloads worth dropping.
+- Make the urgent case safe. "I need X now, and I haven't upgraded in weeks" gets real options with real costs, never `-Sy X`.
+- Detect partial upgrades that already happened and the damage they left.
+- Take a snapshot before upgrading: a Timeshift (or snapper) helper built into the upgrade flow.
 
 ## v2 non-goals
 
-- Installing or searching for packages. cronen is still not an AUR helper or a pacman frontend.
+- Searching for packages, or installing them in any way other than the two the install helper offers (`-Syu X`, or a date-matched archive install). cronen is still not an AUR helper or a pacman frontend.
 - Upgrading only some packages. Partial upgrades are unsupported on Arch, so the only upgrade is the full one from v1.
-- Downgrading to versions that aren't already on disk. No Arch Linux Archive downloads.
+- Downgrading to versions that aren't already on disk. The Arch Linux Archive is used only for the install helper's date-matched installs.
 - Managing mirrors or editing `pacman.conf`. cronen *reads* both and only *reports* problems with them.
 
 ## Safety invariants
 
 These hold for every v2 feature. Reviews should check them explicitly.
 
-1. **cronen never changes the system itself.** Every action that changes something goes through `tea.ExecProcess` with the terminal handed over, after a confirm modal that shows the **exact command line**. Nothing runs as root without a hand-off.
+1. **cronen never changes the system itself.** Every action that changes something goes through `tea.ExecProcess` with the terminal handed over, after a confirm modal that shows the **exact command line**. Nothing runs as root without a hand-off. The one exception is opt-in: with `snapshot_list_sudo = true`, cronen runs `sudo -n timeshift --list`, which only reads.
 2. **The preview comes before the hand-off.** Each write action first runs pacman's own `--print` dry run as the user. If that fails (unsatisfiable dependencies, breaking a dependency), the modal shows pacman's error and offers no way to proceed.
 3. **No shell, ever.** Commands are argv slices, with `--` before package names. Package names are validated against `^[a-z0-9@._+][a-z0-9@._+-]*$` and file paths for `-U` must be regular files inside a configured cache directory. Anything that fails validation is refused rather than escaped.
-4. **No `-Sy` without `-u`. No `pacman -S <pkg>`.** v1's partial-upgrade guarantee still holds.
+4. **No `-Sy` without `-u`.** v1's partial-upgrade guarantee still holds. The only installs are the install helper's two forms: `pacman -Syu -- X` against the real database, and `pacman -S -- X` against a temporary database synced from the Arch Linux Archive for the date of the last full upgrade. A plain `pacman -S X` against the real database is never offered.
 5. **The real sync database is never written to.** cronen reads the database `checkupdates` already synced, always with `--dbpath` pointing at it, plus `--logfile /dev/null`.
 6. **Every pacman call runs with `LC_ALL=C`.** v1 parses `pacman -Qi` without this, which breaks on a localised system. M7 fixes this in `internal/system`, for all commands cronen runs and not only the new ones.
 7. **Protected packages** (see config) can't be removed or downgraded with a single `y`: the modal requires typing the package name.
@@ -493,6 +497,101 @@ New keys:
 | `D` | packages, history | downgrade from cache (preview first) |
 | `f` / `s` | packages | cycle filter / sort |
 | `P` | housekeeping | merge `.pacnew` files with pacdiff |
+| `F` | updates | prefetch: download pending packages now, install later |
+| `I` | updates | install helper ("I need X now") |
+| `t` | upgrade modal | toggle "take a snapshot first" |
+| `S` | housekeeping | take a snapshot now |
+| `R` | housekeeping (snapshot row) | restore a snapshot |
+| `B` | housekeeping | run the broken-linkage scan |
+
+## Helpers
+
+These four features come from how cronen is actually used. The upgrade usually gets checked when bandwidth is limited, or when a package is needed urgently on a machine that hasn't been upgraded in weeks. In this household, a feature that wraps another tool is called a *helper*.
+
+### Bandwidth helper
+- **What the upgrade costs.** M7 already gives the total download (packages already in the cache count as 0). The header adds:
+  - **how far behind you are:** "47 days behind · 312 packages · 1.8 GiB",
+  - **growth:** state records one `(date, pending bytes)` sample per day, keeping 90, and once two samples are at least a week apart it shows the trend: "+~250 MiB/week",
+  - **a time estimate.**
+- **Time estimate.**
+  - For every upgrade hand-off, state records the bytes it had to download, how many packages it upgraded, and how long the hand-off took. It keeps the last 10.
+  - Prefetches record download-only samples, which are better data.
+  - The estimate is "~14 min (from your last 6 upgrades)". With no samples it says "no estimate yet" rather than guessing. Keep the model simple, with the logic in a pure package: median throughput from the prefetch samples, plus a per-package install time from the upgrade samples.
+- **Big downloads.**
+  - In the updates screen, `s` sorts by download size.
+  - The detail pane shows "last used ~4 months ago": the newest atime among the package's files in `bin` directories and its `.desktop` files. Show it only when the filesystem is mounted `relatime` or `strictatime` (read from `/proc/self/mounts`), never under `noatime`.
+  - `space` and `X` work here too. Removing a big package you don't use before upgrading is the honest way to cut the download. Afterwards the transaction preview reruns and shows what was saved.
+- **Prefetch (`F`).**
+  - Hands off `checkupdates -d`, which downloads the pending packages into the cache without touching the real sync database. Check on Arch whether it needs root to write the cache, and hand off with or without `privilege_command` to match. `prefetch_command` overrides it.
+  - Afterwards the preview's download size drops, and the header shows "1.7 of 1.8 GiB already downloaded".
+- **Metered connection.** Read NetworkManager's `GENERAL.METERED` (`nmcli -t -g GENERAL.METERED device show <dev>`) for the device carrying the default route (from `/proc/net/route`).
+  - `yes` or `yes (guessed)`, with a download bigger than `metered_warn_mib`, raises a `warn` preflight problem. The upgrade and prefetch modals repeat it.
+  - Without `nmcli`, skip the check silently.
+- **ParallelDownloads hint.** If `ParallelDownloads` in `[options]` means pacman downloads one file at a time (check what current pacman does when the key is missing), show an `info` hint in housekeeping and the upgrade modal: "set `ParallelDownloads = 5` in /etc/pacman.conf". cronen doesn't edit the file.
+
+### Install helper ("I need X now")
+The urgent case is the one that tempts people into `pacman -Sy X`: syncing the database and installing one package on a system weeks behind. That's a partial upgrade. X gets built against libraries newer than the ones installed, and things break later. The helper offers the two safe alternatives with their costs side by side, and explains the partial-upgrade problem once, with a link to the wiki's "Partial upgrades" section.
+
+- **Entry points:** `cronen install <pkg>...` (opens the TUI straight into the helper), or `I` on the updates screen (a text input for package names).
+- **Names** are validated like every other name and looked up in the checkupdates database (`pacman -Si --dbpath`). AUR names are looked up with the v1 RPC client.
+- **Option A: full upgrade plus X.**
+  - Dry run: `pacman -Sup --dbpath <checkupdates db> --print-format … -- X`. Hand-off: `<privilege> pacman -Syu -- X`. With `aur_helper` set, use `paru -Syu -- X` / `yay -Syu -- X`, which also covers AUR packages.
+  - The modal shows the whole transaction's download size and time estimate, and offers a snapshot first (see the snapshot helper).
+  - This is the recommended option and is selected by default.
+- **Option B: X as of your last full upgrade** (experimental, `archive_install = true`, repo packages only).
+  - The Arch Linux Archive keeps daily snapshots of the repos: `https://archive.archlinux.org/repos/YYYY/MM/DD/$repo/os/$arch`. Installing X from the snapshot taken when you last fully upgraded gets you a build that matches what you actually have, so you download only X and its new dependencies.
+  - Only offered when the last full upgrade time is known (from `pacman.log`).
+  - Steps:
+    1. In a fresh `0700` directory under `$XDG_CACHE_HOME/cronen/archive/`, create `sync/`, a `local` symlink to the real local database (the same trick `checkupdates` uses), and a `pacman.conf`. The `pacman.conf` copies the real `[options]` and enables the official repos that are enabled in the real config (`core`, `extra`, `multilib`), each with the archive `Server`. Custom repos are dropped, and the modal says so.
+    2. Sync it as the user, like `checkupdates` does: `fakeroot pacman -Sy --dbpath <dir> --config <dir>/pacman.conf --logfile /dev/null`. `fakeroot` is in `base-devel`. Without it, option B is shown as unavailable and says why.
+    3. **Pick the day.** The snapshot for the upgrade day may be from before the upgrade, so try that day and the next. Keep the one where `pacman -Qu --dbpath <dir>` lists the fewest installed packages that differ from the snapshot. If it isn't 0, list the packages that differ in the modal and lower the confidence: "your system doesn't exactly match 2026-09-18: 3 packages differ".
+    4. Dry run: `pacman -Sp --dbpath <dir> --config <dir>/pacman.conf --print-format … -- X`.
+    5. Hand-off: `<privilege> pacman -S --dbpath <dir> --config <dir>/pacman.conf -- X`.
+  - **The lock caveat:** this takes its lock in the temporary directory, not the real one, so right before the hand-off cronen checks that `/var/lib/pacman/db.lck` doesn't exist and refuses if it does.
+  - The modal also says that the archive is slow, that the next `-Syu` upgrades X normally, and that root reads a config from a directory cronen just wrote (fresh, `0700`, regenerated for every install).
+  - Afterwards, state records "X installed from the archive (2026-09-18)", and History shows it.
+- **Never offered:** `-Sy X`, or `-S X` against the real database. If neither option is possible (option B disabled or unavailable and the user declines A), the helper says so and does nothing.
+
+### Partial-upgrade detector
+- **The database was synced without upgrading.** Run `pacman -Qu` against the **real** database (no sync, so it's read-only), dropping `[ignored]` lines. If it lists anything, someone ran `-Sy` without `-u`. That raises a global `warn`: "Your package database was synced without upgrading. Installing anything now is a partial upgrade. Run the full upgrade first." It becomes `critical` when the linkage scan below finds damage. It counts toward exit code 20 (30 when critical).
+- **History.**
+  - The History screen marks transactions whose command synced without upgrading and installed something: `-Sy X`, `-Syy X`, `-S -y X`, `--sync --refresh X`, from pacman, paru or yay.
+  - Parse the options properly (short-option clusters and long options), not with a regex on the whole line.
+  - Since the last full upgrade, the updates header says "2 partial upgrades since your last full upgrade (Oct 3: pacman -Sy discord)". Packages those transactions installed or upgraded get a `~` badge in the Packages screen until the next full upgrade.
+- **Broken-linkage scan.**
+  - On demand: `B` in housekeeping, or `cronen --scan-linkage`, which prints the result and exits `20` if anything is broken and `0` if not. It runs in the background with progress and can be cancelled.
+  - Reuses M8's ELF reader across **all** installed packages' ELF files.
+  - Resolution, in this order:
+    1. `RUNPATH`/`RPATH` (with `$ORIGIN` expanded),
+    2. the directories from `/etc/ld.so.conf` and `/etc/ld.so.conf.d/*`,
+    3. `/usr/lib`, and `/usr/lib32` for 32-bit ELF.
+  - Anything still unresolved is broken: "/usr/bin/foo (foo 1.2-1) needs libbar.so.3, which no installed package provides".
+  - Cache the results per package version.
+  - Skip what's known to be dlopen-only (plugin directories); keep that list data-driven.
+- **Fixes it suggests:**
+  - a broken repo package → the full upgrade (or a reinstall from the cache at the installed version, if the cached file exists),
+  - a broken foreign package → a rebuild, by handing off `<aur_helper> -S -- X`. Only offer the rebuild when there are no pending repo updates; otherwise say "upgrade first, then rebuild", because a rebuild against the old libraries would just break again.
+
+### Snapshot helper (Timeshift, snapper)
+- **Backends** in `internal/snapshot`: Timeshift and snapper. With `snapshot_tool = ""`, use whichever one is installed (Timeshift first). Each backend gives: detect, list (if possible), create, delete and restore argv, and how it names snapshots. Snapshot names are validated (Timeshift: `^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$`; snapper: a number).
+- **Detecting an existing hook.**
+  - If `timeshift-autosnap` or `snap-pac` is installed, pacman already takes a snapshot on every transaction. Say so in the modal and don't add a second snapshot.
+  - The preflight still reports the last snapshot's age.
+- **In the upgrade flow.**
+  - The upgrade modal (and the install helper's option A) gets a line `☑ take a snapshot first (Timeshift)`, which `t` toggles. With `snapshot_before_upgrade = "ask"` (the default), it starts ticked when a backend is detected and no hook is. `"always"` and `"never"` do what they say.
+  - When ticked, cronen chains two hand-offs:
+    1. `<privilege> timeshift --create --comments "cronen: before -Syu (312 packages)"` (snapper: `<privilege> snapper -c <config> create --description "…" --cleanup-algorithm number`).
+    2. Then, **only if that exited 0**, the upgrade.
+  - If the snapshot fails, the upgrade doesn't start. The modal comes back with the error and a separate "upgrade without a snapshot" choice, which needs `y` again.
+  - State records each snapshot cronen created (time, tool, comment).
+- **Listing.**
+  - snapper: `snapper -c <config> list` as the user works when the config allows it (`ALLOW_USERS`/`ALLOW_GROUPS`).
+  - Timeshift: listing needs root. Use `sudo -n timeshift --list` only with `snapshot_list_sudo = true` (the one read-only exception to invariant 1); otherwise show only the snapshots cronen itself recorded, and say so.
+  - Read Timeshift's mode (rsync or btrfs) and backup device from `/etc/timeshift/timeshift.json` when it's readable. Check the field names on a real install.
+- **Preflight.** `warn` when the newest known snapshot is older than `snapshot_max_age_days` (default 7), and `info` when none is known. For rsync mode with the backup device mounted, also show its free space.
+- **Housekeeping.** A Snapshots section with the list, `S` to take one now, `X` to delete the marked ones (`timeshift --delete --snapshot <name>`), and `R` to restore one (`timeshift --restore --snapshot <name>`; Timeshift asks its own questions after that).
+  - Restore gets the heaviest confirmation in the app: the modal says the system will need a reboot and that changes since the snapshot will be lost, and it requires typing `restore`.
+  - snapper restores (`snapper rollback`) are shown as a command to copy and are not handed off, because the rollback model depends on how the system boots.
 
 ## Non-interactive changes
 
@@ -502,8 +601,12 @@ New keys:
   - `security_fixes`, `rebuilds`, `acknowledged`
   - `preflight`: an array of `{"severity","message"}`
   - `reboot_pending`
-  
+  - `days_behind`, `eta_seconds` (omitted with no samples), `prefetched_bytes`, `metered`
+  - `partial_upgrade` (the real database was synced without upgrading), `broken_linkage` (only when a cached scan result exists)
+  - `last_snapshot` (RFC 3339, omitted when none is known)
+
   Existing fields keep their meaning.
+- New: `cronen install <pkg>...` (the install helper) and `cronen --scan-linkage` (prints broken files; exit `20` if any, `0` if none, `1` on error).
 - `--check` adds lines for preflight problems, rebuilds and security fixes, ordered like the rest by severity.
 - Exit code `30` now means **critical**: manual-intervention news *or* a critical preflight problem. `20` and `10` are unchanged, but ignore acknowledged flags. Document this in the README and man page as a behaviour change.
 - `--waybar` `class`/`alt` use the new definitions, so a full `/boot` turns the module red.
@@ -523,9 +626,23 @@ protected = ["base", "linux*", "glibc", "systemd", "pacman", "sudo", "grub", "sy
 protected_mode = "extend"    # like watchlist_mode
 extra_cache_dirs = []        # globs, e.g. ["~/.cache/paru/clone/*"]
 pacdiff_command = ""         # overrides "<privilege_command> pacdiff"
+
+# helpers
+metered_warn_mib = 100       # warn on a metered connection above this download size
+prefetch_command = ""        # overrides "checkupdates -d"
+archive_install = true       # install helper option B (experimental)
+snapshot_tool = ""           # "", "timeshift", "snapper"; "" = detect
+snapshot_before_upgrade = "ask"  # "ask" (tick it when a tool is detected), "always", "never"
+snapshot_max_age_days = 7
+snapshot_list_sudo = false   # allow "sudo -n timeshift --list" (read-only)
+snapper_config = "root"
 ```
 
-State moves to `version: 2`. It adds acknowledgements (`{name, version, rules}`) and recorded AUR maintainers (`{pkgbase, maintainer, comaintainers}`). A version-1 file loads as-is, and an unknown future version is treated like a corrupt file (v1's rules: never panic, start from empty).
+State moves to `version: 2`. It adds acknowledgements (`{name, version, rules}`) and recorded AUR maintainers (`{pkgbase, maintainer, comaintainers}`). It also adds the helpers' records:
+- upgrade and prefetch timing samples (last 10 of each),
+- daily pending-size samples (last 90),
+- snapshots cronen created,
+- archive installs. A version-1 file loads as-is, and an unknown future version is treated like a corrupt file (v1's rules: never panic, start from empty).
 
 Cache TTLs: security 6 h, GitLab 1 h, mirror 1 h, AUR atom/diff 15 min (like v1's AUR), ELF scan results until the package version changes. `r` still bypasses all of them.
 
@@ -546,11 +663,18 @@ internal/aur/          + review.go (atom log, rawdiff, base-commit choice, diff 
 internal/ops/          pure: build argv for remove/downgrade/pacdiff, validate names and
                          paths, parse --print output and pacman errors
 internal/risk/         + rules 7–15, acknowledgements
-internal/ui/           + tabs.go, packages.go, history.go, housekeeping.go, diff.go;
-                         confirm.go generalised for every write action
+internal/ui/           + tabs.go, packages.go, history.go, housekeeping.go, diff.go,
+                         install.go; confirm.go generalised for every write action and
+                         for chained hand-offs (snapshot, then upgrade)
+internal/bandwidth/    pure: time estimates, growth trend, "last used" from atimes
+internal/archive/      archive-install planning: day choice, pacman.conf generation (pure);
+                         directory setup and sync go through system
+internal/linkage/      pure resolution of DT_NEEDED against search paths; ELF via system
+internal/partial/      pure: detect sync-without-upgrade commands in log transactions
+internal/snapshot/     Timeshift and snapper backends: detect, list parsing, argv
 ```
 
-The v1 rules still apply. On top of them: `internal/ops` and `internal/rebuild` (apart from the ELF reader) take no interfaces at all, only parsed data, so they're tested like `internal/risk`.
+The v1 rules still apply. On top of them: `internal/ops`, `internal/rebuild`, `internal/bandwidth`, `internal/partial` and `internal/linkage` (apart from the ELF reader) take no interfaces at all, only parsed data, so they're tested like `internal/risk`. `internal/system` gains `/proc/net/route` and `/proc/self/mounts` reads, `nmcli`, and access times through `Stat`.
 
 ## v2 testing
 
@@ -573,8 +697,16 @@ The v1 rules still apply. On top of them: `internal/ops` and `internal/rebuild` 
   - small ELF fixtures checked in (a few KB each, with known `DT_NEEDED` entries)
   - `/proc/self/mounts` and `fstab` with and without a separate `/boot`
   - `statfs` results via the fake
+  - `nmcli` metered output (`yes`, `yes (guessed)`, `no`, `unknown`) and `/proc/net/route`
+  - `checkupdates -d` success and failure
+  - archive install: a real `pacman.conf` with custom repos and `Include` lines, plus `-Qu --dbpath` drift for two candidate days
+  - real-database `pacman -Qu` with and without pending entries
+  - `pacman.log` with `-Sy X`, `-Syy X`, `-S -y X`, `--sync --refresh X`, paru and yay variants, and full upgrades that must **not** match (`-Syu`, `-Syyu`, `-Suy`)
+  - ELF fixtures with `RUNPATH`/`$ORIGIN`, a missing soname, and a 32-bit binary; `ld.so.conf` with an include
+  - `timeshift --list` output, `timeshift.json`, `snapper list` output, and a permission-denied `snapper list`
 - Table-driven tests for rules 7–15, acknowledgement logic, `internal/ops` argv building and validation (including names and paths that must be refused), and "why installed" chains (including cycles and packages with no explicit root).
-- Snapshot tests for each new screen and for the confirm modal with each action: plain remove, remove with a protected package, remove that breaks a dependency, downgrade, orphan cleanup.
+- Table-driven tests for the time estimate (no samples, one, many, outliers), the growth trend, option parsing in `internal/partial`, the archive day choice, linkage resolution, and snapshot name validation.
+- Snapshot tests for each new screen and for the confirm modal with each action: plain remove, remove with a protected package, remove that breaks a dependency, downgrade, orphan cleanup, the install helper with both options (and with B unavailable), and upgrade with a snapshot. Also test the chained hand-off with the fake runner: the snapshot fails → the upgrade never runs.
 
 ### Needs checking on Arch (by the maintainer, before the milestone merges)
 The PR for each milestone lists which of these it relied on. Fixtures for them should be captured from a real system, not written by hand.
@@ -583,10 +715,14 @@ The PR for each milestone lists which of these it relied on. Fixtures for them s
 - the soname `Provides` spellings on current repo packages, including makepkg autodeps (M8)
 - `pacman -Rp` and `pacman -Up` work as a normal user (M14, M15)
 - the security tracker's JSON field names (M10), GitLab project-path mangling (M10), and severity label names (M10)
+- whether `checkupdates -d` needs root to write the cache, and how `ParallelDownloads` behaves when it's not set (M16)
+- the whole archive-install flow: the `fakeroot` sync as a normal user, `pacman -S` with `--dbpath` and `--config` writing the real local database through the symlink, and which archive day matches best (M17)
+- `pacman -Qu` against the real database works without root and without a lock (M18)
+- Timeshift's CLI flags and `timeshift.json` fields, and snapper's `list` permissions (M19)
 
 ## v2 milestones
 
-M7 goes first. M8–M11 then only touch their own packages plus a short UI wiring step each, so they **can run in parallel** like M1–M3. Expect small conflicts in `internal/ui` and `internal/risk`; rebase onto `main` and don't merge it in. M12–M15 run in order.
+M7 goes first. M8–M11 then only touch their own packages plus a short UI wiring step each, so they **can run in parallel** like M1–M3. Expect small conflicts in `internal/ui` and `internal/risk`; rebase onto `main` and don't merge it in. M12–M15 run in order. After M15, the helpers (M16–M19) run in order too. M19 only needs M14's confirm modal, so it can move up to right after M14 if a snapshot before upgrading is wanted sooner.
 
 ### M7: Transaction preview (run alone, first)
 - `LC_ALL=C` for every command in `internal/system`, with a test that the real runner sets it.
@@ -628,6 +764,22 @@ M7 goes first. M8–M11 then only touch their own packages plus a short UI wirin
 - Log transactions, the History screen, cache lookup, the downgrade flow from History and Packages, and (stretch) reverting a transaction.
 - **Done when:** the history parser handles both timestamp formats and an interrupted transaction, the downgrade modal's tests cover a missing `.sig` and a reverse-dependency warning, and `-U` paths outside the cache directories are refused.
 
+### M16: Bandwidth helper
+- How far behind, the growth trend, the time estimate and its samples in state, sorting by download size, "last used", prefetch (`F`), the metered check, the `ParallelDownloads` hint, and the JSON fields.
+- **Done when:** the estimate tests pass, prefetch is tested with the fake runner, "last used" is hidden under `noatime`, and `--demo` shows "N days behind" and an estimate from fixture samples.
+
+### M17: Install helper
+- `cronen install` and `I`, option A, and option B (`internal/archive`, behind `archive_install`), with the lock check and the "never offered" guarantees.
+- **Done when:** the argv tests show that `-Sy` without `-u` and `-S` against the real database can't be produced, option B is unavailable without `fakeroot` or a known last upgrade, the day-choice tests pass, and the generated `pacman.conf` drops custom repos and `Include` lines.
+
+### M18: Partial-upgrade detector
+- The real-database `-Qu` check, History marking and the `~` badge, the linkage scan (`internal/linkage`, `B`, `--scan-linkage`), and the suggested fixes.
+- **Done when:** the option-parsing table covers every variant listed under v2 testing, the linkage fixtures find exactly the broken file, and a rebuild is never offered while repo updates are pending.
+
+### M19: Snapshot helper
+- `internal/snapshot` with both backends, detecting an existing hook, the chained hand-off in the upgrade modal and in install option A, the preflight age check, and the Snapshots section in housekeeping (create, delete, restore).
+- **Done when:** the chained hand-off tests pass (a failed snapshot stops the upgrade), the restore modal requires typing `restore`, the hook detection skips the extra snapshot, and listing without `snapshot_list_sudo` never runs `sudo`.
+
 ---
 
 ## Later (not v2)
@@ -638,3 +790,8 @@ M7 goes first. M8–M11 then only touch their own packages plus a short UI wirin
 - `--json --full` with per-package detail, and shell completions.
 - Theming: an ASCII / Nerd Font icon toggle and a configurable palette.
 - Downgrades from the Arch Linux Archive for versions that aren't cached.
+- Services and processes that need a restart after an upgrade (deleted libraries in `/proc/*/maps`).
+- Boot sanity: every kernel has its `vmlinuz` and initramfs, bootloader entries point at real kernels, and the CPU microcode package is installed.
+- AUR packages that are now in the official repos, with a switch to the repo version.
+- Fixing install reasons (`pacman -D --asdeps` / `--asexplicit`) so orphan cleanup catches more.
+- Integrity: `pacman -Qkk`, and reinstalling from the cache at the installed version. Also unowned files, config drift, a package list kept in dotfiles, a maintenance checklist, and cache cleanup with `paccache`.
