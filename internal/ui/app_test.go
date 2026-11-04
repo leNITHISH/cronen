@@ -28,6 +28,7 @@ func fixtureOptions() Options {
 		Runner:   fixtures.Runner(),
 		Fetcher:  fixtures.Fetcher(),
 		FS:       fixtures.FS(),
+		SyncDB:   fixtures.SyncDBPath,
 		Now:      func() time.Time { return fixtures.Now },
 		Location: time.UTC,
 	}
@@ -52,7 +53,7 @@ func run(t *testing.T, m Model, cmd tea.Cmd) Model {
 		for _, c := range msg {
 			m = run(t, m, c)
 		}
-	case repoMsg, aurMsg, newsMsg, logMsg, pacnewMsg, archwebMsg, openedMsg, stateSavedMsg, upgradedMsg:
+	case repoMsg, aurMsg, newsMsg, logMsg, pacnewMsg, previewMsg, archwebMsg, openedMsg, stateSavedMsg, upgradedMsg:
 		m = send(t, m, msg)
 	}
 	return m

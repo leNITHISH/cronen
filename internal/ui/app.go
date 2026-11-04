@@ -41,6 +41,10 @@ type Options struct {
 	// kept in memory only, as in demo mode.
 	StatePath string
 
+	// SyncDB is the database checkupdates syncs, which the transaction
+	// preview reads; see pacman.SyncDBPath.
+	SyncDB string
+
 	// Exec hands the terminal to the upgrade command and reports how it
 	// exited through done; the real one wraps tea.ExecProcess. Nil
 	// disables upgrading.
@@ -113,22 +117,26 @@ type Model struct {
 	// gen is the generation of the current load; see load.go.
 	gen                              int
 	repoSec, aurSec, newsSec, logSec section
-	pacnewSec                        section
-	repo                             []pacman.Update
-	aurPkgs                          []aur.Package
-	newsItems                        []news.Item
-	lastUpgrade                      time.Time
-	pacnew                           []string
-	unreadNews                       []news.Item
-	unread                           map[string]bool
-	newsDecided                      bool
-	result                           risk.Result
-	archweb                          map[string]archwebResult
-	rendered                         map[renderKey]string
-	updates                          updatesPane
-	newsPane                         newsPane
-	detail, newsView                 viewport.Model
-	detailKey, newsViewKey           string
+	pacnewSec, previewSec            section
+	// tx is the transaction preview, valid when previewed is set.
+	tx                     pacman.Transaction
+	previewed              bool
+	txUpdates              map[string]pacman.UpdateDetail
+	repo                   []pacman.Update
+	aurPkgs                []aur.Package
+	newsItems              []news.Item
+	lastUpgrade            time.Time
+	pacnew                 []string
+	unreadNews             []news.Item
+	unread                 map[string]bool
+	newsDecided            bool
+	result                 risk.Result
+	archweb                map[string]archwebResult
+	rendered               map[renderKey]string
+	updates                updatesPane
+	newsPane               newsPane
+	detail, newsView       viewport.Model
+	detailKey, newsViewKey string
 }
 
 // New returns the root model. Its Init starts loading every data source.
@@ -198,10 +206,11 @@ func (m *Model) markLoading() {
 	m.newsSec = section{loading: true}
 	m.logSec = section{loading: true}
 	m.pacnewSec = section{loading: true}
+	m.previewSec = section{loading: m.cfg.Preview}
 }
 
 func (m Model) anyLoading() bool {
-	for _, s := range []section{m.repoSec, m.aurSec, m.newsSec, m.logSec, m.pacnewSec} {
+	for _, s := range []section{m.repoSec, m.aurSec, m.newsSec, m.logSec, m.pacnewSec, m.previewSec} {
 		if s.loading {
 			return true
 		}
@@ -270,6 +279,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.repoSec = section{err: msg.err}
 		m.repo = msg.updates
+		if msg.err != nil || !m.cfg.Preview {
+			// Without the updates there is nothing to preview, and
+			// checkupdates has already said why.
+			m.previewSec = section{}
+			m.tx, m.previewed = pacman.Transaction{}, false
+			return m, m.changed()
+		}
+		return m, tea.Batch(m.changed(),
+			loadPreview(m.ctx(), m.opts.Runner, m.opts.FS, m.opts.SyncDB, msg.updates, m.location(), m.gen))
+
+	case previewMsg:
+		if msg.gen != m.gen {
+			return m, nil
+		}
+		m.previewSec = section{err: msg.err}
+		m.previewed = msg.err == nil
+		m.tx = msg.tx
+		m.txUpdates = map[string]pacman.UpdateDetail{}
+		for _, u := range msg.tx.Updates {
+			m.txUpdates[u.Name] = u
+		}
 		return m, m.changed()
 
 	case aurMsg:
@@ -489,7 +519,11 @@ func (m *Model) changed() tea.Cmd {
 		m.newsDecided = true
 	}
 
-	m.result = summary.Assess(summary.Updates(m.repo, m.aurPkgs), m.unreadNews, m.cfg, m.now())
+	var tx *pacman.Transaction
+	if m.previewed {
+		tx = &m.tx
+	}
+	m.result = summary.Assess(summary.Updates(m.repo, m.aurPkgs), m.unreadNews, tx, m.cfg, m.now())
 
 	m.newsPane.move(0, len(m.newsItems))
 	// The banner may have appeared or gone, changing the body height.
@@ -546,7 +580,7 @@ func (m Model) errorNotes() []string {
 	if m.newsSec.err != nil && !m.newsSec.loading {
 		notes = append(notes, newsErrorNote)
 	}
-	for _, s := range []section{m.repoSec, m.aurSec} {
+	for _, s := range []section{m.repoSec, m.aurSec, m.previewSec} {
 		if s.err != nil && !s.loading {
 			notes = append(notes, "✗ "+s.err.Error())
 		}
@@ -676,6 +710,14 @@ func (m Model) statusLine(w int) string {
 		parts = append(parts, m.spinner.View()+" checking updates")
 	default:
 		parts = append(parts, plural(len(m.result.Packages), "update", "updates"))
+	}
+	switch {
+	case m.previewed:
+		parts = append(parts, pacman.FormatSize(m.tx.DownloadBytes)+" ↓", pacman.FormatDelta(m.tx.SizeDelta))
+	case m.previewSec.loading && !m.repoSec.loading:
+		parts = append(parts, m.spinner.View()+" previewing")
+	case m.previewSec.err != nil:
+		parts = append(parts, m.styles.Error.Render("preview unavailable"))
 	}
 	if m.newsDecided {
 		parts = append(parts, itoa(len(m.result.Flagged()))+" flagged")

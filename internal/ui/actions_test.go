@@ -446,7 +446,7 @@ func TestAgreesWithSummary(t *testing.T) {
 	opts := fixtureOptions()
 	m := loaded(t, opts, 100, 30)
 	s := summary.Gather(context.Background(), summary.Sources{
-		Runner: opts.Runner, Fetcher: opts.Fetcher, FS: opts.FS,
+		Runner: opts.Runner, Fetcher: opts.Fetcher, FS: opts.FS, SyncDB: opts.SyncDB,
 		Config: config.Default(), Now: opts.Now, Location: opts.Location,
 	})
 	type counts struct{ updates, flagged, interventions, unread, pacnew int }
