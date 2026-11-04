@@ -69,3 +69,14 @@ and the RPC CoMaintainers array were checked against the live AUR (anonymous
 GET, 2026-11-05). The commit messages, ids and diff contents are still invented.
 
 aur_info.json: visual-studio-code-bin gained a "CoMaintainers" array, as the RPC returns it.
+
+M13, package browser (hand-written; generated from a compact table, same
+package set as pacman_Qq.txt plus their dependencies and a few orphans):
+
+  pacman_Qi.txt       pacman -Qi with no arguments, every installed package. Required By
+                      and Optional For are derived from Depends On / Optional Deps. The
+                      "Backup Files" lines are made up (plain -Qi may not print them; -Qii
+                      does). Install Date uses the same spelling as Build Date; the
+                      spotify/paru fixtures use the "Mon 01 Sep 2025 10:01:00 AM UTC"
+                      spelling, and the parser reads both.
+  pacman_Qdtq.txt     pacman -Qdtq (orphans, one name per line)
