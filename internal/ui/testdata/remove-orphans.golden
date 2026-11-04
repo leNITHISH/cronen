@@ -1,0 +1,40 @@
+ cronen                                             1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Remove 4 orphans?                                                                                  
+                                                                                                    
+ Dry run: pacman -Rnsp --print-format '%n %v' -- libgbm-compat old-codec-lib paru-debug zstd-       
+    debug                                                                                           
+ Options: s ☑ also remove unneeded dependencies (-s) · n ☑ no .pacsave backups (-n)                 
+                                                                                                    
+ This runs: sudo pacman -Rns -- libgbm-compat old-codec-lib paru-debug zstd-debug                   
+                                                                                                    
+ Selected (4)                                                                                       
+   libgbm-compat 1.0-1 102 KiB                                                                      
+   old-codec-lib 0.9-3 2.4 MiB                                                                      
+   paru-debug 2.1.0-1 120 MiB                                                                       
+   zstd-debug 1.5.7-2 20 MiB                                                                        
+                                                                                                    
+ Frees 142 MiB                                                                                      
+                                                                                                    
+ ⚠ removing orphans can create new orphans; -s already removes those it can                         
+                                                                                                    
+ Press y to remove, esc to cancel.                                                                  
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Remove 4 orphans?                                                                       esc cancel 

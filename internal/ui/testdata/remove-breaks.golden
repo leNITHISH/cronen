@@ -1,0 +1,30 @@
+ cronen                                             1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Remove 1 package?                                                                                  
+                                                                                                    
+ Dry run: pacman -Rnsp --print-format '%n %v' -- libx11                                             
+ Options: s ☑ also remove unneeded dependencies (-s) · n ☑ no .pacsave backups (-n)                 
+                                                                                                    
+ ✗ pacman's dry run failed; nothing will be run                                                     
+   failed to prepare transaction (could not satisfy dependencies)                                   
+   ⚠ removing libx11 breaks libx11, required by gtk3                                                
+   ⚠ removing libx11 breaks libx11, required by libxt                                               
+   ⚠ removing libx11 breaks libx11, required by mesa                                                
+                                                                                                    
+ esc cancels; a toggle above reruns the dry run                                                     
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Remove 1 package?                                                                       esc cancel 

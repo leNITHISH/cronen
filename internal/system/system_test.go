@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"net/http"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -359,5 +360,25 @@ func TestFakeRunnerHandler(t *testing.T) {
 	}
 	if _, _, err := r.Run(context.Background(), "c"); !errors.Is(err, ErrUnexpectedCommand) {
 		t.Errorf("c: %v", err)
+	}
+}
+
+func TestFakeFSReadDirAndGlob(t *testing.T) {
+	f := NewFakeFS(map[string][]byte{"/c/a.pkg": []byte("xx"), "/c/b.pkg": nil, "/c/sub/z": nil, "/d/e": nil})
+	f.SetSize("/c/b.pkg", 1<<30)
+	got, err := f.ReadDir("/c")
+	if err != nil || len(got) != 2 || got[0].Name() != "a.pkg" || got[0].Size() != 2 || got[1].Size() != 1<<30 {
+		t.Errorf("ReadDir = %v, %v", got, err)
+	}
+	if _, err := f.ReadDir("/nope"); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("missing dir: %v", err)
+	}
+	g, err := f.Glob("/c/*")
+	if err != nil || !reflect.DeepEqual(g, []string{"/c/a.pkg", "/c/b.pkg", "/c/sub"}) {
+		t.Errorf("Glob = %v, %v", g, err)
+	}
+	info, _ := f.Stat("/c/b.pkg")
+	if info.Size() != 1<<30 {
+		t.Errorf("Stat size = %d", info.Size())
 	}
 }
