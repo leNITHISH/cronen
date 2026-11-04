@@ -1,10 +1,12 @@
 package ui
 
 import (
-	"github.com/charmbracelet/x/ansi"
-	"github.com/leNITHISH/cronen/internal/config"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
+
+	"github.com/leNITHISH/cronen/internal/config"
 )
 
 func historyScreen(t *testing.T, opts Options) Model {

@@ -68,7 +68,7 @@ func validArch(a string) bool {
 		return false
 	}
 	for _, r := range a {
-		if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '_') {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '_' {
 			return false
 		}
 	}
@@ -80,7 +80,7 @@ func validPkgrel(r string) bool {
 		return false
 	}
 	for _, c := range r {
-		if !(c >= '0' && c <= '9' || c == '.') {
+		if (c < '0' || c > '9') && c != '.' {
 			return false
 		}
 	}
