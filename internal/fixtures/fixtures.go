@@ -49,7 +49,7 @@ const (
 	PacmanQlForeign = "pacman_Ql-foreign.txt" // pacman -Ql, for the foreign packages
 	// The M10 fixtures are HAND-WRITTEN too, pending capture from the real
 	// services.
-	PacmanQ          = "pacman_Q.txt"      // pacman -Q
+	PacmanQn         = "pacman_Qn.txt"     // pacman -Qn
 	SecurityAll      = "security_all.json" // https://security.archlinux.org/all.json
 	GitLabIssuesPref = "gitlab_issues_"    // + project + ".json"; other projects 404
 )
@@ -136,7 +136,7 @@ func Runner() *system.FakeRunner {
 	r := system.NewFakeRunner()
 	r.Set("checkupdates", CheckupdatesResult())
 	r.Set("pacman -Qm", system.FakeResult{Stdout: Bytes(PacmanQm)})
-	r.Set("pacman -Q", system.FakeResult{Stdout: Bytes(PacmanQ)})
+	r.Set("pacman -Qn", system.FakeResult{Stdout: Bytes(PacmanQn)})
 	r.Set("pacman -Qq", system.FakeResult{Stdout: Bytes(PacmanQq)})
 	r.Set("pacdiff -o", system.FakeResult{Stdout: Bytes(PacdiffO)})
 	r.Set("pacman -Sup --dbpath "+SyncDBPath+" --logfile /dev/null --noconfirm --print-format %n %v %r %s",

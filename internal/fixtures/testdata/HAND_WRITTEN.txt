@@ -53,5 +53,5 @@ the services use):
   security_all.json          https://security.archlinux.org/all.json (an array of groups)
   gitlab_issues_linux.json   .../api/v4/projects/archlinux%2Fpackaging%2Fpackages%2Flinux/issues
   gitlab_issues_mesa.json    the same for mesa; every other project answers 404
-  pacman_Q.txt               pacman -Q, every installed package with its version
+  pacman_Qn.txt              pacman -Qn, the native packages with their versions
   vercmp.txt                 gained the comparisons the security fixtures need

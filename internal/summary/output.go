@@ -57,6 +57,18 @@ func (s Summary) Text() string {
 				lines = append(lines, icon(sev)+" preflight: "+oneLine(p.Message))
 			}
 		}
+		// Installed and vulnerable with no fix is a warning, a security
+		// fix only info, so they sit with their severity.
+		switch sev {
+		case risk.Warn:
+			for _, v := range s.Vulnerable {
+				lines = append(lines, icon(sev)+" "+oneLine(risk.VulnerableReason(v)))
+			}
+		case risk.Info:
+			for _, p := range s.Security {
+				lines = append(lines, "🛡 "+p.Name+": "+oneLine(securityText(p)))
+			}
+		}
 	}
 	if s.Previewed {
 		lines = append(lines, "transaction: "+s.transactionLine())
@@ -71,6 +83,27 @@ func (s Summary) Text() string {
 		lines = append(lines, "error: "+oneLine(err.Error()))
 	}
 	return strings.Join(lines, "\n") + "\n"
+}
+
+// securityText is "fixes AVG-2901 (High): CVE-2025-60001; AVG-2902 (Low)".
+func securityText(p risk.Package) string {
+	var parts []string
+	for _, f := range p.Security {
+		parts = append(parts, f.Describe())
+	}
+	return "fixes " + strings.Join(parts, "; ")
+}
+
+// SecurityFixes counts the distinct advisory groups the pending updates
+// fix.
+func (s Summary) SecurityFixes() int {
+	seen := map[string]bool{}
+	for _, p := range s.Security {
+		for _, f := range p.Security {
+			seen[f.Group] = true
+		}
+	}
+	return len(seen)
 }
 
 // JSON is the machine-readable summary --json prints, for example
@@ -91,6 +124,8 @@ func (s Summary) JSON() []byte {
 		Replaced      int           `json:"replaced"`
 		Held          int           `json:"held"`
 		Rebuilds      int           `json:"rebuilds"`
+		SecFixes      int           `json:"security_fixes"`
+		Vulnerable    int           `json:"vulnerable"`
 		Preflight     []problemJSON `json:"preflight"`
 		RebootPending bool          `json:"reboot_pending"`
 		Errors        []string      `json:"errors,omitempty"`
@@ -108,6 +143,8 @@ func (s Summary) JSON() []byte {
 		Replaced:      len(s.Transaction.Removed),
 		Held:          len(s.Held),
 		Rebuilds:      len(RebuildPackages(s.Rebuilds)),
+		SecFixes:      s.SecurityFixes(),
+		Vulnerable:    len(s.Vulnerable),
 		Preflight:     []problemJSON{},
 		RebootPending: s.RebootPending,
 	}
