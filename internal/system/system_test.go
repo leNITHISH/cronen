@@ -215,6 +215,35 @@ func TestHTTPClientCache(t *testing.T) {
 	}
 }
 
+func TestHTTPClientGetTTL(t *testing.T) {
+	ctx := context.Background()
+	srv := &fakeServer{status: 200, body: "v1"}
+	now := time.Date(2026, 10, 23, 12, 0, 0, 0, time.UTC)
+	c := &HTTPClient{Client: srv.client(), FS: NewFakeFS(nil), CacheDir: "/cache", TTL: DefaultTTL, Now: func() time.Time { return now }}
+	const url = "https://security.archlinux.org/all.json"
+
+	if _, err := GetTTL(ctx, c, url, 6*time.Hour, false); err != nil {
+		t.Fatal(err)
+	}
+	// Well past the default TTL but inside the longer one: still cached.
+	srv.body = "v2"
+	now = now.Add(5 * time.Hour)
+	if b, _ := GetTTL(ctx, c, url, 6*time.Hour, false); string(b) != "v1" || srv.hits != 1 {
+		t.Fatalf("within custom TTL: %q, hits %d", b, srv.hits)
+	}
+	now = now.Add(time.Hour)
+	if b, _ := GetTTL(ctx, c, url, 6*time.Hour, false); string(b) != "v2" || srv.hits != 2 {
+		t.Fatalf("past custom TTL: %q, hits %d", b, srv.hits)
+	}
+
+	// Fetchers without TTL support fall back to Get.
+	f := NewFakeFetcher()
+	f.Set(url, FakeResponse{Body: []byte("fake")})
+	if b, err := GetTTL(ctx, f, url, time.Hour, true); err != nil || string(b) != "fake" {
+		t.Fatalf("fake: %q, %v", b, err)
+	}
+}
+
 func TestHTTPClientErrors(t *testing.T) {
 	ctx := context.Background()
 	srv := &fakeServer{status: 503, body: "down"}

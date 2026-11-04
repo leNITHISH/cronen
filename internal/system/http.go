@@ -20,6 +20,24 @@ type Fetcher interface {
 	Get(ctx context.Context, url string, fresh bool) ([]byte, error)
 }
 
+// TTLFetcher is a Fetcher that can serve cached responses for a custom
+// time instead of its default TTL.
+type TTLFetcher interface {
+	Fetcher
+	// GetTTL is Get with cached responses served for ttl.
+	GetTTL(ctx context.Context, url string, ttl time.Duration, fresh bool) ([]byte, error)
+}
+
+// GetTTL fetches url, serving a cached response for up to ttl when f
+// supports it (HTTPClient does). Other fetchers, such as the fake, ignore
+// ttl.
+func GetTTL(ctx context.Context, f Fetcher, url string, ttl time.Duration, fresh bool) ([]byte, error) {
+	if t, ok := f.(TTLFetcher); ok {
+		return t.GetTTL(ctx, url, ttl, fresh)
+	}
+	return f.Get(ctx, url, fresh)
+}
+
 // HTTPError reports a non-2xx response.
 type HTTPError struct {
 	URL        string
@@ -73,8 +91,13 @@ type cacheEntry struct {
 
 // Get implements Fetcher.
 func (c *HTTPClient) Get(ctx context.Context, url string, fresh bool) ([]byte, error) {
+	return c.GetTTL(ctx, url, c.TTL, fresh)
+}
+
+// GetTTL implements TTLFetcher.
+func (c *HTTPClient) GetTTL(ctx context.Context, url string, ttl time.Duration, fresh bool) ([]byte, error) {
 	if !fresh {
-		if body, ok := c.cached(url); ok {
+		if body, ok := c.cached(url, ttl); ok {
 			return body, nil
 		}
 	}
@@ -119,7 +142,7 @@ func (c *HTTPClient) cachePath(url string) string {
 	return filepath.Join(c.CacheDir, "http", hex.EncodeToString(sum[:])+".json")
 }
 
-func (c *HTTPClient) cached(url string) ([]byte, bool) {
+func (c *HTTPClient) cached(url string, ttl time.Duration) ([]byte, bool) {
 	if c.CacheDir == "" || c.FS == nil {
 		return nil, false
 	}
@@ -132,7 +155,7 @@ func (c *HTTPClient) cached(url string) ([]byte, bool) {
 		return nil, false
 	}
 	age := c.now().Sub(e.Fetched)
-	if age < 0 || age >= c.TTL {
+	if age < 0 || age >= ttl {
 		return nil, false
 	}
 	return e.Body, true
