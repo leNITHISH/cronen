@@ -122,6 +122,9 @@ type Package struct {
 	Update
 	// Flags are ordered by severity, highest first.
 	Flags []Flag
+	// Acknowledged are the flags the user acknowledged for this version.
+	// They are not in Flags, so they never count as flagged.
+	Acknowledged []Flag
 	// Security lists the advisory groups updating the package fixes. They
 	// are a reason to upgrade, not a flag: they never count as flagged.
 	Security []security.Fix
