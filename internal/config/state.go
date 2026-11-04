@@ -82,7 +82,7 @@ func (s *State) ReadNews() []string {
 }
 
 // Maintainer returns the recorded maintainer of a package base.
-func (s *State) Maintainer(pkgbase string) (Maintainer, bool) {
+func (s State) Maintainer(pkgbase string) (Maintainer, bool) {
 	m, ok := s.maintainers[pkgbase]
 	return m, ok
 }
@@ -102,7 +102,7 @@ func (s *State) SetMaintainer(m Maintainer) {
 }
 
 // Maintainers returns every recorded maintainer, sorted by package base.
-func (s *State) Maintainers() []Maintainer {
+func (s State) Maintainers() []Maintainer {
 	out := make([]Maintainer, 0, len(s.maintainers))
 	for _, m := range s.maintainers {
 		out = append(out, m)
