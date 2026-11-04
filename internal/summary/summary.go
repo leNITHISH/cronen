@@ -313,6 +313,15 @@ func Gather(ctx context.Context, src Sources) Summary {
 	}
 	res := Assess(updates, unread, txp, src.Config, t, WithRebuilds(rebuilds), WithFeeds(feeds, src.Config))
 	s.Rebuilds = res.Rebuilds
+	// Maintainer changes need no extra request. Diffs are only fetched in
+	// eager mode, since --check isn't interactive: nothing opens them.
+	var reviews map[string]aur.Review
+	if src.Config.AURReview == config.AURReviewEager && aurErr == nil {
+		var errs []error
+		reviews, errs = loadReviews(ctx, src.Runner, src.Fetcher, loc, aurPkgs)
+		s.Errors = append(s.Errors, errs...)
+	}
+	res = AssessAUR(res, aurPkgs, src.State, reviews)
 	s.Held = res.Held
 	s.Vulnerable = res.Vulnerable
 	for _, p := range res.Packages {

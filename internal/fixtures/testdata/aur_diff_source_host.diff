@@ -1,0 +1,10 @@
+diff --git a/PKGBUILD b/PKGBUILD
+index 1111111..2222222 100644
+--- a/PKGBUILD
++++ b/PKGBUILD
+@@ -3,7 +3,7 @@
+ pkgrel=1
+ url="https://github.com/example/foo"
+-source=("$pkgname-$pkgver.tar.gz::https://github.com/example/foo/archive/v$pkgver.tar.gz")
++source=("$pkgname-$pkgver.tar.gz::https://files.example-cdn.xyz/foo/v$pkgver.tar.gz")
+ sha256sums=('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')

@@ -75,6 +75,7 @@ const (
 	screenNews
 	screenHelp
 	screenConfirm
+	screenDiff
 )
 
 type focus int
@@ -157,6 +158,14 @@ type Model struct {
 	newsPane               newsPane
 	detail, newsView       viewport.Model
 	detailKey, newsViewKey string
+
+	// reviews is the AUR history of each pending AUR update, by package
+	// name; see review.go. diffView shows the diff of diffName. freshGen is
+	// the generation whose loads bypass the cache.
+	reviews  map[string]reviewState
+	diffView viewport.Model
+	diffName string
+	freshGen int
 }
 
 // New returns the root model. Its Init starts loading every data source.
@@ -179,6 +188,8 @@ func New(opts Options) Model {
 		rendered: map[renderKey]string{},
 		detail:   viewport.New(),
 		newsView: viewport.New(),
+		reviews:  map[string]reviewState{},
+		diffView: viewport.New(),
 	}
 	m.filter.Prompt = "/"
 	m.filter.Placeholder = "filter packages"
@@ -271,6 +282,7 @@ func (m *Model) refresh() tea.Cmd {
 	m.freshLoad = true
 	m.markLoading()
 	m.archweb = map[string]archwebResult{}
+	m.reviews, m.freshGen = map[string]reviewState{}, m.gen
 	cmds := m.loadCmds(true)
 	if !m.spinning {
 		m.spinning = true
@@ -355,7 +367,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.aurSec = section{err: msg.err}
 		m.aurPkgs = msg.pkgs
-		return m, tea.Batch(m.changed(), m.startSecurity())
+		return m, tea.Batch(m.aurLoaded(), m.changed(), m.startSecurity())
+
+	case aurLogMsg:
+		return m, m.handleAURLog(msg)
+
+	case aurDiffMsg:
+		return m, m.handleAURDiff(msg)
 
 	case newsMsg:
 		if msg.gen != m.gen {
@@ -431,6 +449,10 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	if m.screen == screenDiff {
+		return m.handleDiffKey(msg)
+	}
+
 	switch {
 	case key.Matches(msg, k.Quit):
 		return m, tea.Quit
@@ -477,6 +499,8 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, m.startFilter()
 	case key.Matches(msg, k.MarkRead):
 		return m, m.markRead()
+	case key.Matches(msg, k.Diff) && m.screen == screenUpdates:
+		return m, m.openDiff()
 	case key.Matches(msg, k.Upstream):
 		return m, m.openLink(false)
 	case key.Matches(msg, k.Changelog):
@@ -572,6 +596,7 @@ func (m *Model) changed() tea.Cmd {
 	}
 	m.result = summary.Assess(summary.Updates(m.repo, m.aurPkgs), m.unreadNews, tx, m.cfg, m.now(),
 		summary.WithRebuilds(m.rebuilds), summary.WithFeeds(m.feeds, m.cfg))
+	m.result = summary.AssessAUR(m.result, m.aurPkgs, m.opts.State, m.reviewMap())
 	m.assessPreflight()
 
 	m.newsPane.move(0, len(m.newsItems))
@@ -656,6 +681,8 @@ func (m *Model) layout() tea.Cmd {
 		vp.SetWidth(pw)
 		vp.SetHeight(bh)
 	}
+	m.diffView.SetWidth(w)
+	m.diffView.SetHeight(bh)
 	m.updates.scroll(bh)
 	m.newsPane.scroll(bh)
 	m.refreshNewsView()
@@ -683,12 +710,15 @@ func (m Model) View() tea.View {
 
 	lw, pw, bh := m.listWidth(), m.paneWidth(), m.bodyHeight()
 	switch m.screen {
-	case screenHelp, screenConfirm:
+	case screenHelp, screenConfirm, screenDiff:
 		body := m.help.FullHelpView(m.keys.FullHelp())
 		if m.screen == screenConfirm {
 			body = m.confirmView(w)
 		} else {
 			body += "\n\n " + m.styles.Subtle.Render(helpNote)
+		}
+		if m.screen == screenDiff {
+			body = m.diffScreenView()
 		}
 		lines = append(lines, m.styles.Rule.Render(strings.Repeat("─", w)))
 		lines = append(lines, fitBlock(body, w, bh)...)

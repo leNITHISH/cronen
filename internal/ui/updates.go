@@ -705,6 +705,13 @@ func (m Model) detailContent(e entry, w int) string {
 				bullet(style.Render(n))
 			}
 		}
+		if rl := m.reviewLines(e); len(rl) > 0 {
+			line("")
+			line(" AUR review:")
+			for _, l := range rl {
+				bullet(l)
+			}
+		}
 	}
 
 	if e.kind == entryRemoved {

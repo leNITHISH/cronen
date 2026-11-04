@@ -1,0 +1,30 @@
+ cronen (demo)                                                1 vulnerable, no fix · last upgrade: 2 days ago 
+ ⚠ 1 news item requires manual intervention — press n to read                                                 
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ visual-studio-code-bin  PKGBUILD diff                                                                        
+ 9588b81 (2025-09-01) → ac86a54 (2025-10-21)                                                                  
+                                                                                                              
+ Suspicious changes:                                                                                          
+   ⚠ changes the host of a source URL (update.code.visualstudio.com → vscode.download.prss.microsoft.com)     
+                                                                                                              
+diff --git a/PKGBUILD b/PKGBUILD                                                                              
+index 1111111..2222222 100644                                                                                 
+--- a/PKGBUILD                                                                                                
++++ b/PKGBUILD                                                                                                
+@@ -10,10 +10,10 @@                                                                                           
+ depends=('libxkbfile' 'gtk3' 'nss')                                                                          
+-source=("code-$pkgver.tar.gz::https://update.code.visualstudio.com/$pkgver/linux-x64/stable"                 
+⚠ +source=("code-$pkgver.tar.gz::https://vscode.download.prss.microsoft.com/$pkgver/linux-x64/stable"         
+         "code.desktop")                                                                                      
+-sha256sums=('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'                               
++sha256sums=('cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'                               
+             'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ 18 updates · 886 MiB ↓ · +26 MiB · 13 flagged · 2 unread news · 1 .pacnew           esc back  ? help  q quit 

@@ -1,0 +1,9 @@
+diff --git a/PKGBUILD b/PKGBUILD
+index 1111111..2222222 100644
+--- a/PKGBUILD
++++ b/PKGBUILD
+@@ -3,6 +3,7 @@
+ pkgrel=1
+ url="https://github.com/example/foo"
++install=foo.install
+ source=("$pkgname-$pkgver.tar.gz::https://github.com/example/foo/archive/v$pkgver.tar.gz")

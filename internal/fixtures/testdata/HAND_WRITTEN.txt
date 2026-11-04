@@ -55,3 +55,17 @@ the services use):
   gitlab_issues_mesa.json    the same for mesa; every other project answers 404
   pacman_Qn.txt              pacman -Qn, the native packages with their versions
   vercmp.txt                 gained the comparisons the security fixtures need
+M11, AUR review (hand-written from cgit's documented atom and rawdiff formats):
+
+  aur_atom_<pkgbase>.xml    https://aur.archlinux.org/cgit/aur.git/atom/?h=<pkgbase>
+  aur_rawdiff_<pkgbase>.diff  .../rawdiff/?h=<pkgbase>&id=<newest>&id2=<base>
+  aur_diff_*.diff           hand-made PKGBUILD diffs, one per suspicious-change heuristic
+                            (plus clean ones that must trigger nothing)
+
+M11 update: the shape of the atom feed (urn:sha1:<sha> ids, Z timestamps, http
+links with id= before h=), the rawdiff direction (id = new side, id2 = old side),
+the .SRCINFO section that rawdiff always includes (ignored by the heuristics)
+and the RPC CoMaintainers array were checked against the live AUR (anonymous
+GET, 2026-11-05). The commit messages, ids and diff contents are still invented.
+
+aur_info.json: visual-studio-code-bin gained a "CoMaintainers" array, as the RPC returns it.

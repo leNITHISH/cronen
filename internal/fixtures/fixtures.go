@@ -63,7 +63,10 @@ const (
 	// GitLabProjectsURL is the root of the GitLab project API; the project
 	// path follows, URL-escaped, then /issues.
 	GitLabProjectsURL = "https://gitlab.archlinux.org/api/v4/projects/"
-	PacmanLogPath     = "/var/log/pacman.log"
+	// AURAtomURL and AURRawdiffURL are the cgit feed and diff endpoints.
+	AURAtomURL    = "https://aur.archlinux.org/cgit/aur.git/atom/"
+	AURRawdiffURL = "https://aur.archlinux.org/cgit/aur.git/rawdiff/"
+	PacmanLogPath = "/var/log/pacman.log"
 	// SyncDBPath is where the fake checkupdates left its database.
 	SyncDBPath        = "/tmp/checkup-db-1000"
 	vercmpCommandName = "vercmp"
@@ -199,6 +202,12 @@ func infoHandler(line string) (system.FakeResult, bool) {
 	var out []string
 	for _, n := range names {
 		b, ok := blocks[n]
+		if !ok && file == PacmanQiOld {
+			// Installed foreign packages have a file of their own.
+			if data, err := files.ReadFile(path.Join("testdata", PacmanQiPrefix+n+".txt")); err == nil {
+				b, ok = strings.TrimRight(string(data), "\n")+"\n", true
+			}
+		}
 		if !ok {
 			return system.FakeResult{
 				Stderr: []byte("error: package '" + n + "' was not found\n"), Code: 1,
@@ -290,6 +299,22 @@ func handle(rawURL string) (system.FakeResponse, bool) {
 	switch base {
 	case AURInfoURL:
 		return filterResults(Bytes(AURInfo), "Name", u.Query()["arg[]"], "resultcount"), true
+	case AURAtomURL, AURRawdiffURL:
+		// aur_atom_<pkgbase>.xml and aur_rawdiff_<pkgbase>.diff exist for
+		// the demo's pending AUR packages. Any other base is a 404.
+		name := "aur_atom_%s.xml"
+		if base == AURRawdiffURL {
+			name = "aur_rawdiff_%s.diff"
+		}
+		h := u.Query().Get("h")
+		if h == "" || strings.ContainsAny(h, `/\`) {
+			return system.FakeResponse{}, false
+		}
+		body, err := files.ReadFile(path.Join("testdata", fmt.Sprintf(name, h)))
+		if err != nil {
+			return system.FakeResponse{Status: 404}, true
+		}
+		return system.FakeResponse{Body: body}, true
 	case ArchwebSearchURL:
 		return filterResults(Bytes(ArchwebSearch), "pkgname", u.Query()["name"], ""), true
 	}

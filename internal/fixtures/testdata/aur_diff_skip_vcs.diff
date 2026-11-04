@@ -1,0 +1,10 @@
+diff --git a/PKGBUILD b/PKGBUILD
+index 1111111..2222222 100644
+--- a/PKGBUILD
++++ b/PKGBUILD
+@@ -4,5 +4,5 @@
+ url="https://github.com/example/foo"
+-source=("git+https://github.com/example/foo.git#branch=main")
++source=("git+https://github.com/example/foo.git#branch=dev")
+-sha256sums=('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
++sha256sums=('SKIP')

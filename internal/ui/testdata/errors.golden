@@ -3,19 +3,19 @@
  NEEDS ATTENTION (0)                                       │ paru                                   
  ✗ news unavailable; news rules skipped                    │ 2.1.0-1 → 2.1.0-2                  AUR 
  REPO (0)                                                  │                                        
- ✗ checkupdates failed: checkupdates: exit status 1: ==>   │ Links:                                 
-   ERROR: Cannot fetch updates                             │  • upstream   https://github.com/morg… 
- AUR (5 + 1 VCS)                                           │  • changelog  https://aur.archlinux.o… 
-▸ paru                                   2.1.0-1→2.1.0-2   │                                        
-  visual-studio-code-bin                 1.105.0→1.105.1   │                                        
-  gnome-shell-extension-legacy                not in AUR ? │                                        
-  neovim-git                                         VCS   │                                        
-  python-pywal                                  orphaned ? │                                        
-  ttf-ms-fonts                               out of date ? │                                        
+ ✗ checkupdates failed: checkupdates: exit status 1: ==>   │ AUR review:                            
+   ERROR: Cannot fetch updates                             │  • maintainer: Morganamilo             
+ AUR (5 + 1 VCS)                                           │  • 2025-10-20  Morganamilo  upgpkg:    
+▸ paru                                   2.1.0-1→2.1.0-2   │    paru 2.1.0-2                        
+  visual-studio-code-bin                 1.105.0→1.105.1   │  • 2025-07-01  Morganamilo  upgpkg:    
+  gnome-shell-extension-legacy                not in AUR ? │    paru 2.1.0-1                        
+  neovim-git                                         VCS   │  • 2025-03-02  Morganamilo  upgpkg:    
+  python-pywal                                  orphaned ? │    paru 2.0.4-1                        
+  ttf-ms-fonts                               out of date ? │  • d: review the PKGBUILD diff         
                                                            │                                        
-                                                           │                                        
-                                                           │                                        
-                                                           │                                        
+                                                           │ Links:                                 
+                                                           │  • upstream   https://github.com/morg… 
+                                                           │  • changelog  https://aur.archlinux.o… 
                                                            │                                        
                                                            │                                        
                                                            │                                        
