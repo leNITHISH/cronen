@@ -399,3 +399,33 @@ func TestFakeRunnerRejectsNosavePrint(t *testing.T) {
 		}
 	}
 }
+
+func TestFakeRunnerRejectsInvalidPacmanOptions(t *testing.T) {
+	for _, tt := range []struct {
+		args    []string
+		invalid bool
+	}{
+		{[]string{"-Rnsp", "--print-format", "%n %v", "--", "foo"}, true},
+		{[]string{"-Rsp", "--print-format", "%n %v", "--", "foo"}, false},
+		{[]string{"-Rns", "--", "foo"}, false},
+		{[]string{"-Up", "--print-format", "%n %v", "--", "/c/foo-1-1-any.pkg.tar.zst"}, false},
+		{[]string{"-U", "--", "/c/foo-1-1-any.pkg.tar.zst"}, false},
+		{[]string{"-Uy", "--", "/c/foo-1-1-any.pkg.tar.zst"}, true},
+		{[]string{"-Uu", "--", "/c/foo-1-1-any.pkg.tar.zst"}, true},
+		{[]string{"-Un", "--", "/c/foo-1-1-any.pkg.tar.zst"}, true},
+		{[]string{"-Syu", "-U", "--", "/c/foo-1-1-any.pkg.tar.zst"}, true},
+		{[]string{"-Sup", "--dbpath", "/db", "--", "foo"}, false},
+		{[]string{"-Qip", "--", "/c/foo-1-1-any.pkg.tar.zst"}, false},
+		// After "--" nothing is an option.
+		{[]string{"-R", "--", "-Rnp"}, false},
+	} {
+		r := NewFakeRunner()
+		_, code, err := r.Run(context.Background(), "pacman", tt.args...)
+		var ee *ExitError
+		got := errors.As(err, &ee) && code == 1 && strings.Contains(string(ee.Stderr), "invalid option") ||
+			errors.As(err, &ee) && strings.Contains(string(ee.Stderr), "only one operation")
+		if got != tt.invalid {
+			t.Errorf("pacman %v: invalid = %v, want %v (err %v)", tt.args, got, tt.invalid, err)
+		}
+	}
+}
