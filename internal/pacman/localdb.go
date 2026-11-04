@@ -32,8 +32,6 @@ type LocalPackage struct {
 	RequiredBy  []string
 	Provides    []string
 	Groups      []string
-	// BackupFiles are the paths in the package's Backup Files.
-	BackupFiles []string
 }
 
 // LocalDB is every installed package, sorted by name, and what's known
@@ -95,7 +93,6 @@ func ParseLocalDB(data []byte, loc *time.Location) ([]LocalPackage, error) {
 			RequiredBy:  depNames(kv["Required By"]),
 			Provides:    listField(kv["Provides"]),
 			Groups:      listField(kv["Groups"]),
-			BackupFiles: backupFiles(kv["Backup Files"]),
 			InstallDate: parseInstallDate(kv["Install Date"], loc),
 		}
 		if p.Name == "" {
@@ -124,20 +121,66 @@ func depNames(v string) []string {
 	return out
 }
 
-// backupFiles splits the Backup Files field: one path per line, optionally
-// prefixed with "[modified]" or "[unmodified]" as `pacman -Qii` prints.
-func backupFiles(v string) []string {
-	if v == "" || v == "None" {
+// BackupFile is one entry of a package's Backup Files.
+type BackupFile struct {
+	Path string
+	// Status is what `pacman -Qii` printed after the path: "modified",
+	// "unmodified" or "unreadable". It is "" when pacman printed none.
+	Status string
+}
+
+// ParseBackupFiles parses the output of `pacman -Qii -- names...` into the
+// backup files of each package, by package name. Plain `pacman -Qi` prints no
+// Backup Files field; `-Qii` prints "path [status]", one per line.
+func ParseBackupFiles(data []byte) (map[string][]BackupFile, error) {
+	blocks, err := parseBlocks(data)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string][]BackupFile, len(blocks))
+	for _, kv := range blocks {
+		if kv["Name"] == "" {
+			return nil, errors.New("pacman -Qii: a package has no Name")
+		}
+		out[kv["Name"]] = backupFiles(kv["Backup Files"])
+	}
+	return out, nil
+}
+
+// Modified returns the paths of the files whose status is "modified": only
+// those become .pacsave files on removal.
+func Modified(files []BackupFile) []string {
+	var out []string
+	for _, f := range files {
+		if f.Status == "modified" {
+			out = append(out, f.Path)
+		}
+	}
+	return out
+}
+
+// backupFiles splits the Backup Files field (continuation lines are joined by
+// two spaces): "path [status]", or the older "[status] path" spelling.
+func backupFiles(v string) []BackupFile {
+	if v == "" || v == "None" || v == "(none)" {
 		return nil
 	}
-	var out []string
+	var out []BackupFile
 	for _, f := range strings.Split(v, "  ") {
 		f = strings.TrimSpace(f)
-		if i := strings.LastIndex(f, "] "); strings.HasPrefix(f, "[") && i > 0 {
-			f = strings.TrimSpace(f[i+2:])
+		var status string
+		switch {
+		case strings.HasPrefix(f, "["):
+			if i := strings.Index(f, "] "); i > 0 {
+				status, f = f[1:i], strings.TrimSpace(f[i+2:])
+			}
+		case strings.HasSuffix(f, "]"):
+			if i := strings.LastIndex(f, " ["); i > 0 {
+				status, f = f[i+2:len(f)-1], strings.TrimSpace(f[:i])
+			}
 		}
 		if f != "" {
-			out = append(out, f)
+			out = append(out, BackupFile{Path: f, Status: status})
 		}
 	}
 	return out

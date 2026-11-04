@@ -1,0 +1,40 @@
+ cronen (demo)                                      1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+ ‼ /boot is in fstab but not mounted while linux updates: mount it before upgrading. The kernel wou…
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+ Preflight                                                                                          
+   ‼ /boot is in fstab but not mounted while linux updates: mount it before upgrading. The kernel w…
+                                                                                                    
+ Orphans (4) · 142 MiB, 142 MiB marked                                                              
+  ▸ ☑ libgbm-compat 1.0-1 102 KiB                                                                   
+    ☑ old-codec-lib 0.9-3 2.4 MiB                                                                   
+    ☑ paru-debug 2.1.0-1 120 MiB                                                                    
+    ☑ zstd-debug 1.5.7-2 20 MiB                                                                     
+   space mark · X remove the marked · removing orphans can create new orphans                       
+                                                                                                    
+ Config files (1)                                                                                   
+   P merge them with sudo pacdiff                                                                   
+   /etc/pacman.d/mirrorlist.pacnew                                                                  
+     --- /etc/pacman.d/mirrorlist                                                                   
+     +++ /etc/pacman.d/mirrorlist.pacnew                                                            
+     @@ -1,4 +1,4 @@                                                                                
+      ## Arch Linux repository mirrorlist                                                           
+     -## Generated on 2025-09-01                                                                    
+     +## Generated on 2026-10-01                                                                    
+      Server = https://mirror.example.org/archlinux/$repo/os/$arch                                  
+                                                                                                    
+ Package cache                                                                                      
+   3 packages, 525 MiB in /var/cache/pacman/pkg                                                     
+   to trim it: paccache -r (paccache is not run by cronen)                                          
+                                                                                                    
+ Failed units                                                                                       
+   ✗ bluetooth.service                                                                              
+                                                                                                    
+ Vulnerable, no fix yet (1)                                                                         
+   ⚠ sudo 1.9.17.p2-1 is affected by AVG-2930 (High) and no fix is available yet                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ housekeeping · 4 orphans marked of 4 · 1 .pacnew                                                   

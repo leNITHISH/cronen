@@ -58,6 +58,9 @@ type Options struct {
 	// disables upgrading.
 	Exec func(argv []string, done tea.ExecCallback) tea.Cmd
 
+	// Home is the user's home directory, for ~/ in extra_cache_dirs.
+	Home string
+
 	// Context bounds every command and request. Nil means
 	// context.Background().
 	Context context.Context
@@ -174,6 +177,15 @@ type Model struct {
 	// reviews is the AUR history of each pending AUR update, by package
 	// name; see review.go. diffView shows the diff of diffName. freshGen is
 	// the generation whose loads bypass the cache.
+	// hk is the Housekeeping screen. act is the write action the confirm
+	// modal is about (nil for the upgrade), actionReturn the screen it
+	// returns to, and actionNotice the line under the header after one.
+	hk           housekeepingPane
+	act          *pendingAction
+	actionReturn screen
+	actionNotice string
+	actionErr    bool
+
 	reviews  map[string]reviewState
 	diffView viewport.Model
 	diffName string
@@ -255,11 +267,14 @@ func (m *Model) markLoading() {
 	m.secSec = section{loading: m.cfg.Security}
 	m.issuesSec = section{loading: m.cfg.KnownIssues && m.cfg.Preview}
 	m.localSec = section{loading: m.cfg.PackageBrowser}
+	m.hk.diffSec = section{}
+	m.hk.cacheSec = section{loading: m.cfg.Housekeeping}
+	m.hk.unitsSec = section{loading: m.cfg.Housekeeping}
 	m.secStarted = false
 }
 
 func (m Model) anyLoading() bool {
-	for _, s := range []section{m.repoSec, m.aurSec, m.newsSec, m.logSec, m.pacnewSec, m.previewSec, m.rebuildSec, m.localSec} {
+	for _, s := range []section{m.repoSec, m.aurSec, m.newsSec, m.logSec, m.pacnewSec, m.previewSec, m.rebuildSec, m.localSec, m.hk.diffSec, m.hk.cacheSec, m.hk.unitsSec} {
 		if s.loading {
 			return true
 		}
@@ -283,6 +298,7 @@ func (m Model) loadCmds(fresh bool) []tea.Cmd {
 		cmds = append(cmds, loadLocalDB(ctx, m.opts.Runner, m.location(), m.gen))
 	}
 	cmds = append(cmds, m.mirrorCmds(fresh)...)
+	cmds = append(cmds, m.housekeepingCmds()...)
 	return cmds
 }
 
@@ -418,7 +434,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.pacnewSec = section{err: msg.err}
 		m.pacnew = msg.files
+		if msg.err != nil || len(msg.files) == 0 || !m.cfg.Housekeeping {
+			m.hk.diffs, m.hk.diffSec = nil, section{}
+			return m, nil
+		}
+		m.hk.diffSec = section{loading: true}
+		return m, loadPacnewDiffs(m.ctx(), m.opts.Runner, msg.files, m.gen)
+
+	case pacnewDiffMsg, cacheMsg, unitsMsg:
+		m.handleHousekeepingMsg(msg)
 		return m, nil
+
+	case dryRunMsg:
+		m.handleDryRun(msg)
+		return m, nil
+
+	case actionDoneMsg:
+		return m, m.handleActionDone(msg)
 
 	case archwebMsg:
 		m.archweb[msg.name] = archwebResult{pkg: msg.pkg, err: msg.err, done: true}
@@ -456,6 +488,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	k := m.keys
+	if m.screen == screenConfirm && m.act != nil {
+		return m.handleActionKey(msg)
+	}
 	if m.screen == screenConfirm {
 		switch {
 		case key.Matches(msg, k.Confirm):
@@ -506,6 +541,11 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 	}
+	if m.screen == screenHousekeeping {
+		if cmd, ok := m.handleHousekeepingKey(msg); ok {
+			return m, cmd
+		}
+	}
 	if other && (key.Matches(msg, k.MarkRead) || key.Matches(msg, k.Upstream) ||
 		key.Matches(msg, k.Changelog) || key.Matches(msg, k.Diff) ||
 		key.Matches(msg, k.Acknowledge) || key.Matches(msg, k.ShowAcked)) {
@@ -530,6 +570,9 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, m.layout()
 		case m.upgrade.done:
 			m.upgrade = upgradeOutcome{}
+			return m, m.layout()
+		case m.actionNotice != "":
+			m.actionNotice = ""
 			return m, m.layout()
 		}
 		return m, nil
@@ -753,7 +796,7 @@ func (m Model) View() tea.View {
 	}
 	if notice := m.noticeText(); notice != "" {
 		style := m.styles.Bold
-		if m.upgrade.err != nil {
+		if m.upgrade.err != nil || (m.actionNotice != "" && m.actionErr) {
 			style = m.styles.Error
 		}
 		lines = append(lines, fitLine(" "+style.Render(notice), w))
@@ -761,9 +804,13 @@ func (m Model) View() tea.View {
 
 	lw, pw, bh := m.listWidth(), m.paneWidth(), m.bodyHeight()
 	switch m.screen {
-	case screenHistory, screenHousekeeping:
+	case screenHistory:
 		lines = append(lines, m.styles.Rule.Render(strings.Repeat("─", w)))
 		lines = append(lines, fitBlock(m.placeholderView(tabLabel(m.screen)), w, bh)...)
+		lines = append(lines, m.styles.Rule.Render(strings.Repeat("─", w)))
+	case screenHousekeeping:
+		lines = append(lines, m.styles.Rule.Render(strings.Repeat("─", w)))
+		lines = append(lines, fitBlock(m.housekeepingView(w, bh), w, bh)...)
 		lines = append(lines, m.styles.Rule.Render(strings.Repeat("─", w)))
 	case screenHelp, screenConfirm, screenDiff:
 		body := m.help.FullHelpView(m.keys.FullHelp())
@@ -843,6 +890,9 @@ func (m Model) statusLine(w int) string {
 		hints := helpHint(m.keys.Accept) + "  esc clear"
 		return spread(" "+m.filter.View(), m.styles.Subtle.Render(hints)+" ", w)
 	}
+	if m.screen == screenConfirm && m.act != nil {
+		return spread(" "+actionTitle(m.act), m.styles.Subtle.Render("esc cancel")+" ", w)
+	}
 	if m.screen == screenConfirm {
 		hints := helpHint(m.keys.Confirm) + "  " + helpHint(m.keys.Cancel)
 		return spread(" Upgrade?", m.styles.Subtle.Render(hints)+" ", w)
@@ -898,7 +948,9 @@ func (m Model) statusLine(w int) string {
 	switch m.screen {
 	case screenPackages:
 		parts = m.packagesStatus()
-	case screenHistory, screenHousekeeping:
+	case screenHousekeeping:
+		parts = m.housekeepingStatus()
+	case screenHistory:
 		parts = []string{tabLabel(m.screen)}
 	}
 	if q := m.filter.Value(); strings.TrimSpace(q) != "" {
@@ -912,6 +964,9 @@ func (m Model) statusLine(w int) string {
 	}
 	if m.screen == screenPackages {
 		hints = append(hints, "f show", "s sort", "space mark")
+	}
+	if m.screen == screenHousekeeping {
+		hints = append(hints, "space mark", "X remove", "P pacdiff")
 	}
 	hints = append(hints, helpHint(m.keys.Help), helpHint(m.keys.Quit))
 	return spread(left, m.styles.Subtle.Render(strings.Join(hints, "  "))+" ", w)

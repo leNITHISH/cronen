@@ -1,0 +1,7 @@
+--- /etc/pacman.d/mirrorlist
++++ /etc/pacman.d/mirrorlist.pacnew
+@@ -1,4 +1,4 @@
+ ## Arch Linux repository mirrorlist
+-## Generated on 2025-09-01
++## Generated on 2026-10-01
+ Server = https://mirror.example.org/archlinux/$repo/os/$arch

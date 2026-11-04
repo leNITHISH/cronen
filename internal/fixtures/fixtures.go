@@ -148,6 +148,10 @@ func Runner() *system.FakeRunner {
 	r.Set("pacman -Qi", system.FakeResult{Stdout: Bytes(PacmanQiAll)})
 	r.Set("pacman -Qdtq", system.FakeResult{Stdout: Bytes(PacmanQdtq)})
 	r.Set("pacdiff -o", system.FakeResult{Stdout: Bytes(PacdiffO)})
+	r.Set("diff -u /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.pacnew",
+		system.FakeResult{Stdout: Bytes(DiffMirrorlist), Code: 1})
+	r.Set("systemctl --failed --plain --no-legend", system.FakeResult{Stdout: Bytes(SystemctlFail)})
+	r.Set("systemctl --user --failed --plain --no-legend", system.FakeResult{Stdout: Bytes(SystemctlUser)})
 	r.Set("pacman -Sup --dbpath "+SyncDBPath+" --logfile /dev/null --noconfirm --print-format %n %v %r %s",
 		system.FakeResult{Stdout: Bytes(PacmanSup)})
 	r.Set("pacman -Qu --dbpath "+SyncDBPath+" --logfile /dev/null", system.FakeResult{Stdout: Bytes(PacmanQu)})
@@ -176,6 +180,12 @@ func Runner() *system.FakeRunner {
 // and the batched `pacman -Qi -- names...` with the blocks of the fixtures
 // for the packages named, like pacman does.
 func infoHandler(line string) (system.FakeResult, bool) {
+	if r, ok := removeHandler(line); ok {
+		return r, true
+	}
+	if r, ok := qiiHandler(line); ok {
+		return r, true
+	}
 	var file string
 	var names []string
 	switch {
@@ -373,8 +383,31 @@ func FS() *system.FakeFS {
 	files := preflightFiles()
 	files[PacmanLogPath] = Bytes(PacmanLog)
 	files[SyncDBPath+"/sync/core.db"] = nil
+	files[PacmanConfPath] = []byte("[options]\nCacheDir = " + CacheDir + "\n")
+	for name := range cacheFiles {
+		files[CacheDir+name] = nil
+	}
 	files[SyncDBPath+"/sync/extra.db"] = nil
-	return system.NewFakeFS(files)
+	fsys := system.NewFakeFS(files)
+	for name, size := range cacheFiles {
+		fsys.SetSize(CacheDir+name, size)
+	}
+	return fsys
+}
+
+// PacmanConfPath and CacheDir are where the fake pacman.conf and package
+// cache live. The cache holds three packages and a signature; their sizes
+// are set, not stored.
+const (
+	PacmanConfPath = "/etc/pacman.conf"
+	CacheDir       = "/var/cache/pacman/pkg/"
+)
+
+var cacheFiles = map[string]int64{
+	"linux-6.17.4.arch1-1-x86_64.pkg.tar.zst":     150 << 20,
+	"linux-6.17.4.arch1-1-x86_64.pkg.tar.zst.sig": 566,
+	"firefox-143.0-1-x86_64.pkg.tar.zst":          75 << 20,
+	"nvidia-utils-580.95.05-1-x86_64.pkg.tar.zst": 300 << 20,
 }
 
 // Opener returns a FakeOpener serving the ELF files of the fixture foreign

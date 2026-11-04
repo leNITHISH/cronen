@@ -175,6 +175,8 @@ known_issues = false
 			want:    Config{AUR: true, Preview: true, Security: true, KnownIssues: true, Preflight: true, PackageBrowser: true, MirrorCheck: true, RebuildScanELF: true, MirrorLagHours: 6, IgnoreMajor: []string{"polkit"}, WatchlistMode: WatchlistExtend, NewsDays: 30},
 			wantErr: `ignore_major pattern "[x"`,
 		},
+		{name: "bad privilege_command", toml: `privilege_command = "su"`, want: def, wantErr: "privilege_command"},
+		{name: "bad protected_mode", toml: `protected_mode = "x"`, want: def, wantErr: "protected_mode"},
 		{name: "aur_review eager", toml: `aur_review = "eager"`, want: eagerDef},
 		{name: "bad aur_review", toml: `aur_review = "always"`, want: def, wantErr: "aur_review"},
 		{name: "wrong type for show_debug", toml: `show_debug = "yes"`, want: def, wantErr: "show_debug"},
@@ -185,6 +187,11 @@ known_issues = false
 			if tt.want.AURReview == "" {
 				// Most cases don't care: the default applies.
 				tt.want.AURReview = AURReviewLazy
+			}
+			if tt.want.PrivilegeCommand == "" {
+				tt.want.PrivilegeCommand = "sudo"
+				tt.want.ProtectedMode = WatchlistExtend
+				tt.want.Housekeeping = true
 			}
 			switch {
 			case tt.wantErr == "" && err != nil:

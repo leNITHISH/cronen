@@ -1,0 +1,30 @@
+ cronen                                             1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Remove 1 package?                                                                                  
+                                                                                                    
+ Dry run: pacman -Rsp --print-format '%n %v' -- sudo                                                
+ Options: ctrl+s ☑ also remove unneeded dependencies (-s) · ctrl+n ☑ no .pacsave backups (-n)       
+                                                                                                    
+ This runs: sudo pacman -Rns -- sudo                                                                
+                                                                                                    
+ Selected (1)                                                                                       
+   sudo 1.9.17.p2-1 6.0 MiB protected                                                               
+                                                                                                    
+ Frees 6.0 MiB                                                                                      
+                                                                                                    
+ ⚠ protected: sudo (base system; removing it can leave the system unbootable)                       
+                                                                                                    
+ Protected package: type sudo and press enter to remove it.                                         
+   > ▏                                                                                              
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Remove 1 package?                                                                       esc cancel 

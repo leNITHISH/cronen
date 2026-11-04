@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -56,6 +57,14 @@ func (f *FakeRunner) Calls() []string {
 func (f *FakeRunner) Run(ctx context.Context, name string, args ...string) ([]byte, int, error) {
 	line := commandLine(name, args)
 
+	if name == "pacman" && nosavePrint(args) {
+		f.mu.Lock()
+		f.calls = append(f.calls, line)
+		f.mu.Unlock()
+		return nil, 1, &ExitError{Command: line, Code: 1,
+			Stderr: []byte("error: invalid option: '--nosave' and '--print' may not be used together\n")}
+	}
+
 	f.mu.Lock()
 	f.calls = append(f.calls, line)
 	r, ok := f.results[line]
@@ -78,4 +87,19 @@ func (f *FakeRunner) Run(ctx context.Context, name string, args ...string) ([]by
 		return r.Stdout, r.Code, &ExitError{Command: line, Code: r.Code, Stderr: r.Stderr}
 	}
 	return r.Stdout, 0, nil
+}
+
+// nosavePrint reports an -R option cluster with both n and p, which real
+// pacman refuses, so a dry run built that way fails in tests too.
+func nosavePrint(args []string) bool {
+	for _, a := range args {
+		if a == "--" {
+			return false
+		}
+		if f, ok := strings.CutPrefix(a, "-R"); ok && !strings.HasPrefix(a, "--") &&
+			strings.Contains(f, "n") && strings.Contains(f, "p") {
+			return true
+		}
+	}
+	return false
 }

@@ -1,0 +1,40 @@
+ cronen                                             1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Merge .pacnew and .pacsave files with pacdiff?                                                     
+                                                                                                    
+ This runs: sudo pacdiff                                                                            
+ pacdiff is interactive: it asks what to do with each file; there is no dry run.                    
+                                                                                                    
+ 1 file                                                                                             
+   /etc/pacman.d/mirrorlist.pacnew                                                                  
+                                                                                                    
+ Press y to run it, esc to cancel.                                                                  
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Merge .pacnew and .pacsave files with pacdiff?                                          esc cancel 

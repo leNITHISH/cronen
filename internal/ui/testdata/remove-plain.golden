@@ -1,0 +1,30 @@
+ cronen                                             1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Remove 1 package?                                                                                  
+                                                                                                    
+ Dry run: pacman -Rsp --print-format '%n %v' -- spotify                                             
+ Options: s ☑ also remove unneeded dependencies (-s) · n ☑ no .pacsave backups (-n)                 
+                                                                                                    
+ This runs: sudo pacman -Rns -- spotify                                                             
+                                                                                                    
+ Selected (1)                                                                                       
+   spotify 1:1.2.74.477-1 1.0 MiB                                                                   
+ Pulled in by pacman (1)                                                                            
+   alsa-lib 1.2.14-1 1.9 MiB                                                                        
+                                                                                                    
+ Frees 2.9 MiB                                                                                      
+                                                                                                    
+ ⚠ 1 package is pulled in by -s                                                                     
+                                                                                                    
+ Press y to remove, esc to cancel.                                                                  
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Remove 1 package?                                                                       esc cancel 
