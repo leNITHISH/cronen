@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -30,6 +31,8 @@ type Info struct {
 	URL string
 	// Maintainer is empty for orphaned packages.
 	Maintainer string
+	// CoMaintainers are the package base's co-maintainers.
+	CoMaintainers []string
 	// OutOfDate is when the package was flagged out of date, or the zero
 	// time if it isn't flagged.
 	OutOfDate time.Time
@@ -134,12 +137,13 @@ func NewClient(f system.Fetcher, r system.Runner) *Client {
 }
 
 type rpcResult struct {
-	Name        string  `json:"Name"`
-	PackageBase string  `json:"PackageBase"`
-	Version     string  `json:"Version"`
-	URL         *string `json:"URL"`
-	Maintainer  *string `json:"Maintainer"`
-	OutOfDate   *int64  `json:"OutOfDate"`
+	Name        string   `json:"Name"`
+	PackageBase string   `json:"PackageBase"`
+	Version     string   `json:"Version"`
+	URL         *string  `json:"URL"`
+	Maintainer  *string  `json:"Maintainer"`
+	CoMaint     []string `json:"CoMaintainers"`
+	OutOfDate   *int64   `json:"OutOfDate"`
 }
 
 type rpcResponse struct {
@@ -210,6 +214,7 @@ func (c *Client) fetchBatch(ctx context.Context, names []string, fresh bool, int
 		if r.Maintainer != nil {
 			info.Maintainer = *r.Maintainer
 		}
+		info.CoMaintainers = slices.Clone(r.CoMaint)
 		if r.OutOfDate != nil {
 			info.OutOfDate = time.Unix(*r.OutOfDate, 0).UTC()
 		}

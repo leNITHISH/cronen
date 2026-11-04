@@ -6,13 +6,24 @@ import (
 	"fmt"
 	"io/fs"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/leNITHISH/cronen/internal/system"
 )
 
 // stateVersion is written to the state file so the format can change later.
-const stateVersion = 1
+// Version 1 files load as they are: the fields version 2 added are absent.
+const stateVersion = 2
+
+// Maintainer is the AUR maintainer and co-maintainers cronen last accepted
+// for a package base.
+type Maintainer struct {
+	PkgBase string `json:"pkgbase"`
+	// Maintainer is empty for an orphaned package.
+	Maintainer    string   `json:"maintainer"`
+	CoMaintainers []string `json:"comaintainers,omitempty"`
+}
 
 // State is what cronen remembers between runs. The zero value is an empty
 // state and is ready to use.
@@ -21,12 +32,15 @@ type State struct {
 	// zero time if it never has.
 	LastUpgrade time.Time
 	readNews    map[string]bool
+	maintainers map[string]Maintainer
 }
 
 type stateFile struct {
 	Version     int        `json:"version"`
 	ReadNews    []string   `json:"read_news"`
 	LastUpgrade *time.Time `json:"last_upgrade,omitempty"`
+	// Maintainers was added in version 2.
+	Maintainers []Maintainer `json:"aur_maintainers,omitempty"`
 }
 
 // IsRead reports whether the news item with this GUID was marked read.
@@ -51,6 +65,9 @@ func (s *State) MarkRead(guids ...string) {
 func (s State) Clone() State {
 	c := State{LastUpgrade: s.LastUpgrade}
 	c.MarkRead(s.ReadNews()...)
+	for _, m := range s.Maintainers() {
+		c.SetMaintainer(m)
+	}
 	return c
 }
 
@@ -64,9 +81,39 @@ func (s *State) ReadNews() []string {
 	return out
 }
 
+// Maintainer returns the recorded maintainer of a package base.
+func (s *State) Maintainer(pkgbase string) (Maintainer, bool) {
+	m, ok := s.maintainers[pkgbase]
+	return m, ok
+}
+
+// SetMaintainer records m as the accepted maintainer of m.PkgBase. It is
+// how a flagged change is cleared: after a successful upgrade, or when the
+// user acknowledges it.
+func (s *State) SetMaintainer(m Maintainer) {
+	if m.PkgBase == "" {
+		return
+	}
+	if s.maintainers == nil {
+		s.maintainers = map[string]Maintainer{}
+	}
+	m.CoMaintainers = slices.Sorted(slices.Values(m.CoMaintainers))
+	s.maintainers[m.PkgBase] = m
+}
+
+// Maintainers returns every recorded maintainer, sorted by package base.
+func (s *State) Maintainers() []Maintainer {
+	out := make([]Maintainer, 0, len(s.maintainers))
+	for _, m := range s.maintainers {
+		out = append(out, m)
+	}
+	slices.SortFunc(out, func(a, b Maintainer) int { return strings.Compare(a.PkgBase, b.PkgBase) })
+	return out
+}
+
 // MarshalJSON implements json.Marshaler.
 func (s State) MarshalJSON() ([]byte, error) {
-	f := stateFile{Version: stateVersion, ReadNews: s.ReadNews()}
+	f := stateFile{Version: stateVersion, ReadNews: s.ReadNews(), Maintainers: s.Maintainers()}
 	if !s.LastUpgrade.IsZero() {
 		t := s.LastUpgrade
 		f.LastUpgrade = &t
@@ -88,6 +135,9 @@ func (s *State) UnmarshalJSON(data []byte) error {
 		s.LastUpgrade = *f.LastUpgrade
 	}
 	s.MarkRead(f.ReadNews...)
+	for _, m := range f.Maintainers {
+		s.SetMaintainer(m)
+	}
 	return nil
 }
 

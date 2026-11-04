@@ -71,7 +71,17 @@ type Config struct {
 	// KnownIssues enables the GitLab lookup of open issues for pending repo
 	// updates. With it off, cronen makes no GitLab requests at all.
 	KnownIssues bool `toml:"known_issues"`
+	// AURReview is AURReviewLazy or AURReviewEager: whether the PKGBUILD
+	// diff of a pending AUR update is fetched when it is opened, or for
+	// every pending AUR update.
+	AURReview string `toml:"aur_review"`
 }
+
+// Values of Config.AURReview.
+const (
+	AURReviewLazy  = "lazy"
+	AURReviewEager = "eager"
+)
 
 // Default returns the configuration used when there is no config file.
 func Default() Config {
@@ -86,6 +96,7 @@ func Default() Config {
 		WatchlistMode:  WatchlistExtend,
 		NewsDays:       30,
 		MirrorLagHours: 6,
+		AURReview:      AURReviewLazy,
 	}
 }
 
@@ -138,6 +149,12 @@ func Parse(data []byte) (Config, error) {
 	default:
 		errs = append(errs, fmt.Errorf("watchlist_mode %q: want %q or %q", cfg.WatchlistMode, WatchlistExtend, WatchlistReplace))
 		cfg.WatchlistMode = def.WatchlistMode
+	}
+	switch cfg.AURReview {
+	case AURReviewLazy, AURReviewEager:
+	default:
+		errs = append(errs, fmt.Errorf("aur_review %q: want %q or %q", cfg.AURReview, AURReviewLazy, AURReviewEager))
+		cfg.AURReview = def.AURReview
 	}
 	if cfg.NewsDays <= 0 {
 		errs = append(errs, fmt.Errorf("news_days %d: must be positive", cfg.NewsDays))
