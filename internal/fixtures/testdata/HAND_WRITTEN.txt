@@ -102,3 +102,23 @@ real Arch system, see the M14 pull request for the read-only commands):
 
 The package cache listing (/var/cache/pacman/pkg/, a few files with sizes set
 by internal/fixtures.FS) and /etc/pacman.conf are made up in code.
+
+M15, history and downgrade (hand-written; PENDING CAPTURE from a real Arch
+system, see the M15 pull request for the read-only commands):
+
+  pacman.log                  gained transactions: nvidia-utils upgrades, a kernel
+                              upgrade that was cut off (no "transaction completed"),
+                              a -S that installed one package and removed another,
+                              and a -U downgrade of firefox. The ISO timestamps match
+                              what pacman 7 writes; the lines are invented
+  pacman_Up_unsatisfied.stderr  the stderr of pacman -Up for a package that breaks a
+                              dependency. The wording of the ":: installing X (v)
+                              breaks dependency 'Y' required by Z" line is what cronen
+                              assumes
+  (in code) history.go        the answers to pacman -Qip -- <files> (Build Date in the C
+                              locale) and pacman -Up --print-format '%n %v' -- <files>
+  (in code) fixtures.go       the cache files: linux 6.17.3 (+ .sig) and 6.17.2 (no .sig),
+                              nvidia-utils 575.64-1 (+ .sig), firefox 143.0-1 (no .sig).
+                              File names assume the epoch-less spelling is not needed:
+                              none of these packages has an epoch
+  vercmp.txt                  gained the comparisons of those versions

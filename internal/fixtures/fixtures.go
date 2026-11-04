@@ -186,6 +186,9 @@ func infoHandler(line string) (system.FakeResult, bool) {
 	if r, ok := qiiHandler(line); ok {
 		return r, true
 	}
+	if r, ok := downgradeHandler(line); ok {
+		return r, true
+	}
 	var file string
 	var names []string
 	switch {
@@ -404,10 +407,15 @@ const (
 )
 
 var cacheFiles = map[string]int64{
-	"linux-6.17.4.arch1-1-x86_64.pkg.tar.zst":     150 << 20,
-	"linux-6.17.4.arch1-1-x86_64.pkg.tar.zst.sig": 566,
-	"firefox-143.0-1-x86_64.pkg.tar.zst":          75 << 20,
-	"nvidia-utils-580.95.05-1-x86_64.pkg.tar.zst": 300 << 20,
+	"linux-6.17.4.arch1-1-x86_64.pkg.tar.zst":      150 << 20,
+	"linux-6.17.4.arch1-1-x86_64.pkg.tar.zst.sig":  566,
+	"firefox-143.0-1-x86_64.pkg.tar.zst":           75 << 20,
+	"linux-6.17.3.arch1-1-x86_64.pkg.tar.zst":      149 << 20,
+	"linux-6.17.3.arch1-1-x86_64.pkg.tar.zst.sig":  566,
+	"linux-6.17.2.arch1-1-x86_64.pkg.tar.zst":      148 << 20,
+	"nvidia-utils-575.64-1-x86_64.pkg.tar.zst":     290 << 20,
+	"nvidia-utils-575.64-1-x86_64.pkg.tar.zst.sig": 566,
+	"nvidia-utils-580.95.05-1-x86_64.pkg.tar.zst":  300 << 20,
 }
 
 // Opener returns a FakeOpener serving the ELF files of the fixture foreign

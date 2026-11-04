@@ -26,7 +26,7 @@
       Server = https://mirror.example.org/archlinux/$repo/os/$arch                                  
                                                                                                     
  Package cache                                                                                      
-   3 packages, 525 MiB in /var/cache/pacman/pkg                                                     
+   6 packages, 1.1 GiB in /var/cache/pacman/pkg                                                     
    to trim it: paccache -r (paccache is not run by cronen)                                          
                                                                                                     
  Failed units                                                                                       

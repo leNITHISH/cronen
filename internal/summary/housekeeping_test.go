@@ -48,7 +48,7 @@ func TestLoadPacnewDiffs(t *testing.T) {
 func TestLoadCache(t *testing.T) {
 	fsys := fixtures.FS()
 	info, err := LoadCache(fsys, nil, "")
-	if err != nil || info.Files != 3 || info.Bytes != (150+75+300)<<20 || !reflect.DeepEqual(info.Dirs, []string{"/var/cache/pacman/pkg"}) {
+	if err != nil || info.Files != 6 || info.Bytes != (150+75+300+149+148+290)<<20 || !reflect.DeepEqual(info.Dirs, []string{"/var/cache/pacman/pkg"}) {
 		t.Errorf("%+v %v", info, err)
 	}
 
@@ -62,7 +62,7 @@ func TestLoadCache(t *testing.T) {
 		}
 	}
 	info, err = LoadCache(fsys, []string{"~/.cache/paru/clone/*", "/nope/*"}, "/home/u")
-	if err != nil || info.Files != 5 || info.Bytes != (150+75+300)<<20+8 || len(info.Dirs) != 3 {
+	if err != nil || info.Files != 8 || info.Bytes != (150+75+300+149+148+290)<<20+8 || len(info.Dirs) != 3 {
 		t.Errorf("%+v %v", info, err)
 	}
 
