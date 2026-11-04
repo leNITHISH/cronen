@@ -14,7 +14,7 @@
    ⚠ pacman's database lock (/var/lib/pacman/db.lck) exists. If pacman or an AUR helper is          
     running, wait for it. If `pgrep -x pacman` finds nothing, the lock is stale and can be removed. 
                                                                                                     
- 18 updates · 11 flagged · kernel update: reboot afterwards                                         
+ 18 updates · 12 flagged · kernel update: reboot afterwards                                         
                                                                                                     
  This runs: sudo pacman -Syu                                                                        
  demo: nothing is run                                                                               

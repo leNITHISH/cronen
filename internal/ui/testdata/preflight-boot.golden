@@ -2,24 +2,24 @@
  ⚠ 1 news item requires manual intervention — press n to read                                       
  ‼ /boot is in fstab but not mounted while linux updates: mount it before upgrading. The kernel wou…
 ────────────────────────────────────────┬───────────────────────────────────────────────────────────
- NEEDS ATTENTION (11)                   │ linux-firmware                                            
+ NEEDS ATTENTION (12)                   │ linux-firmware                                            
 ▸ linux-firmware    20251011→20251021 ‼ │ 20251011-1 → 20251021-1                                   
   nvidia-utils          580.95→590.44 ⚠ │                                                           
   python                    3.13→3.14 ⚠ │ Why flagged:                                              
   ripgrep                   14.1→15.0 ⚠ │  • Manual intervention in news: 'linux-firmware >=        
-  glibc             2.42+r17→2.42+r33 ℹ │    20251021-1 upgrade requires manual intervention'       
-  linux                     6.17→6.18 ℹ │    (yesterday)                                            
-  linux-api-headers       6.16→6.16.1 ℹ │  • On your watchlist (linux*)                             
-  linux-headers             6.17→6.18 ℹ │                                                           
-  mesa                  25.2.4→25.2.5 ℹ │ Transaction:                                              
-  systemd                 258.1→258.2 ℹ │  • download: 420 MiB                                      
-  vulkan-icd-loader   1.4.328→1.4.330 ℹ │  • installed size: 580 MiB → 584 MiB (+3.8 MiB)           
- REPO (5)                               │  • built 26 hours ago (2026-10-22 10:00)                  
-  firefox               144.0→144.0.1   │                                                           
-  gnupg             2.4.8-1→1:2.4.8-2   │ Links:                                                    
-  openssh               10.0p1→10.2p1   │  • not found on archlinux.org                             
+  zstd                1.5.7-2→1.5.7-3 ⚠ │    20251021-1 upgrade requires manual intervention'       
+  glibc             2.42+r17→2.42+r33 ℹ │    (yesterday)                                            
+  linux                     6.17→6.18 ℹ │  • On your watchlist (linux*)                             
+  linux-api-headers       6.16→6.16.1 ℹ │                                                           
+  linux-headers             6.17→6.18 ℹ │ Transaction:                                              
+  mesa                  25.2.4→25.2.5 ℹ │  • download: 420 MiB                                      
+  systemd                 258.1→258.2 ℹ │  • installed size: 580 MiB → 584 MiB (+3.8 MiB)           
+  vulkan-icd-loader   1.4.328→1.4.330 ℹ │  • built 26 hours ago (2026-10-22 10:00)                  
+ REPO (4)                               │                                                           
+  firefox               144.0→144.0.1   │ Links:                                                    
+  gnupg             2.4.8-1→1:2.4.8-2   │  • not found on archlinux.org                             
+  openssh               10.0p1→10.2p1   │                                                           
   vim               9.1.1800→9.1.1850   │                                                           
-  zstd                1.5.7-2→1.5.7-3   │                                                           
  AUR (5 + 1 VCS)                        │                                                           
   paru                2.1.0-1→2.1.0-2   │                                                           
   visual-studio-code… 1.105.0→1.105.1   │                                                           
@@ -27,4 +27,4 @@
   neovim-git                      VCS   │                                                           
   python-pywal               orphaned ? │                                                           
 ────────────────────────────────────────┴───────────────────────────────────────────────────────────
- 18 updates · 886 MiB ↓ · +26 MiB · 11 flagged · 2 unread news · 1 .pacnew           ? help  q quit 
+ 18 updates · 886 MiB ↓ · +26 MiB · 12 flagged · 2 unread news · 1 .pacnew           ? help  q quit 
