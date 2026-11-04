@@ -81,3 +81,56 @@ func TestStateNewerVersionStillRejected(t *testing.T) {
 		t.Fatalf("got %+v, %v", s, err)
 	}
 }
+
+func TestStateAcknowledgements(t *testing.T) {
+	var s State
+	if got := s.Acknowledged("foo", "1-1"); got != nil {
+		t.Fatalf("zero state: %v", got)
+	}
+	if s.Acknowledge("", "1-1", "kernel") || s.Acknowledge("foo", "", "kernel") || s.Acknowledge("foo", "1-1") {
+		t.Fatal("an incomplete acknowledgement was recorded")
+	}
+	if !s.Acknowledge("foo", "1-1", "watchlist", "kernel") {
+		t.Fatal("not recorded")
+	}
+	if s.Acknowledge("foo", "1-1", "kernel") {
+		t.Error("an already acknowledged rule reported a change")
+	}
+	// A new rule for the same version is added.
+	s.Acknowledge("foo", "1-1", "major-bump")
+	if got, want := s.Acknowledged("foo", "1-1"), []string{"kernel", "major-bump", "watchlist"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("rules = %v, want %v", got, want)
+	}
+	// Only the exact version counts.
+	if got := s.Acknowledged("foo", "1-2"); got != nil {
+		t.Errorf("another version: %v", got)
+	}
+	// A new version replaces the old record.
+	s.Acknowledge("foo", "1-2", "kernel")
+	if got := s.Acknowledged("foo", "1-1"); got != nil {
+		t.Errorf("the old version is still acknowledged: %v", got)
+	}
+	s.Acknowledge("bar", "2", "held")
+
+	fsys := system.NewFakeFS(nil)
+	if err := SaveState(fsys, statePath, s); err != nil {
+		t.Fatal(err)
+	}
+	got, err := LoadState(fsys, statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Acknowledgement{{Name: "bar", Version: "2", Rules: []string{"held"}}, {Name: "foo", Version: "1-2", Rules: []string{"kernel"}}}
+	if !reflect.DeepEqual(got.Acknowledgements(), want) {
+		t.Fatalf("after a round trip: %+v", got.Acknowledgements())
+	}
+
+	c := s.Clone()
+	c.Acknowledge("foo", "1-2", "watchlist")
+	if g := s.Acknowledged("foo", "1-2"); !reflect.DeepEqual(g, []string{"kernel"}) {
+		t.Errorf("clone changed the original: %v", g)
+	}
+	if g := c.Acknowledged("bar", "2"); !reflect.DeepEqual(g, []string{"held"}) {
+		t.Errorf("clone lost a record: %v", g)
+	}
+}

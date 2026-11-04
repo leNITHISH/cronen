@@ -162,7 +162,7 @@ func TestJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]any{
-		"updates": 18.0, "aur": 2.0, "flagged": float64(len(s.Flagged)), "critical": 1.0,
+		"updates": 18.0, "aur": 2.0, "flagged": float64(len(s.Flagged)), "acknowledged": 0.0, "critical": 1.0,
 		"unread_news": 2.0, "pacnew": 1.0, "reboot": true,
 		"download_bytes": 929069795.0, "size_delta_bytes": 27053259.0, "new": 2.0, "replaced": 1.0, "held": 1.0, "rebuilds": 3.0, "security_fixes": 2.0, "vulnerable": 1.0,
 		"preflight": []any{}, "reboot_pending": false,
@@ -255,4 +255,71 @@ func TestWaybar(t *testing.T) {
 func itoa(n int) string {
 	b, _ := json.Marshal(n)
 	return string(b)
+}
+
+func TestAcknowledgedFlagsIgnored(t *testing.T) {
+	only := func(src *Sources) {
+		r := fixtures.Runner()
+		r.Set("checkupdates", system.FakeResult{Stdout: []byte("systemd 258.1-1 -> 258.2-1\n")})
+		src.Runner = r
+		src.Config.AUR = false
+		src.State.MarkRead(firmwareGUID, nvidiaGUID)
+	}
+	src := fixtureSources()
+	only(&src)
+	before := Gather(context.Background(), src)
+	if before.ExitCode() != ExitAttention || len(before.Flagged) != 1 || before.Acknowledged != 0 {
+		t.Fatalf("setup: exit %d, flagged %d, acknowledged %d", before.ExitCode(), len(before.Flagged), before.Acknowledged)
+	}
+
+	// Acknowledging the exact new version drops the flag from every output.
+	p := before.Flagged[0]
+	src.State.Acknowledge(p.Name, p.NewVersion, risk.AcknowledgeableRules(p)...)
+	after := Gather(context.Background(), src)
+	if after.ExitCode() != ExitUpdates || len(after.Flagged) != 0 || after.Acknowledged != 1 {
+		t.Errorf("exit %d, flagged %d, acknowledged %d; want %d, 0, 1", after.ExitCode(), len(after.Flagged), after.Acknowledged, ExitUpdates)
+	}
+	if !strings.Contains(after.Headline(), "1 acknowledged") || strings.Contains(before.Headline(), "acknowledged") {
+		t.Errorf("headlines: %q / %q", before.Headline(), after.Headline())
+	}
+	var got map[string]any
+	if err := json.Unmarshal(after.JSON(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["acknowledged"] != 1.0 || got["flagged"] != 0.0 || got["updates"] != 1.0 {
+		t.Errorf("json = %v", got)
+	}
+
+	// A new version is flagged again.
+	r := fixtures.Runner()
+	r.Set("checkupdates", system.FakeResult{Stdout: []byte("systemd 258.1-1 -> 258.3-1\n")})
+	src.Runner = r
+	if again := Gather(context.Background(), src); again.ExitCode() != ExitAttention || again.Acknowledged != 0 {
+		t.Errorf("new version: exit %d, acknowledged %d", again.ExitCode(), again.Acknowledged)
+	}
+}
+
+// Critical flags can't be acknowledged, so state can't hide them.
+func TestAcknowledgedCriticalStays(t *testing.T) {
+	src := fixtureSources()
+	before := Gather(context.Background(), src)
+	for _, p := range before.Flagged {
+		// Forge an acknowledgement of every rule, as a hand-edited state
+		// file could.
+		for _, f := range p.Flags {
+			src.State.Acknowledge(p.Name, p.NewVersion, f.Rule.String())
+		}
+	}
+	after := Gather(context.Background(), src)
+	if after.ExitCode() != ExitIntervention || len(after.Interventions) != 1 {
+		t.Errorf("exit %d, interventions %d", after.ExitCode(), len(after.Interventions))
+	}
+	for _, p := range after.Flagged {
+		if p.Severity() != risk.Critical {
+			t.Errorf("%s: non-critical flags left: %v", p.Name, p.Flags)
+		}
+	}
+	if len(after.Flagged) == 0 {
+		t.Error("critical flagged packages were hidden")
+	}
 }

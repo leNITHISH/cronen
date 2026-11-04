@@ -110,6 +110,9 @@ type Model struct {
 	filter  textinput.Model
 	// filtering reports whether the filter input has the keyboard.
 	filtering bool
+	// hideAcked hides acknowledged packages from the updates list. They
+	// are shown, with a ✓, by default.
+	hideAcked bool
 	// flashMsg is shown in the status bar until the next key press.
 	flashMsg string
 	flashErr bool
@@ -501,6 +504,10 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, m.markRead()
 	case key.Matches(msg, k.Diff) && m.screen == screenUpdates:
 		return m, m.openDiff()
+	case key.Matches(msg, k.Acknowledge) && m.screen == screenUpdates:
+		return m, m.acknowledge()
+	case key.Matches(msg, k.ShowAcked) && m.screen == screenUpdates:
+		return m, m.toggleAcked()
 	case key.Matches(msg, k.Upstream):
 		return m, m.openLink(false)
 	case key.Matches(msg, k.Changelog):
@@ -597,6 +604,7 @@ func (m *Model) changed() tea.Cmd {
 	m.result = summary.Assess(summary.Updates(m.repo, m.aurPkgs), m.unreadNews, tx, m.cfg, m.now(),
 		summary.WithRebuilds(m.rebuilds), summary.WithFeeds(m.feeds, m.cfg))
 	m.result = summary.AssessAUR(m.result, m.aurPkgs, m.opts.State, m.reviewMap())
+	m.result = summary.AssessAcknowledgements(m.result, m.opts.State)
 	m.assessPreflight()
 
 	m.newsPane.move(0, len(m.newsItems))
@@ -819,6 +827,9 @@ func (m Model) statusLine(w int) string {
 	}
 	if m.newsDecided {
 		parts = append(parts, itoa(len(m.result.Flagged()))+" flagged")
+		if n := len(m.result.AcknowledgedPackages()); n > 0 {
+			parts = append(parts, itoa(n)+" acknowledged")
+		}
 		parts = append(parts, itoa(len(m.unreadNews))+" unread news")
 	}
 	if m.newsSec.err != nil {

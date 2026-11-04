@@ -110,7 +110,7 @@ func TestDemoJSON(t *testing.T) {
 	if code := run(context.Background(), []string{"--demo", "--json"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit code %d; stderr: %s", code, stderr.String())
 	}
-	const want = `{"updates":18,"aur":2,"flagged":12,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1,"rebuilds":3,"security_fixes":2,"vulnerable":1,"preflight":[{"severity":"critical","message":"/boot is in fstab but not mounted while linux updates: mount it before upgrading. The kernel would land on the root filesystem, where the bootloader won't find it."}],"reboot_pending":false}` + "\n"
+	const want = `{"updates":18,"aur":2,"flagged":12,"acknowledged":0,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1,"rebuilds":3,"security_fixes":2,"vulnerable":1,"preflight":[{"severity":"critical","message":"/boot is in fstab but not mounted while linux updates: mount it before upgrading. The kernel would land on the root filesystem, where the bootloader won't find it."}],"reboot_pending":false}` + "\n"
 	if got := stdout.String(); got != want {
 		t.Errorf("got %s, want %s", got, want)
 	}

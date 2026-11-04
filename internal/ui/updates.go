@@ -141,6 +141,9 @@ func (m *Model) rebuildUpdates() {
 		switch {
 		case len(pkg.Flags) > 0:
 			flagged = append(flagged, e)
+		case len(pkg.Acknowledged) > 0 && m.hideAcked:
+			// Acknowledged packages are hidden on request.
+			continue
 		case pkg.AUR:
 			aurEntries = append(aurEntries, e)
 		default:
@@ -419,6 +422,10 @@ func (m Model) entryLine(e entry, selected bool, w int) string {
 	if sev == risk.None && e.aur != nil && aurStatus(*e.aur) != "" {
 		icon = "?"
 	}
+	if sev == risk.None && len(e.pkg.Acknowledged) > 0 {
+		// Acknowledged: back in the normal group, marked.
+		icon = "✓"
+	}
 	icon = " " + m.styles.Severity(sev).Render(icon) + " "
 	if len(e.pkg.Security) > 0 {
 		// The shield marks an update that fixes a security issue.
@@ -663,6 +670,14 @@ func (m Model) detailContent(e entry, w int) string {
 		line(" Why flagged:")
 		for _, f := range e.pkg.Flags {
 			bullet(s.Severity(f.Severity).Render(f.Reason))
+		}
+	}
+
+	if len(e.pkg.Acknowledged) > 0 {
+		line("")
+		line(" Acknowledged for " + e.pkg.NewVersion + ":")
+		for _, f := range e.pkg.Acknowledged {
+			bullet(s.Subtle.Render(f.Reason))
 		}
 	}
 

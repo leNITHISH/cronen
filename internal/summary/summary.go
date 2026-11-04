@@ -178,6 +178,9 @@ type Summary struct {
 	Repo, AUR int
 	// Flagged are the pending updates with at least one flag.
 	Flagged []risk.Package
+	// Acknowledged counts the pending updates the user acknowledged every
+	// flag of. They are left out of Flagged and of every exit code.
+	Acknowledged int
 	// Interventions are the unread news items requiring manual
 	// intervention.
 	Interventions []news.Item
@@ -322,6 +325,7 @@ func Gather(ctx context.Context, src Sources) Summary {
 		s.Errors = append(s.Errors, errs...)
 	}
 	res = AssessAUR(res, aurPkgs, src.State, reviews)
+	res = AssessAcknowledgements(res, src.State)
 	s.Held = res.Held
 	s.Vulnerable = res.Vulnerable
 	for _, p := range res.Packages {
@@ -337,6 +341,7 @@ func Gather(ctx context.Context, src Sources) Summary {
 		}
 	}
 	s.Flagged = res.Flagged()
+	s.Acknowledged = len(res.AcknowledgedPackages())
 	s.Interventions = res.Interventions
 	s.UnreadNews = len(unread)
 	s.Pacnew = len(pacnew)
