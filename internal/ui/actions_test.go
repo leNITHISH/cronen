@@ -405,8 +405,10 @@ func TestUpgradeFailure(t *testing.T) {
 	if !m.opts.State.LastUpgrade.IsZero() || len(m.opts.State.ReadNews()) != 0 {
 		t.Errorf("state changed after a failed upgrade: %+v", m.opts.State)
 	}
-	if _, err := fsys.ReadFile(testStatePath); err == nil {
-		t.Error("state written after a failed upgrade")
+	// The first AUR load records the maintainers it sees as the baseline,
+	// so a state file may exist; it must not record the failed upgrade.
+	if saved, err := config.LoadState(fsys, testStatePath); err != nil || !saved.LastUpgrade.IsZero() || len(saved.ReadNews()) != 0 {
+		t.Errorf("state written after a failed upgrade: %+v, %v", saved, err)
 	}
 	if !strings.Contains(plain(m), "✗ upgrade failed (exit status 1); news not marked read") {
 		t.Errorf("no failure notice:\n%s", plain(m))

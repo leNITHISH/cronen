@@ -13,6 +13,7 @@ import (
 	"github.com/leNITHISH/cronen/internal/config"
 	"github.com/leNITHISH/cronen/internal/news"
 	"github.com/leNITHISH/cronen/internal/risk"
+	"github.com/leNITHISH/cronen/internal/summary"
 	"github.com/leNITHISH/cronen/internal/system"
 )
 
@@ -262,6 +263,8 @@ func (m *Model) handleUpgraded(msg upgradedMsg) tea.Cmd {
 	now := m.now()
 	m.opts.State = m.opts.State.Clone()
 	m.opts.State.LastUpgrade = now
+	// The maintainers the user just upgraded to are the accepted ones now.
+	summary.RecordMaintainers(&m.opts.State, m.aurPkgs, true)
 	m.opts.State.MarkRead(publishedBy(m.newsItems, now)...)
 	return tea.Batch(m.saveState(), m.refresh())
 }
