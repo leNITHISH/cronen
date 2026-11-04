@@ -68,11 +68,12 @@ documents everything, including the config keys.
 | `ctrl+d`/`ctrl+u` | half-page in the detail or news pane |
 | `tab` | switch focus between panes |
 | `/` | filter the package list (`enter` keeps the filter, `esc` clears it) |
-| `1`–`5` | switch screen: Updates, News, Packages, History, Housekeeping (History isn't built yet) |
+| `1`–`5` | switch screen: Updates, News, Packages, History, Housekeeping |
 | `n` | news screen |
 | `f` / `s` | Packages: cycle what is listed (all, explicit, dependencies, foreign, orphans) / the sort (name, size, install date) |
 | `space` | Packages, Housekeeping: mark / unmark the selected package or orphan |
 | `X` | Packages, Housekeeping: remove the marked packages or orphans (dry run and confirmation first) |
+| `D` | Packages, History: downgrade the selected package to an older version from the package cache (dry run and confirmation first) |
 | `P` | Housekeeping: merge `.pacnew` files with `pacdiff` (confirmation first) |
 | `m` | mark the selected news item read (on the updates screen: the news behind the selected package's flags) |
 | `o` | open the upstream URL (on the news screen: the post) with `xdg-open` |
@@ -264,6 +265,7 @@ protected_mode = "extend"  # "extend" the defaults (base, linux*, glibc, systemd
 extra_cache_dirs = []      # globs of more package cache directories, e.g. ["~/.cache/paru/clone/*"]
 pacdiff_command = ""       # replaces "<privilege_command> pacdiff"
 housekeeping = true        # the Housekeeping screen's .pacnew diffs, cache size and failed units
+history = true             # the History screen (pacman.log) and the cache lookup behind D
 ```
 
 Rebuild detection (needs `preview` and `aur`) flags the update behind each
@@ -306,6 +308,28 @@ Housekeeping also shows the preflight results, a pending reboot, `.pacnew` and
 `.pacsave` files with an inline diff (`P` hands off to `pacdiff`), the package
 cache size, failed systemd units and installed packages that are vulnerable with
 no fix. Each of these reads can fail on its own without breaking the rest.
+
+### History and downgrade
+
+`4` shows `pacman.log` as transactions, newest first: date, the command that
+ran them and counts (`+` installed, `↑` upgraded, `↓` downgraded, `⟳`
+reinstalled, `-` removed). The detail pane lists every change and marks with `●`
+each old version that is still in the package cache. A transaction with no
+`transaction completed` line is marked interrupted. `/` filters by package and
+turns the list into that package's own history. Both timestamp formats of
+`pacman.log` are read.
+
+`D` (History or Packages) lists the versions of the selected package in the
+cache (pacman's `CacheDir` plus `extra_cache_dirs`) that are older than the
+installed one, newest first, with build date and whether a `.sig` is beside the
+file. After you pick one, cronen runs `pacman -Up --print-format '%n %v' -- <file>`
+as you, and the modal shows the exact command, what pacman would install, a
+warning for a missing `.sig`, the installed packages that require it, and that the
+next `-Syu` upgrades it again unless you add it to `IgnorePkg` (cronen never
+edits `pacman.conf`). Protected packages need their name typed. `y` hands the
+terminal to `<privilege_command> pacman -U -- <file>`. Only regular files directly
+inside a configured cache directory are accepted. `history = false` turns the
+History screen and `D` off.
 
 ### AUR review
 

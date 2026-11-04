@@ -1,0 +1,30 @@
+ cronen                                             1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────────────────────────┬───────────────────────────────────────
+    when              command                               │ 2026-10-12 02:25:01                   
+  2026-10-22 15:00  pacman -U /var/cache/pacman/pkg/fi… ↓1  │ pacman -Syu                           
+  2026-10-22 04:10  pacman -S firefox                  +1 -1│ ⚠ interrupted: pacman.log has no      
+  2026-10-21 03:42  pacman -S ripgrep                   ⟳1  │   "transaction completed" for it      
+  2026-10-20 13:32  pacman -Syu                         ↑2  │                                       
+▸ 2026-10-12 02:25  pacman -Syu                     ⚠ ↑2    │ Changes (2)                           
+  2026-10-05 12:50  pacman -S nvidia-utils              ↑1  │   ↑ linux 6.17.2.arch1-1 →            
+  2026-09-30 15:46  pacman -Syu                         ↑1  │     6.17.3.arch1-1 ●                  
+  2019-03-14 08:31  pacman -Syu                         ↑1  │   ↑ nvidia-utils 575.50-1 →           
+  2019-01-01 12:01  pacman -Syu                         ↑1  │     575.64-1                          
+                                                            │                                       
+                                                            │ + installed  ↑ upgraded  ↓            
+                                                            │ downgraded  ⟳ reinstalled  - removed  
+                                                            │ ● the old version is still in the     
+                                                            │ package cache: D can downgrade to it  
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+────────────────────────────────────────────────────────────┴───────────────────────────────────────
+ 9 transactions                                    esc back  / package  D downgrade  ? help  q quit 

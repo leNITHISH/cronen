@@ -51,6 +51,11 @@ var breaksPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`^(?:::\s*)?(\S+): removing (\S+) breaks dependency '([^']+)'$`),
 }
 
+// installBreaks is the spelling of a downgrade (or any install) that breaks
+// a dependency: ":: installing X (1.0-1) breaks dependency 'Y' required by Z".
+// Needs checking on Arch: the exact wording.
+var installBreaks = regexp.MustCompile(`^(?:::\s*)?installing (\S+) \(([^)]+)\) breaks dependency '([^']+)' required by (\S+)$`)
+
 // Errors is what pacman's stderr said.
 type Errors struct {
 	// Problems are the dependency breaks.
@@ -81,6 +86,10 @@ func ParseErrors(data []byte) Errors {
 		}
 		if strings.Contains(line, "could not satisfy dependencies") {
 			e.Unsatisfied = true
+		}
+		if m := installBreaks.FindStringSubmatch(line); m != nil {
+			e.Problems = append(e.Problems, Problem{Removing: m[1], Dependency: m[3], RequiredBy: m[4], Text: line})
+			continue
 		}
 		if m := breaksPatterns[0].FindStringSubmatch(line); m != nil {
 			e.Problems = append(e.Problems, Problem{Removing: m[1], Dependency: m[2], RequiredBy: m[3], Text: line})

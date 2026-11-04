@@ -26,6 +26,18 @@ type pendingAction struct {
 	plan    ops.Plan
 	// typed is what the user has typed towards plan.Token().
 	typed string
+
+	// The downgrade modal first lets the user pick a cached version
+	// (candidates, pick), then dry-runs the chosen file (target). from is
+	// the installed version and cacheDirs the directories -U files may
+	// come from.
+	picking    bool
+	candidates []pacman.CachedPackage
+	pick       int
+	target     pacman.CachedPackage
+	from       string
+	cacheDirs  []string
+	dateErr    error
 }
 
 type dryRunMsg struct {
@@ -44,7 +56,9 @@ type actionDoneMsg struct {
 	kind  ops.Kind
 	names []string
 	freed int64
-	err   error
+	// version is what a downgrade installed.
+	version string
+	err     error
 }
 
 // dryRun runs the dry run as the user, through the runner.
@@ -105,6 +119,9 @@ func (m *Model) startRemove(kind ops.Kind, names []string) tea.Cmd {
 // rerunDry (re)starts the dry run with the current options.
 func (m *Model) rerunDry() tea.Cmd {
 	a := m.act
+	if a.kind == ops.KindDowngrade {
+		return m.rerunDowngradeDry()
+	}
 	a.seq++
 	a.loading, a.typed = true, ""
 	argv, err := ops.RemoveDryArgv(a.opts, a.names)
@@ -122,6 +139,10 @@ func (m *Model) handleDryRun(msg dryRunMsg) {
 		return
 	}
 	a.loading = false
+	if a.kind == ops.KindDowngrade {
+		m.buildDowngradePlan(msg)
+		return
+	}
 	plan, err := ops.BuildRemovePlan(ops.RemoveInput{
 		Kind: a.kind, Options: a.opts, Names: a.names,
 		Priv: m.cfg.PrivilegeArgv(), Protected: m.cfg.EffectiveProtected(), DB: m.localDB,
@@ -163,6 +184,9 @@ func (m Model) handleActionKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		m.closeAction()
 		return m, nil
+	}
+	if a.kind == ops.KindDowngrade {
+		return m.handleDowngradeKey(msg)
 	}
 	if a.kind == ops.KindPacdiff {
 		if s == "y" {
@@ -225,6 +249,14 @@ func (m *Model) runAction() tea.Cmd {
 		return nil
 	}
 	done := actionDoneMsg{kind: plan.Kind, names: plan.Selected, freed: plan.Freed}
+	if a.kind == ops.KindDowngrade {
+		if err := m.recheckDowngrade(); err != nil {
+			m.flash(err.Error(), true)
+			m.closeAction()
+			return nil
+		}
+		done.version = a.target.Version
+	}
 	m.closeAction()
 	return m.opts.Exec(plan.Command, func(err error) tea.Msg {
 		done.err = err
@@ -240,6 +272,9 @@ func (m *Model) handleActionDone(msg actionDoneMsg) tea.Cmd {
 		m.actionNotice = "✗ " + actionVerb(msg.kind) + " failed (" + msg.err.Error() + ")"
 	case msg.kind == ops.KindPacdiff:
 		m.actionNotice = "✓ pacdiff finished"
+	case msg.kind == ops.KindDowngrade:
+		m.actionNotice = "✓ downgraded " + strings.Join(msg.names, ", ") + " to " + msg.version +
+			" · the next -Syu upgrades it again unless it's in IgnorePkg"
 	default:
 		m.actionNotice = "✓ removed " + plural(len(msg.names), "package", "packages") + " (" + strings.Join(msg.names, ", ") + ")"
 		if msg.freed > 0 {
@@ -254,8 +289,11 @@ func (m *Model) handleActionDone(msg actionDoneMsg) tea.Cmd {
 }
 
 func actionVerb(k ops.Kind) string {
-	if k == ops.KindPacdiff {
+	switch k {
+	case ops.KindPacdiff:
 		return "pacdiff"
+	case ops.KindDowngrade:
+		return "downgrade"
 	}
 	return "removal"
 }
@@ -267,6 +305,8 @@ func actionTitle(a *pendingAction) string {
 		return "Remove " + plural(len(a.names), "orphan", "orphans") + "?"
 	case ops.KindPacdiff:
 		return "Merge .pacnew and .pacsave files with pacdiff?"
+	case ops.KindDowngrade:
+		return "Downgrade " + strings.Join(a.names, ", ") + " from the package cache?"
 	}
 	return "Remove " + plural(len(a.names), "package", "packages") + "?"
 }

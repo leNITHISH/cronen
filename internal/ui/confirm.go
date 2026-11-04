@@ -63,6 +63,9 @@ const maxListed = 6
 // shows pacman's error and no way to proceed.
 func (m Model) actionView(w int) string {
 	s, a := m.styles, m.act
+	if a.kind == ops.KindDowngrade {
+		return m.downgradeView(w)
+	}
 	var lines []string
 	add := func(text string) {
 		lines = append(lines, wrapIndent(text, w, 4))

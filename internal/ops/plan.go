@@ -16,6 +16,7 @@ const (
 	KindRemove Kind = iota
 	KindOrphans
 	KindPacdiff
+	KindDowngrade
 )
 
 // Item is one package a removal affects.
@@ -24,6 +25,8 @@ type Item struct {
 	Version string
 	// Size is the installed size freed, 0 if unknown.
 	Size int64
+	// From is the installed version a downgrade replaces.
+	From string
 	// Selected is true for packages the user picked, false for those
 	// pacman pulled in (-s).
 	Selected bool
@@ -55,6 +58,9 @@ type Plan struct {
 	// Failure is pacman's error text when the dry run failed. A plan with
 	// a Failure offers no way to proceed.
 	Failure string
+	// Unsigned are the package files of a downgrade with no .sig beside
+	// them.
+	Unsigned []string
 	// Files are the .pacnew files of a pacdiff plan.
 	Files []string
 }

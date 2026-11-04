@@ -33,10 +33,12 @@ type KeyMap struct {
 	// Remove removes the marked packages; Pacdiff merges .pacnew files.
 	Remove  key.Binding
 	Pacdiff key.Binding
-	Back    key.Binding
-	Refresh key.Binding
-	Help    key.Binding
-	Quit    key.Binding
+	// Downgrade installs an older cached version of a package.
+	Downgrade key.Binding
+	Back      key.Binding
+	Refresh   key.Binding
+	Help      key.Binding
+	Quit      key.Binding
 
 	// Accept ends filter input, keeping the filter.
 	Accept key.Binding
@@ -136,6 +138,10 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("P"),
 			key.WithHelp("P", "merge .pacnew (housekeeping)"),
 		),
+		Downgrade: key.NewBinding(
+			key.WithKeys("D"),
+			key.WithHelp("D", "downgrade from cache"),
+		),
 		Back: key.NewBinding(
 			key.WithKeys("esc"),
 			key.WithHelp("esc", "back"),
@@ -176,7 +182,7 @@ func (k KeyMap) ShortHelp() []key.Binding {
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Top, k.Bottom},
-		{k.HalfDown, k.HalfUp, k.Focus, k.Filter, k.Screens, k.Mark, k.CycleFilter, k.CycleSort, k.Remove, k.Pacdiff},
+		{k.HalfDown, k.HalfUp, k.Focus, k.Filter, k.Screens, k.Mark, k.CycleFilter, k.CycleSort, k.Remove, k.Pacdiff, k.Downgrade},
 		{k.News, k.MarkRead, k.Upstream, k.Changelog, k.Diff},
 		{k.Acknowledge, k.ShowAcked},
 		{k.Upgrade, k.Refresh, k.Back, k.Help, k.Quit},

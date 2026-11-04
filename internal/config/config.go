@@ -100,6 +100,11 @@ type Config struct {
 	// Housekeeping enables the Housekeeping screen's own data sources:
 	// the .pacnew diffs, the package cache size and the failed units.
 	Housekeeping bool `toml:"housekeeping"`
+	// History enables the History screen's data sources: pacman.log read
+	// into transactions, and the package cache listing that shows which old
+	// versions can still be installed. Downgrades need the cache listing,
+	// so with it off the D key is unavailable.
+	History bool `toml:"history"`
 }
 
 // Privilege commands cronen knows how to prefix a write action with.
@@ -136,6 +141,7 @@ func Default() Config {
 		PrivilegeCommand: "sudo",
 		ProtectedMode:    WatchlistExtend,
 		Housekeeping:     true,
+		History:          true,
 	}
 }
 

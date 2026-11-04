@@ -25,6 +25,9 @@ type FS interface {
 	// Stat reports on a file or directory. Missing paths report an error
 	// matching fs.ErrNotExist.
 	Stat(path string) (fs.FileInfo, error)
+	// Lstat is Stat that doesn't follow a final symbolic link: it reports
+	// on the link itself, so a caller can refuse links.
+	Lstat(path string) (fs.FileInfo, error)
 	// ReadDir lists the files directly inside a directory (not its
 	// subdirectories), sorted by name. A missing directory reports an
 	// error matching fs.ErrNotExist.
@@ -81,6 +84,11 @@ func (OSFS) Stat(path string) (fs.FileInfo, error) {
 	return os.Stat(path)
 }
 
+// Lstat implements FS.
+func (OSFS) Lstat(path string) (fs.FileInfo, error) {
+	return os.Lstat(path)
+}
+
 // ReadDir implements FS.
 func (OSFS) ReadDir(path string) ([]fs.FileInfo, error) {
 	entries, err := os.ReadDir(path)
@@ -114,6 +122,33 @@ type FakeFS struct {
 	// sizes overrides the size Stat and ReadDir report for a file, so a
 	// test can have a 4 GiB cache without holding 4 GiB.
 	sizes map[string]int64
+	// symlinks are the paths Lstat reports as symbolic links.
+	symlinks map[string]bool
+}
+
+// SetSymlink makes Lstat report the file at path as a symbolic link (Stat
+// still sees the file, as it follows links).
+func (f *FakeFS) SetSymlink(path string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.symlinks == nil {
+		f.symlinks = map[string]bool{}
+	}
+	f.symlinks[filepath.Clean(path)] = true
+}
+
+// Lstat implements FS: Stat, except for paths marked with SetSymlink.
+func (f *FakeFS) Lstat(path string) (fs.FileInfo, error) {
+	fi, err := f.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.symlinks[filepath.Clean(path)] {
+		return fakeInfo{name: fi.Name(), size: fi.Size(), link: true}, nil
+	}
+	return fi, nil
 }
 
 // SetSize makes Stat and ReadDir report size bytes for the file at path.
@@ -242,13 +277,17 @@ type fakeInfo struct {
 	name string
 	size int64
 	dir  bool
+	link bool
 }
 
 func (i fakeInfo) Name() string { return i.name }
 func (i fakeInfo) Size() int64  { return i.size }
 func (i fakeInfo) Mode() fs.FileMode {
-	if i.dir {
+	switch {
+	case i.dir:
 		return fs.ModeDir | 0o755
+	case i.link:
+		return fs.ModeSymlink | 0o777
 	}
 	return 0o644
 }

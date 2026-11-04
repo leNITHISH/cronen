@@ -78,18 +78,3 @@ func screenForKey(k string) (screen, bool) {
 	}
 	return tabs[k[0]-'1'].screen, true
 }
-
-// placeholderView is the body of a screen that isn't built yet.
-func (m Model) placeholderView(name string) string {
-	return "\n " + m.styles.Subtle.Render(name+" isn't available yet.")
-}
-
-// tabLabel is the name of a tab screen.
-func tabLabel(s screen) string {
-	for _, t := range tabs {
-		if t.screen == s {
-			return t.label
-		}
-	}
-	return ""
-}

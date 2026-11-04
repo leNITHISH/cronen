@@ -1,0 +1,30 @@
+ cronen                                             1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Downgrade firefox from the package cache?                                                          
+                                                                                                    
+ Installed: firefox 144.0-1                                                                         
+                                                                                                    
+ Chosen: /var/cache/pacman/pkg/firefox-143.0-1-x86_64.pkg.tar.zst                                   
+ Dry run: pacman -Up --print-format '%n %v' -- /var/cache/pacman/pkg/firefox-143.0-1-               
+    x86_64.pkg.tar.zst                                                                              
+                                                                                                    
+ This runs: sudo pacman -U -- /var/cache/pacman/pkg/firefox-143.0-1-x86_64.pkg.tar.zst              
+                                                                                                    
+ Downgrading                                                                                        
+   firefox 144.0-1 → 143.0-1                                                                        
+                                                                                                    
+ ⚠ no .sig file beside firefox-143.0-1-x86_64.pkg.tar.zst: its signature can't be checked           
+    (pacman's LocalFileSigLevel decides whether that is allowed)                                    
+ ⚠ the next -Syu upgrades firefox again unless you add it to IgnorePkg in pacman.conf; cronen       
+    won't do that                                                                                   
+                                                                                                    
+ Press y to downgrade, esc to cancel.                                                               
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Downgrade firefox from the package cache?                                               esc cancel 

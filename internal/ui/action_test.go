@@ -203,7 +203,7 @@ func TestHousekeepingScreen(t *testing.T) {
 	checkSize(t, m, 100, 40)
 	out := plain(m)
 	for _, want := range []string{"Orphans (4)", "libgbm-compat", "old-codec-lib", "mirrorlist.pacnew",
-		"+## Generated on 2026-10-01", "3 packages", "bluetooth.service", "paccache -r"} {
+		"+## Generated on 2026-10-01", "6 packages", "bluetooth.service", "paccache -r"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("screen lacks %q", want)
 		}

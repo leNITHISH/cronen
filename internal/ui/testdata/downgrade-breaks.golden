@@ -1,0 +1,30 @@
+ cronen                                             1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Downgrade linux from the package cache?                                                            
+                                                                                                    
+ Installed: linux 6.17.4.arch1-1                                                                    
+                                                                                                    
+ Chosen: /var/cache/pacman/pkg/linux-6.17.2.arch1-1-x86_64.pkg.tar.zst                              
+ Dry run: pacman -Up --print-format '%n %v' -- /var/cache/pacman/pkg/linux-6.17.2.arch1-1-          
+    x86_64.pkg.tar.zst                                                                              
+                                                                                                    
+ ✗ pacman's dry run failed; nothing will be run                                                     
+   failed to prepare transaction (could not satisfy dependencies)                                   
+   ⚠ :: installing linux (6.17.2.arch1-1) breaks dependency 'linux=6.17.4.arch1-1' required by      
+    nvidia                                                                                          
+                                                                                                    
+ esc cancels                                                                                        
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Downgrade linux from the package cache?                                                 esc cancel 

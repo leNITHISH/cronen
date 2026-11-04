@@ -22,7 +22,7 @@ const fullUpgradeMarker = "[PACMAN] starting full system upgrade"
 // minute-precision format in local time.
 var (
 	zonedLayouts = []string{"2006-01-02T15:04:05-0700", time.RFC3339}
-	localLayout  = "2006-01-02 15:04"
+	localLayouts = []string{"2006-01-02 15:04", "2006-01-02 15:04:05"}
 )
 
 // LastFullUpgrade returns the time of the last "starting full system
@@ -73,7 +73,14 @@ func parseTimestamp(s string, loc *time.Location) (time.Time, error) {
 	if loc == nil {
 		loc = time.Local
 	}
-	return time.ParseInLocation(localLayout, s, loc)
+	var err error
+	for _, layout := range localLayouts {
+		var t time.Time
+		if t, err = time.ParseInLocation(layout, s, loc); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, err
 }
 
 // ReadLastFullUpgrade reads the pacman.log at path and returns the time of

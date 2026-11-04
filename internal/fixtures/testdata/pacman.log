@@ -13,6 +13,14 @@
 [2026-09-30T21:16:10+0530] [ALPM] transaction started
 [2026-09-30T21:16:12+0530] [ALPM] upgraded mesa (1:25.2.3-1 -> 1:25.2.4-1)
 [2026-09-30T21:16:20+0530] [ALPM] transaction completed
+[2026-10-05T18:20:00+0530] [PACMAN] Running 'pacman -S nvidia-utils'
+[2026-10-05T18:20:01+0530] [ALPM] transaction started
+[2026-10-05T18:20:03+0530] [ALPM] upgraded nvidia-utils (575.64-1 -> 580.95.05-1)
+[2026-10-05T18:20:09+0530] [ALPM] transaction completed
+[2026-10-12T07:55:00+0530] [PACMAN] Running 'pacman -Syu'
+[2026-10-12T07:55:01+0530] [ALPM] transaction started
+[2026-10-12T07:55:04+0530] [ALPM] upgraded linux (6.17.2.arch1-1 -> 6.17.3.arch1-1)
+[2026-10-12T07:55:04+0530] [ALPM] upgraded nvidia-utils (575.50-1 -> 575.64-1)
 [2026-10-20T19:02:05+0530] [PACMAN] Running 'pacman -Syu'
 [2026-10-20T19:02:05+0530] [PACMAN] synchronizing package lists
 [2026-10-20T19:02:11+0530] [PACMAN] starting full system upgrade
@@ -25,3 +33,12 @@
 [2026-10-21T09:12:03+0530] [ALPM] transaction started
 [2026-10-21T09:12:04+0530] [ALPM] reinstalled ripgrep (14.1.1-1)
 [2026-10-21T09:12:04+0530] [ALPM] transaction completed
+[2026-10-22T09:40:00+0530] [PACMAN] Running 'pacman -S firefox'
+[2026-10-22T09:40:02+0530] [ALPM] transaction started
+[2026-10-22T09:40:03+0530] [ALPM] installed egl-wayland2 (1.0.0-1)
+[2026-10-22T09:40:05+0530] [ALPM] removed iptables (1:1.8.11-1)
+[2026-10-22T09:40:06+0530] [ALPM] transaction completed
+[2026-10-22T20:30:00+0530] [PACMAN] Running 'pacman -U /var/cache/pacman/pkg/firefox-143.0-1-x86_64.pkg.tar.zst'
+[2026-10-22T20:30:01+0530] [ALPM] transaction started
+[2026-10-22T20:30:02+0530] [ALPM] downgraded firefox (144.0.1-1 -> 144.0-1)
+[2026-10-22T20:30:07+0530] [ALPM] transaction completed

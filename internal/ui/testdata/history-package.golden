@@ -1,0 +1,30 @@
+ cronen                                             1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────────────────────────┬───────────────────────────────────────
+    when        package                                     │ 2026-10-12 02:25:01                   
+▸ 2026-10-12  nvidia-utils            ↑ 575.50-1 → 575.64-1 │ pacman -Syu                           
+  2026-10-05  nvidia-utils            ↑ 575.64-1 → 580.95.0…│ ⚠ interrupted: pacman.log has no      
+                                                            │   "transaction completed" for it      
+                                                            │                                       
+                                                            │ Changes (2)                           
+                                                            │   ↑ linux 6.17.2.arch1-1 →            
+                                                            │     6.17.3.arch1-1 ●                  
+                                                            │ ▸ ↑ nvidia-utils 575.50-1 →           
+                                                            │     575.64-1                          
+                                                            │                                       
+                                                            │ + installed  ↑ upgraded  ↓            
+                                                            │ downgraded  ⟳ reinstalled  - removed  
+                                                            │ ● the old version is still in the     
+                                                            │ package cache: D can downgrade to it  
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+────────────────────────────────────────────────────────────┴───────────────────────────────────────
+ 9 transactions · 2 changes shown · filter: nvidia-utils                                            

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -81,33 +80,10 @@ type CacheInfo struct {
 // (from pacman.conf, else the default) and in extra, a list of globs whose
 // leading ~/ is expanded with home.
 func LoadCache(fsys system.FS, extra []string, home string) (CacheInfo, error) {
-	conf, err := fsys.ReadFile(pacman.ConfPath)
-	dirs := []string{pacman.DefaultCacheDir}
-	if err == nil {
-		dirs = pacman.CacheDirs(conf)
-	}
-	for _, g := range extra {
-		if rest, ok := strings.CutPrefix(g, "~/"); ok {
-			if home == "" {
-				continue
-			}
-			g = filepath.Join(home, rest)
-		}
-		matches, err := fsys.Glob(g)
-		if err != nil {
-			continue
-		}
-		dirs = append(dirs, matches...)
-	}
+	dirs := pacman.ResolveCacheDirs(fsys, extra, home)
 	var info CacheInfo
-	seen := map[string]bool{}
 	var firstErr error
 	for _, d := range dirs {
-		d = filepath.Clean(d)
-		if seen[d] {
-			continue
-		}
-		seen[d] = true
 		entries, err := fsys.ReadDir(d)
 		if err != nil {
 			if firstErr == nil && !errors.Is(err, fs.ErrNotExist) {

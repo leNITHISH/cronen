@@ -1,0 +1,30 @@
+ cronen                                             1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Downgrade linux from the package cache?                                                            
+                                                                                                    
+ Installed: linux 6.17.4.arch1-1                                                                    
+                                                                                                    
+ Chosen: /var/cache/pacman/pkg/linux-6.17.3.arch1-1-x86_64.pkg.tar.zst                              
+ Dry run: pacman -Up --print-format '%n %v' -- /var/cache/pacman/pkg/linux-6.17.3.arch1-1-          
+    x86_64.pkg.tar.zst                                                                              
+                                                                                                    
+ This runs: sudo pacman -U -- /var/cache/pacman/pkg/linux-6.17.3.arch1-1-x86_64.pkg.tar.zst         
+                                                                                                    
+ Downgrading                                                                                        
+   linux 6.17.4.arch1-1 → 6.17.3.arch1-1 protected                                                  
+                                                                                                    
+ ⚠ protected: linux (base system; a bad version can leave the system unbootable)                    
+ ⚠ required by linux-headers, nvidia: check they still work with linux 6.17.3.arch1-1               
+ ⚠ the next -Syu upgrades linux again unless you add it to IgnorePkg in pacman.conf; cronen         
+    won't do that                                                                                   
+                                                                                                    
+ Protected package: type linux and press enter to downgrade it.                                     
+   > ▏                                                                                              
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Downgrade linux from the package cache?                                                 esc cancel 

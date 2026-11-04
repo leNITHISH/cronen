@@ -192,6 +192,7 @@ known_issues = false
 				tt.want.PrivilegeCommand = "sudo"
 				tt.want.ProtectedMode = WatchlistExtend
 				tt.want.Housekeeping = true
+				tt.want.History = true
 			}
 			switch {
 			case tt.wantErr == "" && err != nil:

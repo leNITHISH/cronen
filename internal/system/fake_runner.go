@@ -57,12 +57,13 @@ func (f *FakeRunner) Calls() []string {
 func (f *FakeRunner) Run(ctx context.Context, name string, args ...string) ([]byte, int, error) {
 	line := commandLine(name, args)
 
-	if name == "pacman" && nosavePrint(args) {
-		f.mu.Lock()
-		f.calls = append(f.calls, line)
-		f.mu.Unlock()
-		return nil, 1, &ExitError{Command: line, Code: 1,
-			Stderr: []byte("error: invalid option: '--nosave' and '--print' may not be used together\n")}
+	if name == "pacman" {
+		if msg := invalidPacman(args); msg != "" {
+			f.mu.Lock()
+			f.calls = append(f.calls, line)
+			f.mu.Unlock()
+			return nil, 1, &ExitError{Command: line, Code: 1, Stderr: []byte("error: " + msg + "\n")}
+		}
 	}
 
 	f.mu.Lock()
@@ -89,17 +90,52 @@ func (f *FakeRunner) Run(ctx context.Context, name string, args ...string) ([]by
 	return r.Stdout, 0, nil
 }
 
-// nosavePrint reports an -R option cluster with both n and p, which real
-// pacman refuses, so a dry run built that way fails in tests too.
-func nosavePrint(args []string) bool {
+// invalidPacman returns the error real pacman gives for an option
+// combination it refuses, or "" for a combination it accepts or that the
+// fake doesn't know about. It makes a dry run or hand-off built with a
+// flag pacman rejects fail in tests too. The rules are the ones pacman
+// enforces in its option parsing:
+//
+//   - only one operation (-D -F -Q -R -S -T -U) may be used at a time;
+//   - -n (--nosave) belongs to -R and can't be combined with -p (--print);
+//   - -U takes none of the sync and remove options: -y, -u, -s, -n, -c
+//     (and the like) are invalid with it.
+func invalidPacman(args []string) string {
+	var ops []byte
+	var cluster string
 	for _, a := range args {
 		if a == "--" {
-			return false
+			break
 		}
-		if f, ok := strings.CutPrefix(a, "-R"); ok && !strings.HasPrefix(a, "--") &&
-			strings.Contains(f, "n") && strings.Contains(f, "p") {
-			return true
+		if len(a) < 2 || a[0] != '-' || a[1] == '-' {
+			continue
+		}
+		// A short-option cluster. Letters after an operation letter are its
+		// options; a following argument is never a cluster of its own here
+		// because cronen passes values only to long options.
+		for _, c := range []byte(a[1:]) {
+			if c >= 'A' && c <= 'Z' {
+				ops = append(ops, c)
+			}
+		}
+		cluster += a[1:]
+	}
+	if len(ops) > 1 {
+		return "only one operation may be used at a time"
+	}
+	if len(ops) == 1 {
+		switch ops[0] {
+		case 'R':
+			if strings.Contains(cluster, "n") && strings.Contains(cluster, "p") {
+				return "invalid option: '--nosave' and '--print' may not be used together"
+			}
+		case 'U':
+			for _, c := range []byte(strings.TrimPrefix(cluster, "U")) {
+				if !strings.ContainsRune("pdvw", rune(c)) {
+					return "invalid option: '-" + string(c) + "' is not valid with -U"
+				}
+			}
 		}
 	}
-	return false
+	return ""
 }
