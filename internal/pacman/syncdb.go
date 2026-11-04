@@ -248,6 +248,33 @@ func parseSize(v string) (int64, error) {
 	return int64(math.Round(n * mult)), nil
 }
 
+// FormatSize formats a byte count the way pacman does, with a binary unit
+// and one decimal below 10: "512 B", "3.5 KiB", "412 MiB", "1.2 GiB".
+func FormatSize(n int64) string {
+	units := []string{"B", "KiB", "MiB", "GiB", "TiB"}
+	v := float64(n)
+	i := 0
+	for v >= 1024 && i < len(units)-1 {
+		v /= 1024
+		i++
+	}
+	if i == 0 {
+		return strconv.FormatInt(n, 10) + " B"
+	}
+	if v < 10 {
+		return strconv.FormatFloat(v, 'f', 1, 64) + " " + units[i]
+	}
+	return strconv.FormatFloat(v, 'f', 0, 64) + " " + units[i]
+}
+
+// FormatDelta is FormatSize with a sign: "+26 MiB", "-3.5 KiB", "+0 B".
+func FormatDelta(n int64) string {
+	if n < 0 {
+		return "-" + FormatSize(-n)
+	}
+	return "+" + FormatSize(n)
+}
+
 // infoBatch is how many packages go to one pacman -Si or -Qi call.
 const infoBatch = 100
 

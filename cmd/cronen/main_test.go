@@ -97,6 +97,9 @@ func TestDemoCheck(t *testing.T) {
 	if !strings.HasPrefix(out, "18 updates (2 AUR) · 11 flagged · 2 unread news · 1 .pacnew\n") {
 		t.Errorf("output:\n%s", out)
 	}
+	if !strings.Contains(out, "transaction: 886 MiB download, +26 MiB on disk, 2 new, 1 replaced\n") || !strings.Contains(out, "ℹ bash: Held by IgnorePkg") {
+		t.Errorf("no transaction or held lines:\n%s", out)
+	}
 	if !strings.Contains(out, "‼ manual intervention: linux-firmware") {
 		t.Errorf("no intervention line:\n%s", out)
 	}
@@ -107,7 +110,7 @@ func TestDemoJSON(t *testing.T) {
 	if code := run(context.Background(), []string{"--demo", "--json"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit code %d; stderr: %s", code, stderr.String())
 	}
-	const want = `{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true}` + "\n"
+	const want = `{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1}` + "\n"
 	if got := stdout.String(); got != want {
 		t.Errorf("got %s, want %s", got, want)
 	}

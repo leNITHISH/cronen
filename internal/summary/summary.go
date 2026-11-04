@@ -110,15 +110,38 @@ func Updates(repo []pacman.Update, aurPkgs []aur.Package) []risk.Update {
 	return updates
 }
 
-// Assess applies the risk rules with the user's configuration.
-func Assess(updates []risk.Update, unread []news.Item, cfg config.Config, now time.Time) risk.Result {
-	return risk.Assess(risk.Input{
+// LoadPreview works out what -Syu would do from the database checkupdates
+// synced at db: what it pulls in, replaces and downloads, and which updates
+// are held. repo are the pending updates checkupdates found.
+func LoadPreview(ctx context.Context, r system.Runner, fsys system.FS, db string, repo []pacman.Update, loc *time.Location) (pacman.Transaction, error) {
+	if db == "" {
+		return pacman.Transaction{}, fmt.Errorf("%w: no checkupdates database path", pacman.ErrPreviewUnavailable)
+	}
+	return pacman.PreviewTransaction(ctx, r, fsys, db, repo, loc)
+}
+
+// Assess applies the risk rules with the user's configuration. tx is the
+// transaction preview, or nil while it is unavailable: the rules that need
+// it (held packages, fresh builds) then have nothing to look at.
+func Assess(updates []risk.Update, unread []news.Item, tx *pacman.Transaction, cfg config.Config, now time.Time) risk.Result {
+	in := risk.Input{
 		Updates:     updates,
 		UnreadNews:  unread,
 		Watchlist:   cfg.EffectiveWatchlist(),
 		IgnoreMajor: cfg.IgnoreMajor,
 		Now:         now,
-	})
+		FreshHours:  cfg.FlagFreshHours,
+	}
+	if tx != nil {
+		in.Builds = map[string]time.Time{}
+		for _, u := range tx.Updates {
+			in.Builds[u.Name] = u.BuildDate
+		}
+		for _, h := range tx.Held {
+			in.Held = append(in.Held, risk.Update{Name: h.Name, OldVersion: h.OldVersion, NewVersion: h.NewVersion})
+		}
+	}
+	return risk.Assess(in)
 }
 
 // Sources is the system access Gather needs.
@@ -128,6 +151,8 @@ type Sources struct {
 	FS      system.FS
 	Config  config.Config
 	State   config.State
+	// SyncDB is the database checkupdates syncs; see pacman.SyncDBPath.
+	SyncDB string
 	// Now is the current time. Nil means time.Now.
 	Now func() time.Time
 	// Location is the time zone of pacman.log. Nil means time.Local.
@@ -149,6 +174,13 @@ type Summary struct {
 	Pacnew int
 	// Reboot is set when a kernel is among the updates.
 	Reboot bool
+	// Transaction is the preview of what -Syu would do, and Previewed is
+	// set when it was made.
+	Transaction pacman.Transaction
+	Previewed   bool
+	// Held are the updates IgnorePkg or IgnoreGroup hold back. They are
+	// not pending updates and never count as flagged.
+	Held []risk.Package
 	// Errors are the sources that failed. The rest of the summary holds
 	// what the others found.
 	Errors []error
@@ -170,13 +202,22 @@ func Gather(ctx context.Context, src Sources) Summary {
 	var (
 		wg                       sync.WaitGroup
 		repo                     []pacman.Update
+		tx                       pacman.Transaction
+		txErr                    error
 		aurPkgs                  []aur.Package
 		items                    []news.Item
 		lastLog                  time.Time
 		pacnew                   []string
 		repoErr, aurErr, newsErr error
 	)
-	wg.Go(func() { repo, repoErr = pacman.CheckUpdates(ctx, src.Runner) })
+	wg.Go(func() {
+		repo, repoErr = pacman.CheckUpdates(ctx, src.Runner)
+		// The preview reads the database checkupdates just synced, so it
+		// waits for it, and a failed checkupdates has already said why.
+		if repoErr == nil && src.Config.Preview {
+			tx, txErr = LoadPreview(ctx, src.Runner, src.FS, src.SyncDB, repo, loc)
+		}
+	})
 	if src.Config.AUR {
 		wg.Go(func() { aurPkgs, aurErr = LoadAUR(ctx, src.Runner, src.Fetcher, false) })
 	}
@@ -191,7 +232,7 @@ func Gather(ctx context.Context, src Sources) Summary {
 	if newsErr != nil {
 		newsErr = fmt.Errorf("news: %w", newsErr)
 	}
-	for _, err := range []error{repoErr, aurErr, newsErr} {
+	for _, err := range []error{repoErr, aurErr, newsErr, txErr} {
 		if err != nil {
 			s.Errors = append(s.Errors, err)
 		}
@@ -199,7 +240,13 @@ func Gather(ctx context.Context, src Sources) Summary {
 
 	t := now()
 	unread := Unread(items, LastUpgrade(lastLog, src.State), src.State, src.Config, t)
-	res := Assess(Updates(repo, aurPkgs), unread, src.Config, t)
+	var txp *pacman.Transaction
+	if src.Config.Preview && repoErr == nil && txErr == nil {
+		txp = &tx
+		s.Transaction, s.Previewed = tx, true
+	}
+	res := Assess(Updates(repo, aurPkgs), unread, txp, src.Config, t)
+	s.Held = res.Held
 	for _, p := range res.Packages {
 		if p.AUR {
 			s.AUR++
