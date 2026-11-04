@@ -49,6 +49,12 @@ type pacnewMsg struct {
 	err   error
 }
 
+type previewMsg struct {
+	gen int
+	tx  pacman.Transaction
+	err error
+}
+
 type archwebMsg struct {
 	name string
 	pkg  archweb.Package
@@ -59,6 +65,15 @@ func loadRepo(ctx context.Context, r system.Runner, gen int) tea.Cmd {
 	return func() tea.Msg {
 		updates, err := pacman.CheckUpdates(ctx, r)
 		return repoMsg{gen: gen, updates: updates, err: err}
+	}
+}
+
+// loadPreview previews the transaction from the database checkupdates
+// synced, for the repo updates it found.
+func loadPreview(ctx context.Context, r system.Runner, fsys system.FS, db string, repo []pacman.Update, loc *time.Location, gen int) tea.Cmd {
+	return func() tea.Msg {
+		tx, err := summary.LoadPreview(ctx, r, fsys, db, repo, loc)
+		return previewMsg{gen: gen, tx: tx, err: err}
 	}
 }
 

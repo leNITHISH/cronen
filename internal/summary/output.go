@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/leNITHISH/cronen/internal/pacman"
 	"github.com/leNITHISH/cronen/internal/risk"
 )
 
@@ -27,6 +28,17 @@ func (s Summary) Headline() string {
 	return strings.Join(parts, " · ")
 }
 
+// transactionLine is "886 MiB download, +26 MiB on disk, 2 new, 1 replaced".
+func (s Summary) transactionLine() string {
+	tx := s.Transaction
+	return strings.Join([]string{
+		pacman.FormatSize(tx.DownloadBytes) + " download",
+		pacman.FormatDelta(tx.SizeDelta) + " on disk",
+		strconv.Itoa(len(tx.New)) + " new",
+		strconv.Itoa(len(tx.Removed)) + " replaced",
+	}, ", ")
+}
+
 // Text is the plain-text report --check prints: the headline, then what
 // needs attention, most severe first, then any errors.
 func (s Summary) Text() string {
@@ -40,6 +52,12 @@ func (s Summary) Text() string {
 				lines = append(lines, icon(sev)+" "+p.Name+": "+oneLine(p.Flags[0].Reason))
 			}
 		}
+	}
+	if s.Previewed {
+		lines = append(lines, "transaction: "+s.transactionLine())
+	}
+	for _, p := range s.Held {
+		lines = append(lines, icon(risk.Info)+" "+p.Name+": "+oneLine(p.Flags[0].Reason))
 	}
 	if s.Reboot {
 		lines = append(lines, "reboot after upgrading: the kernel is updated")
@@ -62,6 +80,11 @@ func (s Summary) JSON() []byte {
 		UnreadNews int      `json:"unread_news"`
 		Pacnew     int      `json:"pacnew"`
 		Reboot     bool     `json:"reboot"`
+		Download   int64    `json:"download_bytes"`
+		SizeDelta  int64    `json:"size_delta_bytes"`
+		New        int      `json:"new"`
+		Replaced   int      `json:"replaced"`
+		Held       int      `json:"held"`
 		Errors     []string `json:"errors,omitempty"`
 	}{
 		Updates:    s.Updates(),
@@ -71,6 +94,11 @@ func (s Summary) JSON() []byte {
 		UnreadNews: s.UnreadNews,
 		Pacnew:     s.Pacnew,
 		Reboot:     s.Reboot,
+		Download:   s.Transaction.DownloadBytes,
+		SizeDelta:  s.Transaction.SizeDelta,
+		New:        len(s.Transaction.New),
+		Replaced:   len(s.Transaction.Removed),
+		Held:       len(s.Held),
 	}
 	for _, err := range s.Errors {
 		v.Errors = append(v.Errors, err.Error())

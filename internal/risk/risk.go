@@ -48,6 +48,8 @@ const (
 	RuleMajorBump
 	RuleWatchlist
 	RuleKernel
+	RuleFresh
+	RuleHeld
 )
 
 func (r Rule) String() string {
@@ -62,6 +64,10 @@ func (r Rule) String() string {
 		return "watchlist"
 	case RuleKernel:
 		return "kernel"
+	case RuleFresh:
+		return "fresh-build"
+	case RuleHeld:
+		return "held"
 	}
 	return fmt.Sprintf("Rule(%d)", int(r))
 }
@@ -131,6 +137,16 @@ type Input struct {
 	PythonDependents []string
 	// Now is the current time, used for "2 days ago" in reasons.
 	Now time.Time
+
+	// Builds maps a package name to when its new version was built, for
+	// the fresh build rule. Packages without an entry are never flagged.
+	Builds map[string]time.Time
+	// FreshHours flags updates built less than this many hours ago. 0 turns
+	// the rule off.
+	FreshHours int
+	// Held are updates that IgnorePkg or IgnoreGroup hold back. They are
+	// not part of Updates.
+	Held []Update
 }
 
 // Result is the outcome of Assess.
@@ -143,6 +159,9 @@ type Result struct {
 	Interventions []news.Item
 	// RebootRequired is set when a kernel is among the updates.
 	RebootRequired bool
+	// Held are the held packages with their flag. They are not pending
+	// updates, so Packages, Flagged and Count leave them out.
+	Held []Package
 }
 
 // Flagged returns the packages with at least one flag, in input order.
@@ -188,6 +207,9 @@ func Assess(in Input) Result {
 		if f, ok := watchlistFlag(u, in.Watchlist); ok {
 			flags = append(flags, f)
 		}
+		if f, ok := freshFlag(u, in); ok {
+			flags = append(flags, f)
+		}
 		if IsKernel(u.Name) {
 			res.RebootRequired = true
 			flags = append(flags, Flag{Rule: RuleKernel, Severity: Info, Reason: "Kernel update: reboot after upgrading"})
@@ -196,6 +218,12 @@ func Assess(in Input) Result {
 			return cmp.Or(cmp.Compare(b.Severity, a.Severity), cmp.Compare(a.Rule, b.Rule))
 		})
 		res.Packages = append(res.Packages, Package{Update: u, Flags: flags})
+	}
+	for _, u := range in.Held {
+		res.Held = append(res.Held, Package{Update: u, Flags: []Flag{{
+			Rule: RuleHeld, Severity: Info,
+			Reason: fmt.Sprintf("Held by IgnorePkg: %s → %s. Holding packages is a partial upgrade.", u.OldVersion, u.NewVersion),
+		}}})
 	}
 	return res
 }
@@ -285,6 +313,40 @@ func isNameByte(c byte) bool {
 		return true
 	}
 	return strings.IndexByte("-._+@", c) >= 0
+}
+
+// Age describes how long before now t was: "5 hours ago", "30 minutes ago",
+// "3 days ago". A time in the future counts as "just now".
+func Age(t, now time.Time) string {
+	d := now.Sub(t)
+	n, unit := 0, ""
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		n, unit = int(d/time.Minute), "minute"
+	case d < 48*time.Hour:
+		n, unit = int(d/time.Hour), "hour"
+	default:
+		n, unit = int(d/(24*time.Hour)), "day"
+	}
+	if n != 1 {
+		unit += "s"
+	}
+	return fmt.Sprintf("%d %s ago", n, unit)
+}
+
+// freshFlag is rule 11: the new build is younger than flag_fresh_hours.
+func freshFlag(u Update, in Input) (Flag, bool) {
+	built, ok := in.Builds[u.Name]
+	if in.FreshHours <= 0 || !ok || built.IsZero() || u.AUR {
+		return Flag{}, false
+	}
+	age := in.Now.Sub(built)
+	if age >= time.Duration(in.FreshHours)*time.Hour {
+		return Flag{}, false
+	}
+	return Flag{Rule: RuleFresh, Severity: Info, Reason: "Fresh build: built " + Age(built, in.Now)}, true
 }
 
 func ago(t, now time.Time) string {

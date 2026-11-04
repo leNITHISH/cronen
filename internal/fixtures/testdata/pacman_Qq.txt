@@ -5,6 +5,7 @@ firefox
 glibc
 gnome-shell-extension-legacy
 gnupg
+iptables
 linux
 linux-api-headers
 linux-firmware

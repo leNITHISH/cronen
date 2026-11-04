@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -47,7 +48,11 @@ func (e *ExitError) Error() string {
 	return fmt.Sprintf("%s: exit status %d: %s", e.Command, e.Code, msg)
 }
 
-// ExecRunner is the real Runner, backed by os/exec.
+// ExecRunner is the real Runner, backed by os/exec. Every command runs with
+// LC_ALL=C, so output that cronen parses (pacman's "Installed Size", dates,
+// the key names in -Qi) never depends on the user's locale. The upgrade
+// hand-off (InteractiveCommand) is not affected: that command talks to the
+// user, in the user's language.
 type ExecRunner struct{}
 
 // Run implements Runner.
@@ -56,6 +61,8 @@ func (ExecRunner) Run(ctx context.Context, name string, args ...string) ([]byte,
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+	// A duplicate key in cmd.Env resolves to its last value.
+	cmd.Env = append(os.Environ(), "LC_ALL=C")
 
 	err := cmd.Run()
 	if err == nil {

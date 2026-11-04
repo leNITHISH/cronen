@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/x/ansi"
 
@@ -13,6 +14,7 @@ import (
 
 	"github.com/leNITHISH/cronen/internal/archweb"
 	"github.com/leNITHISH/cronen/internal/aur"
+	"github.com/leNITHISH/cronen/internal/pacman"
 	"github.com/leNITHISH/cronen/internal/risk"
 )
 
@@ -23,7 +25,22 @@ type entry struct {
 	pkg risk.Package
 	// aur is set for AUR packages.
 	aur *aur.Package
+	// kind says which part of the transaction the entry is.
+	kind entryKind
+	// newPkg and removed are set for entryNew and entryRemoved.
+	newPkg  *pacman.NewPackage
+	removed *pacman.RemovedPackage
 }
+
+// entryKind tells apart the entries that come from the transaction preview.
+type entryKind int
+
+const (
+	entryUpdate entryKind = iota
+	entryNew
+	entryRemoved
+	entryHeld
+)
 
 // pending reports whether the entry is an update rather than an installed
 // AUR package shown only for its status.
@@ -193,6 +210,28 @@ func (m *Model) rebuildUpdates() {
 		}
 	}
 
+	var newEntries, removedEntries, heldEntries []entry
+	if m.previewed {
+		for i := range m.tx.New {
+			n := &m.tx.New[i]
+			newEntries = append(newEntries, entry{
+				key: "new:" + n.Name, kind: entryNew, newPkg: n,
+				pkg: risk.Package{Update: risk.Update{Name: n.Name, NewVersion: n.Version}},
+			})
+		}
+		for i := range m.tx.Removed {
+			r := &m.tx.Removed[i]
+			removedEntries = append(removedEntries, entry{
+				key: "removed:" + r.Name, kind: entryRemoved, removed: r,
+				pkg: risk.Package{Update: risk.Update{Name: r.Name, OldVersion: r.Version}},
+			})
+		}
+		for _, h := range m.result.Held {
+			heldEntries = append(heldEntries, entry{key: "held:" + h.Name, kind: entryHeld, pkg: h})
+		}
+		newEntries, removedEntries, heldEntries = keep(newEntries), keep(removedEntries), keep(heldEntries)
+	}
+
 	p.entries = p.entries[:0:0]
 	p.rows = nil
 	addEntries := func(es []entry) {
@@ -257,6 +296,10 @@ func (m *Model) rebuildUpdates() {
 		addSection("AUR", m.aurSec, aurEntries, count, "querying the AUR", "up to date")
 	}
 
+	if m.cfg.Preview && !m.repoSec.loading && m.repoSec.err == nil {
+		m.addPreviewRows(p, addEntries, note, newEntries, removedEntries, heldEntries)
+	}
+
 	p.sel = slices.IndexFunc(p.entries, func(e entry) bool { return e.key == p.selKey })
 	if p.sel < 0 || !p.moved {
 		p.sel = 0
@@ -265,6 +308,30 @@ func (m *Model) rebuildUpdates() {
 		p.sel, p.selKey = -1, ""
 	} else {
 		p.selKey = p.entries[p.sel].key
+	}
+}
+
+// addPreviewRows adds the transaction preview's groups after the AUR: NEW,
+// REMOVED and HELD while it is there, or a section with a spinner or the
+// error while it isn't.
+func (m *Model) addPreviewRows(p *updatesPane, addEntries func([]entry), note func(string, bool, bool), newEntries, removed, held []entry) {
+	switch {
+	case m.previewed:
+		for _, g := range []struct {
+			title string
+			es    []entry
+		}{{"NEW", newEntries}, {"REMOVED", removed}, {"HELD", held}} {
+			if len(g.es) > 0 {
+				p.rows = append(p.rows, row{kind: rowSection, text: g.title + " (" + itoa(len(g.es)) + ")"})
+				addEntries(g.es)
+			}
+		}
+	case m.previewSec.loading:
+		p.rows = append(p.rows, row{kind: rowSection, text: "TRANSACTION"})
+		note("previewing the transaction", true, false)
+	case m.previewSec.err != nil:
+		p.rows = append(p.rows, row{kind: rowSection, text: "TRANSACTION"})
+		note("✗ "+m.previewSec.err.Error(), false, true)
 	}
 }
 
@@ -332,10 +399,16 @@ func (m Model) entryLine(e entry, selected bool, w int) string {
 	}
 	// newPart is never truncated; the old version and the name give way.
 	var oldPart, newPart string
-	if e.pending() {
+	switch {
+	case e.kind == entryRemoved:
+		newPart = "replaced"
+	case e.pending():
 		o, n := versionParts(e.pkg.OldVersion, e.pkg.NewVersion)
+		if e.pkg.OldVersion == "" {
+			o = ""
+		}
 		oldPart, newPart = o, "→"+n
-	} else if e.aur != nil {
+	case e.aur != nil:
 		newPart = aurTag(*e.aur)
 	}
 	sev := e.pkg.Severity()
@@ -475,6 +548,57 @@ func (m Model) links(e entry) (upstream, changelog string, pending bool) {
 	return r.pkg.URL, r.pkg.ChangelogURL(), false
 }
 
+// transactionLines describes what the upgrade does to an entry, from the
+// preview: a blank line and a heading first, then one line per fact. It is
+// empty for packages the preview knows nothing about.
+func (m Model) transactionLines(e entry) []string {
+	size := func(label string, n int64) string { return label + " " + pacman.FormatSize(n) }
+	built := func(t time.Time) string {
+		return "built " + risk.Age(t, m.now()) + " (" + t.In(m.location()).Format("2006-01-02 15:04") + ")"
+	}
+	download := func(n int64) string {
+		if n == 0 {
+			return "download: already in the cache"
+		}
+		return size("download:", n)
+	}
+	var lines []string
+	switch e.kind {
+	case entryUpdate:
+		d, ok := m.txUpdates[e.pkg.Name]
+		if !ok || e.aur != nil {
+			return nil
+		}
+		lines = []string{"", " Transaction:", download(d.DownloadSize)}
+		if d.OldSize > 0 || d.NewSize > 0 {
+			lines = append(lines, "installed size: "+pacman.FormatSize(d.OldSize)+" → "+pacman.FormatSize(d.NewSize)+
+				" ("+pacman.FormatDelta(d.NewSize-d.OldSize)+")")
+		}
+		if !d.BuildDate.IsZero() {
+			lines = append(lines, built(d.BuildDate))
+		}
+	case entryNew:
+		n := e.newPkg
+		lines = []string{"", " Pulled in by the upgrade:"}
+		if len(n.NeededBy) > 0 {
+			lines = append(lines, "needed by "+strings.Join(n.NeededBy, ", "))
+		}
+		if len(n.Replaces) > 0 {
+			lines = append(lines, "replaces "+strings.Join(n.Replaces, ", "))
+		}
+		lines = append(lines, download(n.DownloadSize), size("installed size:", n.Size))
+		if !n.BuildDate.IsZero() {
+			lines = append(lines, built(n.BuildDate))
+		}
+	case entryRemoved:
+		r := e.removed
+		lines = []string{"", " Removed by the upgrade:", "replaced by " + r.ReplacedBy, size("frees", r.Size)}
+	case entryHeld:
+		lines = []string{"", " Held back:", "not part of this upgrade: IgnorePkg or IgnoreGroup keeps it at " + e.pkg.OldVersion}
+	}
+	return lines
+}
+
 func (m Model) detailContent(e entry, w int) string {
 	s := m.styles
 	var b strings.Builder
@@ -500,8 +624,14 @@ func (m Model) detailContent(e entry, w int) string {
 	} else if r := m.archweb[e.pkg.Name]; r.done && r.err == nil {
 		where = r.pkg.Repo
 	}
+	if where == "" && e.newPkg != nil {
+		where = e.newPkg.Repo
+	}
 	version := "installed " + e.pkg.OldVersion
-	if e.pending() {
+	switch {
+	case e.kind == entryNew:
+		version = "new: " + e.pkg.NewVersion
+	case e.pending():
 		version = e.pkg.OldVersion + " → " + e.pkg.NewVersion
 	}
 	if ansi.StringWidth(version)+ansi.StringWidth(where)+4 <= w {
@@ -519,6 +649,15 @@ func (m Model) detailContent(e entry, w int) string {
 		for _, f := range e.pkg.Flags {
 			bullet(s.Severity(f.Severity).Render(f.Reason))
 		}
+	}
+
+	for _, l := range m.transactionLines(e) {
+		if l == "" || l[0] == ' ' {
+			// A blank line or a heading.
+			line(l)
+			continue
+		}
+		bullet(l)
 	}
 
 	if e.aur != nil {
@@ -553,6 +692,9 @@ func (m Model) detailContent(e entry, w int) string {
 		}
 	}
 
+	if e.kind == entryRemoved {
+		return strings.TrimRight(b.String(), "\n")
+	}
 	line("")
 	line(" Links:")
 	switch r := m.archweb[e.pkg.Name]; {

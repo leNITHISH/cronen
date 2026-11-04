@@ -16,6 +16,7 @@ import (
 
 	"github.com/leNITHISH/cronen/internal/config"
 	"github.com/leNITHISH/cronen/internal/fixtures"
+	"github.com/leNITHISH/cronen/internal/pacman"
 	"github.com/leNITHISH/cronen/internal/summary"
 	"github.com/leNITHISH/cronen/internal/system"
 	"github.com/leNITHISH/cronen/internal/ui"
@@ -63,7 +64,7 @@ Exit codes of --check:
   10  updates available
   20  attention needed: at least one update is flagged
   30  an unread news item requires manual intervention
-  1   error: a source (checkupdates, the AUR, the news feed) failed
+  1   error: a source (checkupdates, the AUR, the news feed, the preview) failed
 --json always exits 0 once it has printed; failures are in its "errors".
 Bad flags exit 2.
 
@@ -184,9 +185,11 @@ type env struct {
 	cfg       config.Config
 	state     config.State
 	statePath string
-	now       func() time.Time
-	loc       *time.Location
-	exec      func(argv []string, done tea.ExecCallback) tea.Cmd
+	// syncDB is the database checkupdates syncs.
+	syncDB string
+	now    func() time.Time
+	loc    *time.Location
+	exec   func(argv []string, done tea.ExecCallback) tea.Cmd
 }
 
 // demoEnv serves fixture data only: no config, state or cache is read or
@@ -197,6 +200,7 @@ func demoEnv() env {
 		runner:  fixtures.Runner(),
 		fetcher: fixtures.Fetcher(),
 		fs:      fixtures.FS(),
+		syncDB:  fixtures.SyncDBPath,
 		cfg:     config.Default(),
 		now:     func() time.Time { return fixtures.Now },
 		loc:     time.UTC,
@@ -215,6 +219,7 @@ func realEnv(stderr io.Writer) env {
 		runner: system.ExecRunner{},
 		fs:     fsys,
 		cfg:    config.Default(),
+		syncDB: pacman.SyncDBPath(os.Getenv, os.Getuid()),
 		exec: func(argv []string, done tea.ExecCallback) tea.Cmd {
 			return tea.ExecProcess(system.InteractiveCommand(argv), done)
 		},
@@ -247,6 +252,7 @@ func (e env) uiOptions(ctx context.Context) ui.Options {
 		Config:    &cfg,
 		State:     e.state,
 		StatePath: e.statePath,
+		SyncDB:    e.syncDB,
 		Exec:      e.exec,
 		Now:       e.now,
 		Location:  e.loc,
@@ -260,6 +266,7 @@ func (e env) sources() summary.Sources {
 		FS:       e.fs,
 		Config:   e.cfg,
 		State:    e.state,
+		SyncDB:   e.syncDB,
 		Now:      e.now,
 		Location: e.loc,
 	}

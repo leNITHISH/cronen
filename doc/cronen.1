@@ -42,12 +42,22 @@ below.
 Print a one-line JSON summary, for example
 .br
 .nf
-{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true}
+{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1}
 .fi
 .I updates
 counts repo and AUR updates together,
 .I critical
-counts unread news requiring manual intervention, and an
+counts unread news requiring manual intervention,
+.I download_bytes
+and
+.I size_delta_bytes
+are the transaction preview's download and installed\-size change,
+.I new
+counts packages the upgrade pulls in (replacements included),
+.I replaced
+the installed packages a replacement removes and
+.I held
+the updates held back by IgnorePkg, and an
 .I errors
 array lists any source that failed.
 .TP
@@ -192,6 +202,19 @@ flagged.
 List makepkg
 .I <name>\-debug
 splits.
+.TP
+.BR preview " (default " true )
+Show what an upgrade would do: new, replaced and held packages, the download
+size and the change in installed size. It reads the database
+.B checkupdates
+synced (\fB$CHECKUPDATES_DB\fR, or \fB${TMPDIR:\-/tmp}/checkup\-db\-\fIUID\fR) with
+.B pacman \-Sup \-\-dbpath
+and never writes to the real database. A failed preview makes
+.B \-\-check
+exit 1 like any other failed source.
+.TP
+.BR flag_fresh_hours " (default " 0 )
+Flag updates whose new build is younger than this many hours. 0 never flags.
 .PP
 Example:
 .PP

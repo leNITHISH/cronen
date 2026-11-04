@@ -1,0 +1,341 @@
+Repository      : extra
+Name            : firefox
+Version         : 144.0.1-1
+Description     : (fixture) firefox
+Architecture    : x86_64
+URL             : https://example.org/firefox
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : gtk3  libxt
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 72.40 MiB
+Installed Size  : 268.30 MiB
+Packager        : Unknown Packager
+Build Date      : Tue Oct 21 09:30:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : core
+Name            : glibc
+Version         : 2.42+r33+gc7ce5b4c0b7f-1
+Description     : (fixture) glibc
+Architecture    : x86_64
+URL             : https://example.org/glibc
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : linux-api-headers  tzdata  filesystem
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 11.20 MiB
+Installed Size  : 47.10 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct 20 12:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : core
+Name            : gnupg
+Version         : 1:2.4.8-2
+Description     : (fixture) gnupg
+Architecture    : x86_64
+URL             : https://example.org/gnupg
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc  gnutls
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 1.90 MiB
+Installed Size  : 11.40 MiB
+Packager        : Unknown Packager
+Build Date      : Fri Oct 17 10:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : core
+Name            : linux
+Version         : 6.18.1.arch1-1
+Description     : (fixture) linux
+Architecture    : x86_64
+URL             : https://example.org/linux
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : coreutils  kmod  initramfs
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 140.30 MiB
+Installed Size  : 151.00 MiB
+Packager        : Unknown Packager
+Build Date      : Thu Oct 22 18:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : core
+Name            : linux-api-headers
+Version         : 6.16.1-1
+Description     : (fixture) linux-api-headers
+Architecture    : x86_64
+URL             : https://example.org/linux-api-headers
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : None
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 1.30 MiB
+Installed Size  : 5.30 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct 20 10:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : core
+Name            : linux-firmware
+Version         : 20251021-1
+Description     : (fixture) linux-firmware
+Architecture    : x86_64
+URL             : https://example.org/linux-firmware
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : linux-firmware-whence
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 420.50 MiB
+Installed Size  : 584.00 MiB
+Packager        : Unknown Packager
+Build Date      : Wed Oct 22 10:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : core
+Name            : linux-headers
+Version         : 6.18.1.arch1-1
+Description     : (fixture) linux-headers
+Architecture    : x86_64
+URL             : https://example.org/linux-headers
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : linux
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 15.60 MiB
+Installed Size  : 151.20 MiB
+Packager        : Unknown Packager
+Build Date      : Thu Oct 22 18:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : extra
+Name            : mesa
+Version         : 1:25.2.5-1
+Description     : (fixture) mesa
+Architecture    : x86_64
+URL             : https://example.org/mesa
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : libdrm
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 38.00 MiB
+Installed Size  : 190.70 MiB
+Packager        : Unknown Packager
+Build Date      : Thu Oct 16 10:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : extra
+Name            : nvidia-utils
+Version         : 590.44.01-1
+Description     : (fixture) nvidia-utils
+Architecture    : x86_64
+URL             : https://example.org/nvidia-utils
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : libglvnd  egl-wayland2
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 160.10 MiB
+Installed Size  : 345.50 MiB
+Packager        : Unknown Packager
+Build Date      : Thu Oct 22 08:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : core
+Name            : openssh
+Version         : 10.2p1-1
+Description     : (fixture) openssh
+Architecture    : x86_64
+URL             : https://example.org/openssh
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc  openssl
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 1.50 MiB
+Installed Size  : 6.40 MiB
+Packager        : Unknown Packager
+Build Date      : Fri Oct 10 10:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : core
+Name            : python
+Version         : 3.14.0-1
+Description     : (fixture) python
+Architecture    : x86_64
+URL             : https://example.org/python
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : bzip2  expat  openssl
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 14.00 MiB
+Installed Size  : 80.20 MiB
+Packager        : Unknown Packager
+Build Date      : Fri Oct  3 10:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : extra
+Name            : ripgrep
+Version         : 15.0.0-1
+Description     : (fixture) ripgrep
+Architecture    : x86_64
+URL             : https://example.org/ripgrep
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : pcre2
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 2.10 MiB
+Installed Size  : 5.90 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct 13 10:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : core
+Name            : systemd
+Version         : 258.2-1
+Description     : (fixture) systemd
+Architecture    : x86_64
+URL             : https://example.org/systemd
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : libcap  util-linux
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 4.80 MiB
+Installed Size  : 33.20 MiB
+Packager        : Unknown Packager
+Build Date      : Fri Oct 17 10:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : extra
+Name            : vim
+Version         : 9.1.1850-1
+Description     : (fixture) vim
+Architecture    : x86_64
+URL             : https://example.org/vim
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc  gpm  acl
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 1.60 MiB
+Installed Size  : 3.90 MiB
+Packager        : Unknown Packager
+Build Date      : Thu Oct 16 10:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : extra
+Name            : vulkan-icd-loader
+Version         : 1.4.330-1
+Description     : (fixture) vulkan-icd-loader
+Architecture    : x86_64
+URL             : https://example.org/vulkan-icd-loader
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : libx11
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 0.60 MiB
+Installed Size  : 0.70 MiB
+Packager        : Unknown Packager
+Build Date      : Wed Oct 15 10:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : core
+Name            : zstd
+Version         : 1.5.7-3
+Description     : (fixture) zstd
+Architecture    : x86_64
+URL             : https://example.org/zstd
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 0.00 MiB
+Installed Size  : 1.70 MiB
+Packager        : Unknown Packager
+Build Date      : Thu Oct  2 10:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : extra
+Name            : egl-wayland2
+Version         : 1.0.0-1
+Description     : (fixture) egl-wayland2
+Architecture    : x86_64
+URL             : https://example.org/egl-wayland2
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : egl-wayland2
+Depends On      : libglvnd
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : None
+Download Size   : 0.04 MiB
+Installed Size  : 0.10 MiB
+Packager        : Unknown Packager
+Build Date      : Fri Oct 17 10:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature
+
+Repository      : core
+Name            : iptables-nft
+Version         : 1:1.8.11-3
+Description     : (fixture) iptables-nft
+Architecture    : x86_64
+URL             : https://example.org/iptables-nft
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : iptables
+Depends On      : libnftnl  iptables
+Optional Deps   : None
+Conflicts With  : None
+Replaces        : iptables
+Download Size   : 0.09 MiB
+Installed Size  : 1.20 MiB
+Packager        : Unknown Packager
+Build Date      : Sat Oct 18 10:00:00 2026
+Validated By    : MD5 Sum  SHA-256 Sum  Signature

@@ -46,12 +46,19 @@ type Config struct {
 	// ShowDebug lists makepkg debug splits (<name>-debug) among the AUR
 	// packages. They are hidden by default.
 	ShowDebug bool `toml:"show_debug"`
+	// Preview enables the transaction preview: what -Syu would pull in,
+	// replace and download, from the database checkupdates synced.
+	Preview bool `toml:"preview"`
+	// FlagFreshHours flags updates whose new build is younger than this
+	// many hours. 0 never flags.
+	FlagFreshHours int `toml:"flag_fresh_hours"`
 }
 
 // Default returns the configuration used when there is no config file.
 func Default() Config {
 	return Config{
 		AUR:           true,
+		Preview:       true,
 		WatchlistMode: WatchlistExtend,
 		NewsDays:      30,
 	}
@@ -110,6 +117,11 @@ func Parse(data []byte) (Config, error) {
 	if cfg.NewsDays <= 0 {
 		errs = append(errs, fmt.Errorf("news_days %d: must be positive", cfg.NewsDays))
 		cfg.NewsDays = def.NewsDays
+	}
+
+	if cfg.FlagFreshHours < 0 {
+		errs = append(errs, fmt.Errorf("flag_fresh_hours %d: must not be negative", cfg.FlagFreshHours))
+		cfg.FlagFreshHours = def.FlagFreshHours
 	}
 
 	var err1, err2 error

@@ -10,6 +10,11 @@
    no matches                           │    (yesterday)                                            
  AUR (0)                                │  • On your watchlist (linux*)                             
    no matches                           │                                                           
+                                        │ Transaction:                                              
+                                        │  • download: 420 MiB                                      
+                                        │  • installed size: 580 MiB → 584 MiB (+3.8 MiB)           
+                                        │  • built 26 hours ago (2026-10-22 10:00)                  
+                                        │                                                           
                                         │ Links:                                                    
                                         │  • not found on archlinux.org                             
                                         │                                                           
@@ -21,10 +26,5 @@
                                         │                                                           
                                         │                                                           
                                         │                                                           
-                                        │                                                           
-                                        │                                                           
-                                        │                                                           
-                                        │                                                           
-                                        │                                                           
 ────────────────────────────────────────┴───────────────────────────────────────────────────────────
- 18 updates · 11 flagged · 2 unread news · 1 .pacnew · filter: LINUX                 ? help  q quit 
+ 18 updates · 886 MiB ↓ · +26 MiB · 11 flagged · 2 unread news · 1 .pacnew · filter: LINUX          
