@@ -1,0 +1,30 @@
+ cronen (demo)                                      1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────────────────────────┬───────────────────────────────────────
+    name                 version      size    installed  EFO│ libx11 1.8.12-1                       
+▸   libx11               1.8.12-1     3.0 MiB 2025-10-15 D  │ X11 client-side library               
+                                                            │                                       
+                                                            │ installed as a dependency             
+                                                            │ 3.0 MiB · installed 2025-10-15        
+                                                            │                                       
+                                                            │ Why it's installed                    
+                                                            │   libx11 ← gtk3 ← firefox             
+                                                            │     (explicit)                        
+                                                            │                                       
+                                                            │ Depends on                            
+                                                            │   glibc                               
+                                                            │                                       
+                                                            │ Required by                           
+                                                            │   gtk3  libxt  mesa                   
+                                                            │                                       
+                                                            │ https://example.org/libx11            
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+                                                            │                                       
+────────────────────────────────────────────────────────────┴───────────────────────────────────────
+ 47 packages · 1 shown · show: all · sort: name · filter: libx11                                    

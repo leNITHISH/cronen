@@ -71,6 +71,10 @@ type Config struct {
 	// KnownIssues enables the GitLab lookup of open issues for pending repo
 	// updates. With it off, cronen makes no GitLab requests at all.
 	KnownIssues bool `toml:"known_issues"`
+	// PackageBrowser enables the Packages screen: every installed package,
+	// read once with `pacman -Qi`. With it off, cronen doesn't run that
+	// command.
+	PackageBrowser bool `toml:"package_browser"`
 	// AURReview is AURReviewLazy or AURReviewEager: whether the PKGBUILD
 	// diff of a pending AUR update is fetched when it is opened, or for
 	// every pending AUR update.
@@ -91,6 +95,7 @@ func Default() Config {
 		Security:       true,
 		KnownIssues:    true,
 		Preflight:      true,
+		PackageBrowser: true,
 		MirrorCheck:    true,
 		RebuildScanELF: true,
 		WatchlistMode:  WatchlistExtend,

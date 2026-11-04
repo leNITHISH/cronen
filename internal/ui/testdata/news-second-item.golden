@@ -1,4 +1,5 @@
  cronen (demo)                                      1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
  ⚠ 1 news item requires manual intervention — press n to read                                       
 ────────────────────────────────────────┬───────────────────────────────────────────────────────────
   ‼ 2026-10-22  linux-firmware >= 20251…│ NVIDIA 590 driver drops Pascal support                    
@@ -13,7 +14,6 @@
                                         │  Turing and newer cards are unaffected. See the wiki      
                                         │  https://wiki.archlinux.org/title/NVIDIA for              
                                         │  details.                                                 
-                                        │                                                           
                                         │                                                           
                                         │                                                           
                                         │                                                           

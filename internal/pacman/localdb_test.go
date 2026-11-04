@@ -2,7 +2,6 @@ package pacman_test
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -178,48 +177,8 @@ func TestWhyInstalled(t *testing.T) {
 	}
 }
 
-// syntheticQi builds a pacman -Qi dump of n packages: a tree where package i
-// is required by (i-1)/3, and every 7th package is explicit.
-func syntheticQi(n int) []byte {
-	var b strings.Builder
-	for i := range n {
-		reason := "Installed as a dependency for another package"
-		if i%7 == 0 {
-			reason = "Explicitly installed"
-		}
-		req := "None"
-		if i > 0 {
-			req = fmt.Sprintf("pkg%04d", (i-1)/3)
-		}
-		fmt.Fprintf(&b, `Name            : pkg%04d
-Version         : 1.%d-1
-Description     : Synthetic package number %d
-Architecture    : x86_64
-URL             : https://example.org/%d
-Licenses        : GPL-2.0-only
-Groups          : None
-Provides        : None
-Depends On      : glibc  pkg%04d
-Optional Deps   : None
-Required By     : %s
-Optional For    : None
-Conflicts With  : None
-Replaces        : None
-Installed Size  : %d.50 MiB
-Packager        : Unknown Packager
-Build Date      : Mon Oct  6 12:00:00 2025
-Install Date    : Wed Oct 15 09:30:00 2025
-Install Reason  : %s
-Install Script  : No
-Validated By    : Signature
-
-`, i, i, i, i, i+1, req, i%300, reason)
-	}
-	return []byte(b.String())
-}
-
 func TestParseLocalDBLarge(t *testing.T) {
-	pkgs, err := pacman.ParseLocalDB(syntheticQi(1500), time.UTC)
+	pkgs, err := pacman.ParseLocalDB(fixtures.SyntheticQi(1500), time.UTC)
 	if err != nil {
 		t.Fatal(err)
 	}

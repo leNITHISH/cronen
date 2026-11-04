@@ -1,4 +1,5 @@
  cronen                                             1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
  ⚠ 1 news item requires manual intervention — press n to read                                       
 ────────────────────────────────────────────────────────────────────────────────────────────────────
  Upgrade the system?                                                                                
@@ -12,7 +13,6 @@
  This runs: sudo pacman -Syu                                                                        
                                                                                                     
  Press y to upgrade, n or esc to cancel.                                                            
-                                                                                                    
                                                                                                     
                                                                                                     
                                                                                                     

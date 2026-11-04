@@ -54,7 +54,7 @@ func run(t *testing.T, m Model, cmd tea.Cmd) Model {
 		for _, c := range msg {
 			m = run(t, m, c)
 		}
-	case repoMsg, aurMsg, newsMsg, logMsg, pacnewMsg, previewMsg, securityMsg, issuesMsg, rebuildMsg, factsMsg, mirrorMsg, archwebMsg, openedMsg, stateSavedMsg, upgradedMsg, aurLogMsg, aurDiffMsg:
+	case repoMsg, aurMsg, localDBMsg, newsMsg, logMsg, pacnewMsg, previewMsg, securityMsg, issuesMsg, rebuildMsg, factsMsg, mirrorMsg, archwebMsg, openedMsg, stateSavedMsg, upgradedMsg, aurLogMsg, aurDiffMsg:
 		m = send(t, m, msg)
 	}
 	return m

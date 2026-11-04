@@ -1,4 +1,5 @@
  cronen (demo)                                              
+  1 Updates   2 News   3 Packages   4 History   5 Housekeep…
  ⚠ 1 news item requires manual intervention — press n to re…
 ────────────────────────────┬───────────────────────────────
  NEEDS ATTENTION (12)       │ linux-firmware                
@@ -11,6 +12,5 @@
   glibc 2.42+r17→2.42+r33 ℹ │    manual intervention'       
   linux-api-… 6.16→6.16.1 ℹ │    (yesterday)                
   linux-headers 6.17→6.18 ℹ │  • On your watchlist          
-  mesa      25.2.4→25.2.5 ℹ │    (linux*)                   
 ────────────────────────────┴───────────────────────────────
  18 updates · 886 MiB ↓ · +26 MiB · 12 flagged · 2 unread n…
