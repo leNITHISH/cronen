@@ -6,12 +6,12 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/leNITHISH/cronen/internal/fixtures"
 	"github.com/leNITHISH/cronen/internal/pacman"
 	"github.com/leNITHISH/cronen/internal/rebuild"
 	"github.com/leNITHISH/cronen/internal/system"
-	"time"
 )
 
 func fixtureTransaction(t *testing.T) pacman.Transaction {
