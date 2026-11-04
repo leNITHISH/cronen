@@ -108,6 +108,8 @@ $ cronen --check
 ‼ linux-firmware: Manual intervention in news: '…' (yesterday)
 ⚠ nvidia-utils: Mentioned in news: 'NVIDIA 590 driver drops Pascal support' (yesterday)
 …
+transaction: 886 MiB download, +26 MiB on disk, 2 new, 1 replaced
+ℹ bash: Held by IgnorePkg: 5.3.3-1 → 5.3.3-2. Holding packages is a partial upgrade.
 reboot after upgrading: the kernel is updated
 ```
 
@@ -115,13 +117,34 @@ reboot after upgrading: the kernel is updated
 
 ```console
 $ cronen --json
-{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true}
+{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1}
 ```
 
 `updates` counts repo and AUR updates together and `aur` the AUR ones.
 `critical` counts unread news items requiring manual intervention. If a
 source failed, an `errors` array lists what went wrong. `--json` exits 0
 whenever it printed its output.
+
+The transaction preview adds `download_bytes` and `size_delta_bytes` (the
+change in installed size), `new` (packages the upgrade pulls in, including
+replacements), `replaced` (installed packages a replacement removes) and
+`held` (updates held back by `IgnorePkg`). Held packages are not updates and
+never count as flagged.
+
+### Transaction preview
+
+The Updates screen shows what `pacman -Syu` would do, not only which versions
+change: `NEW` lists packages the upgrade pulls in (with what needs them, or
+what they replace), `REMOVED` the installed packages a replacement removes and
+`HELD` the updates `IgnorePkg` holds back. The detail pane adds the download
+size, the installed-size change and how long ago the new build was made, and
+the status bar the totals (`18 updates · 886 MiB ↓ · +26 MiB`).
+
+cronen reads the database `checkupdates` already synced (`$CHECKUPDATES_DB`,
+or `${TMPDIR:-/tmp}/checkup-db-<uid>`) with `pacman -Sup --dbpath … --print-format`
+as your user. It never writes to the real database. If that database isn't
+there, the preview says so and the rest of cronen carries on. Set
+`preview = false` to turn it off.
 
 ### Waybar
 
@@ -173,6 +196,8 @@ watchlist_mode = "extend"  # "extend" the defaults or "replace" them
 news_days = 30
 ignore_major = []          # globs whose major version bumps aren't flagged
 show_debug = false         # list makepkg <name>-debug splits
+preview = true             # transaction preview: new, replaced and held packages, sizes
+flag_fresh_hours = 0       # flag updates built less than this many hours ago; 0 = never
 ```
 
 cronen remembers read news and the last upgrade it ran in
