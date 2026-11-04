@@ -97,6 +97,7 @@ flag_fresh_hours = 6
 preflight = false
 mirror_check = true
 mirror_lag_hours = 3
+rebuild_scan_elf = true
 `,
 			want: Config{
 				AUR:            false,
@@ -111,24 +112,25 @@ mirror_lag_hours = 3
 				Preflight:      false,
 				MirrorCheck:    true,
 				MirrorLagHours: 3,
+				RebuildScanELF: true,
 			},
 		},
 		{
 			name:    "negative flag_fresh_hours",
 			toml:    "flag_fresh_hours = -2\nnews_days = 7\n",
-			want:    Config{AUR: true, Preview: true, Preflight: true, MirrorCheck: true, MirrorLagHours: 6, WatchlistMode: WatchlistExtend, NewsDays: 7},
+			want:    Config{AUR: true, Preview: true, Preflight: true, MirrorCheck: true, RebuildScanELF: true, MirrorLagHours: 6, WatchlistMode: WatchlistExtend, NewsDays: 7},
 			wantErr: "flag_fresh_hours",
 		},
 		{
 			name:    "non-positive mirror_lag_hours",
 			toml:    "mirror_lag_hours = 0\nnews_days = 7\n",
-			want:    Config{AUR: true, Preview: true, Preflight: true, MirrorCheck: true, MirrorLagHours: 6, WatchlistMode: WatchlistExtend, NewsDays: 7},
+			want:    Config{AUR: true, Preview: true, Preflight: true, MirrorCheck: true, RebuildScanELF: true, MirrorLagHours: 6, WatchlistMode: WatchlistExtend, NewsDays: 7},
 			wantErr: "mirror_lag_hours",
 		},
 		{
 			name: "absent keys keep defaults",
 			toml: `aur_helper = "yay"`,
-			want: Config{AUR: true, Preview: true, Preflight: true, MirrorCheck: true, MirrorLagHours: 6, AURHelper: "yay", WatchlistMode: WatchlistExtend, NewsDays: 30},
+			want: Config{AUR: true, Preview: true, Preflight: true, MirrorCheck: true, RebuildScanELF: true, MirrorLagHours: 6, AURHelper: "yay", WatchlistMode: WatchlistExtend, NewsDays: 30},
 		},
 		{name: "syntax error", toml: "aur = \n[[[", want: def, wantErr: "toml"},
 		{name: "binary garbage", toml: "\x00\xff\xfe garbage", want: def, wantErr: "toml"},
@@ -137,13 +139,13 @@ mirror_lag_hours = 3
 		{
 			name:    "unknown key keeps valid settings",
 			toml:    "watchlst = [\"foo\"]\nnews_days = 7\n",
-			want:    Config{AUR: true, Preview: true, Preflight: true, MirrorCheck: true, MirrorLagHours: 6, WatchlistMode: WatchlistExtend, NewsDays: 7},
+			want:    Config{AUR: true, Preview: true, Preflight: true, MirrorCheck: true, RebuildScanELF: true, MirrorLagHours: 6, WatchlistMode: WatchlistExtend, NewsDays: 7},
 			wantErr: "unknown keys ignored: watchlst",
 		},
 		{
 			name:    "invalid aur_helper",
 			toml:    "aur_helper = \"pikaur\"\nnews_days = 7\n",
-			want:    Config{AUR: true, Preview: true, Preflight: true, MirrorCheck: true, MirrorLagHours: 6, WatchlistMode: WatchlistExtend, NewsDays: 7},
+			want:    Config{AUR: true, Preview: true, Preflight: true, MirrorCheck: true, RebuildScanELF: true, MirrorLagHours: 6, WatchlistMode: WatchlistExtend, NewsDays: 7},
 			wantErr: "aur_helper",
 		},
 		{
@@ -157,13 +159,13 @@ mirror_lag_hours = 3
 		{
 			name:    "bad glob dropped, good kept",
 			toml:    `watchlist = ["[a-", "firefox", ""]`,
-			want:    Config{AUR: true, Preview: true, Preflight: true, MirrorCheck: true, MirrorLagHours: 6, Watchlist: []string{"firefox"}, WatchlistMode: WatchlistExtend, NewsDays: 30},
+			want:    Config{AUR: true, Preview: true, Preflight: true, MirrorCheck: true, RebuildScanELF: true, MirrorLagHours: 6, Watchlist: []string{"firefox"}, WatchlistMode: WatchlistExtend, NewsDays: 30},
 			wantErr: `"[a-"`,
 		},
 		{
 			name:    "bad ignore_major glob dropped, good kept",
 			toml:    `ignore_major = ["polkit", "[x"]`,
-			want:    Config{AUR: true, Preview: true, Preflight: true, MirrorCheck: true, MirrorLagHours: 6, IgnoreMajor: []string{"polkit"}, WatchlistMode: WatchlistExtend, NewsDays: 30},
+			want:    Config{AUR: true, Preview: true, Preflight: true, MirrorCheck: true, RebuildScanELF: true, MirrorLagHours: 6, IgnoreMajor: []string{"polkit"}, WatchlistMode: WatchlistExtend, NewsDays: 30},
 			wantErr: `ignore_major pattern "[x"`,
 		},
 		{name: "wrong type for show_debug", toml: `show_debug = "yes"`, want: def, wantErr: "show_debug"},

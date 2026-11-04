@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/leNITHISH/cronen/internal/news"
+	"github.com/leNITHISH/cronen/internal/rebuild"
 )
 
 // Severity ranks how much a flag needs the user's attention. The zero value
@@ -50,6 +51,7 @@ const (
 	RuleKernel
 	RuleFresh
 	RuleHeld
+	RuleRebuild
 )
 
 func (r Rule) String() string {
@@ -68,6 +70,8 @@ func (r Rule) String() string {
 		return "fresh-build"
 	case RuleHeld:
 		return "held"
+	case RuleRebuild:
+		return "rebuild"
 	}
 	return fmt.Sprintf("Rule(%d)", int(r))
 }
@@ -132,8 +136,9 @@ type Input struct {
 	// IgnoreMajor holds glob patterns (path.Match syntax) of packages whose
 	// major version bumps are not flagged.
 	IgnoreMajor []string
-	// PythonDependents lists installed foreign packages that depend on
-	// python, for the Python bump warning. It may be empty.
+	// PythonDependents lists installed foreign packages to rebuild for
+	// the Python bump warning, in addition to those found in Rebuilds. It
+	// may be empty.
 	PythonDependents []string
 	// Now is the current time, used for "2 days ago" in reasons.
 	Now time.Time
@@ -147,6 +152,10 @@ type Input struct {
 	// Held are updates that IgnorePkg or IgnoreGroup hold back. They are
 	// not part of Updates.
 	Held []Update
+	// Rebuilds are the installed foreign packages the updates leave needing
+	// a rebuild; see internal/rebuild. Each is flagged on the update to
+	// blame. Nil when detection didn't run.
+	Rebuilds []rebuild.Finding
 }
 
 // Result is the outcome of Assess.
@@ -162,6 +171,8 @@ type Result struct {
 	// Held are the held packages with their flag. They are not pending
 	// updates, so Packages, Flagged and Count leave them out.
 	Held []Package
+	// Rebuilds are the findings Assess was given, for counting them.
+	Rebuilds []rebuild.Finding
 }
 
 // Flagged returns the packages with at least one flag, in input order.
@@ -189,6 +200,7 @@ func (r Result) Count(s Severity) int {
 // Assess applies every rule to every update.
 func Assess(in Input) Result {
 	var res Result
+	res.Rebuilds = in.Rebuilds
 	for _, it := range in.UnreadNews {
 		if RequiresManualIntervention(it) {
 			res.Interventions = append(res.Interventions, it)
@@ -198,7 +210,8 @@ func Assess(in Input) Result {
 	for _, u := range in.Updates {
 		var flags []Flag
 		flags = append(flags, newsFlags(u, in.UnreadNews, in.Now)...)
-		if f, ok := pythonFlag(u, in.PythonDependents); ok {
+		flags = append(flags, rebuildFlags(u, in.Rebuilds)...)
+		if f, ok := pythonFlag(u, pythonDependents(in)); ok {
 			flags = append(flags, f)
 		}
 		if f, ok := majorBumpFlag(u, in.IgnoreMajor); ok {

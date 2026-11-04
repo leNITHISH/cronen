@@ -90,6 +90,7 @@ func (s Summary) JSON() []byte {
 		New           int           `json:"new"`
 		Replaced      int           `json:"replaced"`
 		Held          int           `json:"held"`
+		Rebuilds      int           `json:"rebuilds"`
 		Preflight     []problemJSON `json:"preflight"`
 		RebootPending bool          `json:"reboot_pending"`
 		Errors        []string      `json:"errors,omitempty"`
@@ -106,6 +107,7 @@ func (s Summary) JSON() []byte {
 		New:           len(s.Transaction.New),
 		Replaced:      len(s.Transaction.Removed),
 		Held:          len(s.Held),
+		Rebuilds:      len(RebuildPackages(s.Rebuilds)),
 		Preflight:     []problemJSON{},
 		RebootPending: s.RebootPending,
 	}

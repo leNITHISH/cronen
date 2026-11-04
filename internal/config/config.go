@@ -61,6 +61,10 @@ type Config struct {
 	// MirrorLagHours is how far behind the reference mirror counts as
 	// stale.
 	MirrorLagHours int `toml:"mirror_lag_hours"`
+	// RebuildScanELF also looks inside the ELF files of foreign packages
+	// for libraries an upgrade drops. It is the slow part of rebuild
+	// detection, so its results are cached.
+	RebuildScanELF bool `toml:"rebuild_scan_elf"`
 }
 
 // Default returns the configuration used when there is no config file.
@@ -70,6 +74,7 @@ func Default() Config {
 		Preview:        true,
 		Preflight:      true,
 		MirrorCheck:    true,
+		RebuildScanELF: true,
 		WatchlistMode:  WatchlistExtend,
 		NewsDays:       30,
 		MirrorLagHours: 6,
