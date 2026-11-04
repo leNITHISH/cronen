@@ -28,13 +28,30 @@ type Package struct {
 	URL string
 }
 
-// ChangelogURL returns the packaging commit log on the Arch GitLab.
+// GitLabNamespace is the group holding the packaging repository of every
+// official package on the Arch GitLab.
+const GitLabNamespace = "archlinux/packaging/packages"
+
+// GitLabProject returns the name of the Arch GitLab project that holds the
+// packaging of pkgbase. GitLab doesn't allow every character package names
+// do, so they are rewritten the way Arch's tooling does: '+' is spelled
+// out as "plus" (libsigc++ becomes libsigcplusplus), '@' becomes '-', and
+// a leading '.' becomes '-'.
 //
-// GitLab project paths are derived from pkgbase, which is used verbatim
-// here; pkgbases with characters GitLab rewrites (such as '+') may not
-// resolve.
+// UNVERIFIED against the live GitLab; see "Needs checking on Arch" in
+// PLAN.md.
+func GitLabProject(pkgbase string) string {
+	s := strings.ReplaceAll(pkgbase, "+", "plus")
+	s = strings.ReplaceAll(s, "@", "-")
+	if strings.HasPrefix(s, ".") {
+		s = "-" + s[1:]
+	}
+	return s
+}
+
+// ChangelogURL returns the packaging commit log on the Arch GitLab.
 func (p Package) ChangelogURL() string {
-	return "https://gitlab.archlinux.org/archlinux/packaging/packages/" + url.PathEscape(p.Base) + "/-/commits/main"
+	return "https://gitlab.archlinux.org/" + GitLabNamespace + "/" + url.PathEscape(GitLabProject(p.Base)) + "/-/commits/main"
 }
 
 // Client looks up packages on archlinux.org.

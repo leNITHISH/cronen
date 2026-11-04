@@ -186,3 +186,28 @@ func TestChangelogURL(t *testing.T) {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }
+
+func TestGitLabProject(t *testing.T) {
+	// The mapping is unverified against the live GitLab (see PLAN.md).
+	for base, want := range map[string]string{
+		"linux":       "linux",
+		"libsigc++":   "libsigcplusplus",
+		"gtk+":        "gtkplus",
+		"c++-thing":   "cplusplus-thing",
+		"nss_wrapper": "nss_wrapper",
+		"foo@bar":     "foo-bar",
+		".hidden":     "-hidden",
+	} {
+		if got := GitLabProject(base); got != want {
+			t.Errorf("GitLabProject(%q) = %q, want %q", base, got, want)
+		}
+	}
+}
+
+func TestChangelogURLMangled(t *testing.T) {
+	p := Package{Name: "libsigc++-3.0", Base: "libsigc++-3.0"}
+	want := "https://gitlab.archlinux.org/archlinux/packaging/packages/libsigcplusplus-3.0/-/commits/main"
+	if got := p.ChangelogURL(); got != want {
+		t.Errorf("ChangelogURL = %s, want %s", got, want)
+	}
+}
