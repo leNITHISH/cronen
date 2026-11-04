@@ -290,6 +290,29 @@ and
 .BR "pacman \-Qdtq" )
 for the Packages screen. With this off cronen runs none of them.
 .TP
+.BR privilege_command " (default " sudo )
+.BR sudo ", " doas " or " run0 .
+Prefixes every write action and the default upgrade command.
+.TP
+.BR protected " (default empty), " protected_mode " (default " extend )
+Package globs that can't be removed with a single
+.BR y :
+the confirm modal asks for the package name. In
+.B extend
+mode they are added to base, linux*, glibc, systemd, pacman, sudo, grub and systemd-boot*;
+.B replace
+uses only yours.
+.TP
+.BR extra_cache_dirs " (default empty)"
+Globs of package cache directories besides pacman's CacheDir, shown on the Housekeeping screen.
+.TP
+.BR pacdiff_command " (default empty)"
+Replaces
+.IR "privilege_command pacdiff" .
+.TP
+.BR housekeeping " (default " true )
+The Housekeeping screen's own reads: .pacnew diffs, the cache size and failed units.
+.TP
 .BR aur_review " (default " lazy )
 .B lazy
 fetches the PKGBUILD diff of a pending AUR update when it is opened with

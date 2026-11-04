@@ -442,8 +442,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, loadPacnewDiffs(m.ctx(), m.opts.Runner, msg.files, m.gen)
 
 	case pacnewDiffMsg, cacheMsg, unitsMsg:
-		cmd, _ := m.handleHousekeepingMsg(msg)
-		return m, cmd
+		m.handleHousekeepingMsg(msg)
+		return m, nil
 
 	case dryRunMsg:
 		m.handleDryRun(msg)

@@ -68,10 +68,12 @@ documents everything, including the config keys.
 | `ctrl+d`/`ctrl+u` | half-page in the detail or news pane |
 | `tab` | switch focus between panes |
 | `/` | filter the package list (`enter` keeps the filter, `esc` clears it) |
-| `1`–`5` | switch screen: Updates, News, Packages, History, Housekeeping (the last two aren't built yet) |
+| `1`–`5` | switch screen: Updates, News, Packages, History, Housekeeping (History isn't built yet) |
 | `n` | news screen |
 | `f` / `s` | Packages: cycle what is listed (all, explicit, dependencies, foreign, orphans) / the sort (name, size, install date) |
-| `space` | Packages: mark the selected package (nothing acts on marks yet) |
+| `space` | Packages, Housekeeping: mark / unmark the selected package or orphan |
+| `X` | Packages, Housekeeping: remove the marked packages or orphans (dry run and confirmation first) |
+| `P` | Housekeeping: merge `.pacnew` files with `pacdiff` (confirmation first) |
 | `m` | mark the selected news item read (on the updates screen: the news behind the selected package's flags) |
 | `o` | open the upstream URL (on the news screen: the post) with `xdg-open` |
 | `c` | open the packaging changelog with `xdg-open` |
@@ -256,6 +258,12 @@ security = true            # security.archlinux.org advisories
 known_issues = true        # open GitLab issues for pending repo updates
 package_browser = true    # the Packages screen: one `pacman -Qi` for every installed package
 aur_review = "lazy"        # "lazy": fetch PKGBUILD diffs when opened (d); "eager": for every pending AUR update
+privilege_command = "sudo" # "sudo", "doas" or "run0": prefixes every write action and the default upgrade
+protected = []             # globs; removing one needs its name typed (added to the defaults below)
+protected_mode = "extend"  # "extend" the defaults (base, linux*, glibc, systemd, pacman, sudo, grub, systemd-boot*) or "replace"
+extra_cache_dirs = []      # globs of more package cache directories, e.g. ["~/.cache/paru/clone/*"]
+pacdiff_command = ""       # replaces "<privilege_command> pacdiff"
+housekeeping = true        # the Housekeeping screen's .pacnew diffs, cache size and failed units
 ```
 
 Rebuild detection (needs `preview` and `aur`) flags the update behind each
@@ -277,6 +285,25 @@ name, `f` and `s` change the filter and the order, and `space` marks packages.
 It is read-only for now. cronen reads the package database once per load with
 `pacman -Qi`, `pacman -Qm` and `pacman -Qdtq`; `package_browser = false`
 turns that off.
+
+### Removing packages and housekeeping
+
+Mark packages with `space` on the Packages screen and press `X`, or press `X`
+on the Housekeeping screen (`5`) to remove the marked orphans (all of them start
+marked). cronen first runs `pacman -R<flags>p --print-format '%n %v' -- <names>`
+as you, and the modal shows the exact command, what is selected and what `-s`
+pulls in, the size freed, the config files that become `.pacsave`, and warnings.
+`s` and `n` toggle `-s` and `-n` and rerun the dry run (default `-Rns`; there is
+no `-c`). If the dry run fails, the modal shows pacman's error and offers no way
+to proceed. Packages matching `protected` need their name typed (then `ctrl+s`
+and `ctrl+n` are the toggles). `y` hands the terminal to
+`<privilege_command> pacman -R<flags> -- <names>`; cronen never changes the
+system itself.
+
+Housekeeping also shows the preflight results, a pending reboot, `.pacnew` and
+`.pacsave` files with an inline diff (`P` hands off to `pacdiff`), the package
+cache size, failed systemd units and installed packages that are vulnerable with
+no fix. Each of these reads can fail on its own without breaking the rest.
 
 ### AUR review
 

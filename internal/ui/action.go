@@ -223,8 +223,7 @@ func (m *Model) handleActionDone(msg actionDoneMsg) tea.Cmd {
 }
 
 func actionVerb(k ops.Kind) string {
-	switch k {
-	case ops.KindPacdiff:
+	if k == ops.KindPacdiff {
 		return "pacdiff"
 	}
 	return "removal"

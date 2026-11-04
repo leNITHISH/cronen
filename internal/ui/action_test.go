@@ -5,14 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	tea "charm.land/bubbletea/v2"
-
 	"github.com/leNITHISH/cronen/internal/config"
 	"github.com/leNITHISH/cronen/internal/fixtures"
 	"github.com/leNITHISH/cronen/internal/system"
 )
-
-func ctrl(r rune) tea.KeyPressMsg { return tea.KeyPressMsg{Code: r, Mod: tea.ModCtrl} }
 
 // markAndRemove marks the named packages on the Packages screen and
 // presses X.
@@ -59,7 +55,7 @@ func TestRemoveModalSnapshots(t *testing.T) {
 		t.Fatalf("plan not blocked: %+v", m.act.plan)
 	}
 	golden(t, "remove-breaks", plain(m))
-	m = send(t, m, press("y"))
+	send(t, m, press("y"))
 	if len(ex.argv) != 0 {
 		t.Fatalf("ran %q after a failed dry run", ex.argv)
 	}
@@ -118,7 +114,7 @@ func TestRemoveToggleRerunsDryRun(t *testing.T) {
 	if !slicesContains(runner.Calls(), "pacman -Rp --print-format %n %v -- spotify") {
 		t.Fatalf("calls %q", runner.Calls())
 	}
-	m = send(t, m, press("y"))
+	send(t, m, press("y"))
 	if len(ex.argv) != 1 || !reflect.DeepEqual(ex.argv[0], []string{"sudo", "pacman", "-R", "--", "spotify"}) {
 		t.Fatalf("ran %q", ex.argv)
 	}
@@ -157,7 +153,7 @@ func TestPrivilegeCommandInHandoff(t *testing.T) {
 	cfg.PrivilegeCommand = "doas"
 	opts.Config = &cfg
 	m := markAndRemove(t, packagesScreen2(t, opts), "spotify")
-	m = send(t, m, press("y"))
+	send(t, m, press("y"))
 	if len(ex.argv) != 1 || ex.argv[0][0] != "doas" {
 		t.Fatalf("ran %q", ex.argv)
 	}

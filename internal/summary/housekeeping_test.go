@@ -53,8 +53,14 @@ func TestLoadCache(t *testing.T) {
 	}
 
 	// Extra directories: globs, with ~ expanded; a missing one is skipped.
-	fsys.WriteFile("/home/u/.cache/paru/clone/paru/paru-2.1.0-1-x86_64.pkg.tar.zst", []byte("12345"), 0o644)
-	fsys.WriteFile("/home/u/.cache/paru/clone/other/other-1-1-any.pkg.tar.xz", []byte("123"), 0o644)
+	for path, data := range map[string]string{
+		"/home/u/.cache/paru/clone/paru/paru-2.1.0-1-x86_64.pkg.tar.zst": "12345",
+		"/home/u/.cache/paru/clone/other/other-1-1-any.pkg.tar.xz":       "123",
+	} {
+		if err := fsys.WriteFile(path, []byte(data), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
 	info, err = LoadCache(fsys, []string{"~/.cache/paru/clone/*", "/nope/*"}, "/home/u")
 	if err != nil || info.Files != 5 || info.Bytes != (150+75+300)<<20+8 || len(info.Dirs) != 3 {
 		t.Errorf("%+v %v", info, err)

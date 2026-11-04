@@ -81,9 +81,8 @@ func (m Model) housekeepingCmds() []tea.Cmd {
 	}
 }
 
-// handleHousekeepingMsg handles the three loads above. It reports whether
-// msg was one of them.
-func (m *Model) handleHousekeepingMsg(msg tea.Msg) (tea.Cmd, bool) {
+// handleHousekeepingMsg handles the three loads above.
+func (m *Model) handleHousekeepingMsg(msg tea.Msg) {
 	switch msg := msg.(type) {
 	case pacnewDiffMsg:
 		if msg.gen == m.gen {
@@ -97,10 +96,7 @@ func (m *Model) handleHousekeepingMsg(msg tea.Msg) (tea.Cmd, bool) {
 		if msg.gen == m.gen {
 			m.hk.unitsSec, m.hk.units = section{err: msg.err}, msg.units
 		}
-	default:
-		return nil, false
 	}
-	return nil, true
 }
 
 // orphanNames are the installed orphans, by name.
