@@ -1,0 +1,373 @@
+Name            : firefox
+Version         : 144.0-1
+Description     : (fixture) firefox
+Architecture    : x86_64
+URL             : https://example.org/firefox
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : gtk3  libxt
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 268.10 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct 13 08:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : glibc
+Version         : 2.42+r17+g6f0cf3d0b5b0-1
+Description     : (fixture) glibc
+Architecture    : x86_64
+URL             : https://example.org/glibc
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : linux-api-headers  tzdata  filesystem
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 47.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : gnupg
+Version         : 2.4.8-1
+Description     : (fixture) gnupg
+Architecture    : x86_64
+URL             : https://example.org/gnupg
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc  gnutls
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 11.40 MiB
+Packager        : Unknown Packager
+Build Date      : Tue Sep 30 10:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : linux
+Version         : 6.17.4.arch1-1
+Description     : (fixture) linux
+Architecture    : x86_64
+URL             : https://example.org/linux
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : coreutils  kmod  initramfs
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 148.20 MiB
+Packager        : Unknown Packager
+Build Date      : Wed Oct 15 09:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : linux-api-headers
+Version         : 6.16-1
+Description     : (fixture) linux-api-headers
+Architecture    : x86_64
+URL             : https://example.org/linux-api-headers
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : None
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 5.30 MiB
+Packager        : Unknown Packager
+Build Date      : Tue Aug 12 10:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : linux-firmware
+Version         : 20251011-1
+Description     : (fixture) linux-firmware
+Architecture    : x86_64
+URL             : https://example.org/linux-firmware
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : linux-firmware-whence
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 580.20 MiB
+Packager        : Unknown Packager
+Build Date      : Sat Oct 11 10:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : linux-headers
+Version         : 6.17.4.arch1-1
+Description     : (fixture) linux-headers
+Architecture    : x86_64
+URL             : https://example.org/linux-headers
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : linux
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 150.10 MiB
+Packager        : Unknown Packager
+Build Date      : Wed Oct 15 09:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : mesa
+Version         : 1:25.2.4-1
+Description     : (fixture) mesa
+Architecture    : x86_64
+URL             : https://example.org/mesa
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : libdrm
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 190.50 MiB
+Packager        : Unknown Packager
+Build Date      : Thu Oct  9 10:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : nvidia-utils
+Version         : 580.95.05-1
+Description     : (fixture) nvidia-utils
+Architecture    : x86_64
+URL             : https://example.org/nvidia-utils
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : libglvnd  egl-wayland2
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 330.00 MiB
+Packager        : Unknown Packager
+Build Date      : Tue Oct 14 10:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : openssh
+Version         : 10.0p1-3
+Description     : (fixture) openssh
+Architecture    : x86_64
+URL             : https://example.org/openssh
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc  openssl
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 6.20 MiB
+Packager        : Unknown Packager
+Build Date      : Thu Sep 18 10:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : python
+Version         : 3.13.7-1
+Description     : (fixture) python
+Architecture    : x86_64
+URL             : https://example.org/python
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : bzip2  expat  openssl
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 78.10 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Aug 11 10:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : ripgrep
+Version         : 14.1.1-1
+Description     : (fixture) ripgrep
+Architecture    : x86_64
+URL             : https://example.org/ripgrep
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : pcre2
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 5.60 MiB
+Packager        : Unknown Packager
+Build Date      : Sat Jul 12 10:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : systemd
+Version         : 258.1-1
+Description     : (fixture) systemd
+Architecture    : x86_64
+URL             : https://example.org/systemd
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : libcap  util-linux
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 33.10 MiB
+Packager        : Unknown Packager
+Build Date      : Thu Oct  2 10:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : vim
+Version         : 9.1.1800-1
+Description     : (fixture) vim
+Architecture    : x86_64
+URL             : https://example.org/vim
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc  gpm  acl
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 3.90 MiB
+Packager        : Unknown Packager
+Build Date      : Wed Oct  8 10:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : vulkan-icd-loader
+Version         : 1.4.328-1
+Description     : (fixture) vulkan-icd-loader
+Architecture    : x86_64
+URL             : https://example.org/vulkan-icd-loader
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : libx11
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 0.70 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 10:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : zstd
+Version         : 1.5.7-2
+Description     : (fixture) zstd
+Architecture    : x86_64
+URL             : https://example.org/zstd
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 1.70 MiB
+Packager        : Unknown Packager
+Build Date      : Wed Jun  4 10:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : iptables
+Version         : 1:1.8.11-2
+Description     : (fixture) iptables
+Architecture    : x86_64
+URL             : https://example.org/iptables
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : libnftnl
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 1.90 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Sep  8 10:00:00 2026
+Install Date    : Wed Oct 15 09:30:00 2026
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature

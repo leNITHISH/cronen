@@ -1,0 +1,19 @@
+HAND-WRITTEN FIXTURES, PENDING CAPTURE FROM A REAL ARCH SYSTEM
+
+These files were written by hand from pacman's documented behaviour. They were
+NOT captured from a real system, so they show what cronen assumes the output
+looks like, not what it looks like. Replace them with captures (see "Needs
+checking on Arch" in PLAN.md and the M7 pull request for the commands), keeping
+the package set, or update the tests that count on it.
+
+M7, the transaction preview:
+
+  pacman_Sup.txt           pacman -Sup --dbpath <db> --logfile /dev/null --noconfirm
+                           --print-format '%n %v %r %s'
+  pacman_Si.txt            pacman -Si --dbpath <db> --logfile /dev/null -- <names>
+  pacman_Qi-updates.txt    pacman -Qi -- <names>, the installed side of the same packages
+  pacman_Qu.txt            pacman -Qu --dbpath <db> --logfile /dev/null (with an [ignored] line)
+
+pacman_Qq.txt gained "iptables" (the package the fixture replacement removes).
+The checkupdates database directory (/tmp/checkup-db-1000/sync/) is only
+simulated by internal/fixtures.FS().

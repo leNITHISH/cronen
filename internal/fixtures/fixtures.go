@@ -37,14 +37,23 @@ const (
 	ArchwebSearch      = "archweb_search.json"
 	News               = "news.rss"
 	PacmanLog          = "pacman.log"
+
+	// The transaction preview fixtures are HAND-WRITTEN, pending capture
+	// from a real Arch system. See HAND_WRITTEN.txt in testdata/.
+	PacmanSup   = "pacman_Sup.txt"        // pacman -Sup --print-format '%n %v %r %s'
+	PacmanSi    = "pacman_Si.txt"         // pacman -Si, for the printed packages
+	PacmanQiOld = "pacman_Qi-updates.txt" // pacman -Qi, for the installed side
+	PacmanQu    = "pacman_Qu.txt"         // pacman -Qu --dbpath, with an [ignored] line
 )
 
 // URLs and paths the fakes answer for.
 const (
-	NewsURL           = "https://archlinux.org/feeds/news/"
-	AURInfoURL        = "https://aur.archlinux.org/rpc/v5/info"
-	ArchwebSearchURL  = "https://archlinux.org/packages/search/json/"
-	PacmanLogPath     = "/var/log/pacman.log"
+	NewsURL          = "https://archlinux.org/feeds/news/"
+	AURInfoURL       = "https://aur.archlinux.org/rpc/v5/info"
+	ArchwebSearchURL = "https://archlinux.org/packages/search/json/"
+	PacmanLogPath    = "/var/log/pacman.log"
+	// SyncDBPath is where the fake checkupdates left its database.
+	SyncDBPath        = "/tmp/checkup-db-1000"
 	vercmpCommandName = "vercmp"
 )
 
@@ -117,6 +126,10 @@ func Runner() *system.FakeRunner {
 	r.Set("pacman -Qm", system.FakeResult{Stdout: Bytes(PacmanQm)})
 	r.Set("pacman -Qq", system.FakeResult{Stdout: Bytes(PacmanQq)})
 	r.Set("pacdiff -o", system.FakeResult{Stdout: Bytes(PacdiffO)})
+	r.Set("pacman -Sup --dbpath "+SyncDBPath+" --logfile /dev/null --noconfirm --print-format %n %v %r %s",
+		system.FakeResult{Stdout: Bytes(PacmanSup)})
+	r.Set("pacman -Qu --dbpath "+SyncDBPath+" --logfile /dev/null", system.FakeResult{Stdout: Bytes(PacmanQu)})
+	r.Handler = infoHandler
 
 	entries, err := files.ReadDir("testdata")
 	if err != nil {
@@ -135,6 +148,43 @@ func Runner() *system.FakeRunner {
 		r.Set(vercmpCommandName+" "+c.B+" "+c.A, system.FakeResult{Stdout: fmt.Appendf(nil, "%d\n", -c.Result)})
 	}
 	return r
+}
+
+// infoHandler answers `pacman -Si` (against the fake checkupdates database)
+// and the batched `pacman -Qi -- names...` with the blocks of the fixtures
+// for the packages named, like pacman does.
+func infoHandler(line string) (system.FakeResult, bool) {
+	var file string
+	var names []string
+	switch {
+	case strings.HasPrefix(line, "pacman -Si --dbpath "+SyncDBPath+" --logfile /dev/null -- "):
+		file = PacmanSi
+		names = strings.Fields(strings.TrimPrefix(line, "pacman -Si --dbpath "+SyncDBPath+" --logfile /dev/null -- "))
+	case strings.HasPrefix(line, "pacman -Qi -- "):
+		file = PacmanQiOld
+		names = strings.Fields(strings.TrimPrefix(line, "pacman -Qi -- "))
+	default:
+		return system.FakeResult{}, false
+	}
+	blocks := map[string]string{}
+	for _, block := range strings.Split(string(Bytes(file)), "\n\n") {
+		for l := range strings.Lines(block) {
+			if name, ok := strings.CutPrefix(l, "Name            : "); ok {
+				blocks[strings.TrimSpace(name)] = strings.TrimRight(block, "\n") + "\n"
+			}
+		}
+	}
+	var out []string
+	for _, n := range names {
+		b, ok := blocks[n]
+		if !ok {
+			return system.FakeResult{
+				Stderr: []byte("error: package '" + n + "' was not found\n"), Code: 1,
+			}, true
+		}
+		out = append(out, b)
+	}
+	return system.FakeResult{Stdout: []byte(strings.Join(out, "\n"))}, true
 }
 
 // Fetcher returns a FakeFetcher serving the news feed, the AUR RPC v5 info
@@ -202,7 +252,12 @@ func mustMarshal(v any) []byte {
 	return b
 }
 
-// FS returns a FakeFS holding the fixture pacman.log at PacmanLogPath.
+// FS returns a FakeFS holding the fixture pacman.log at PacmanLogPath and
+// the sync database checkupdates leaves behind at SyncDBPath.
 func FS() *system.FakeFS {
-	return system.NewFakeFS(map[string][]byte{PacmanLogPath: Bytes(PacmanLog)})
+	return system.NewFakeFS(map[string][]byte{
+		PacmanLogPath:                 Bytes(PacmanLog),
+		SyncDBPath + "/sync/core.db":  nil,
+		SyncDBPath + "/sync/extra.db": nil,
+	})
 }
