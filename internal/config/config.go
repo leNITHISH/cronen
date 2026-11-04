@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -79,6 +80,35 @@ type Config struct {
 	// diff of a pending AUR update is fetched when it is opened, or for
 	// every pending AUR update.
 	AURReview string `toml:"aur_review"`
+
+	// PrivilegeCommand is how write actions gain root: "sudo", "doas" or
+	// "run0".
+	PrivilegeCommand string `toml:"privilege_command"`
+	// Protected holds package globs that can't be removed with a single
+	// y: the confirm modal asks for the package name. See
+	// EffectiveProtected.
+	Protected []string `toml:"protected"`
+	// ProtectedMode is WatchlistExtend or WatchlistReplace, like
+	// watchlist_mode.
+	ProtectedMode string `toml:"protected_mode"`
+	// ExtraCacheDirs are globs of package cache directories besides
+	// pacman's CacheDir, for example ~/.cache/paru/clone/*.
+	ExtraCacheDirs []string `toml:"extra_cache_dirs"`
+	// PacdiffCommand, if set, replaces "<privilege_command> pacdiff". It
+	// is split on whitespace; quoting is not supported.
+	PacdiffCommand string `toml:"pacdiff_command"`
+	// Housekeeping enables the Housekeeping screen's own data sources:
+	// the .pacnew diffs, the package cache size and the failed units.
+	Housekeeping bool `toml:"housekeeping"`
+}
+
+// Privilege commands cronen knows how to prefix a write action with.
+var privilegeCommands = []string{"sudo", "doas", "run0"}
+
+// DefaultProtected is the set of package globs that need the name typed
+// before they are removed by default.
+var DefaultProtected = []string{
+	"base", "linux*", "glibc", "systemd", "pacman", "sudo", "grub", "systemd-boot*",
 }
 
 // Values of Config.AURReview.
@@ -102,6 +132,10 @@ func Default() Config {
 		NewsDays:       30,
 		MirrorLagHours: 6,
 		AURReview:      AURReviewLazy,
+
+		PrivilegeCommand: "sudo",
+		ProtectedMode:    WatchlistExtend,
+		Housekeeping:     true,
 	}
 }
 
@@ -161,6 +195,16 @@ func Parse(data []byte) (Config, error) {
 		errs = append(errs, fmt.Errorf("aur_review %q: want %q or %q", cfg.AURReview, AURReviewLazy, AURReviewEager))
 		cfg.AURReview = def.AURReview
 	}
+	if !slices.Contains(privilegeCommands, cfg.PrivilegeCommand) {
+		errs = append(errs, fmt.Errorf("privilege_command %q: want \"sudo\", \"doas\" or \"run0\"", cfg.PrivilegeCommand))
+		cfg.PrivilegeCommand = def.PrivilegeCommand
+	}
+	switch cfg.ProtectedMode {
+	case WatchlistExtend, WatchlistReplace:
+	default:
+		errs = append(errs, fmt.Errorf("protected_mode %q: want %q or %q", cfg.ProtectedMode, WatchlistExtend, WatchlistReplace))
+		cfg.ProtectedMode = def.ProtectedMode
+	}
 	if cfg.NewsDays <= 0 {
 		errs = append(errs, fmt.Errorf("news_days %d: must be positive", cfg.NewsDays))
 		cfg.NewsDays = def.NewsDays
@@ -176,10 +220,12 @@ func Parse(data []byte) (Config, error) {
 		cfg.MirrorLagHours = def.MirrorLagHours
 	}
 
-	var err1, err2 error
+	var err1, err2, err3, err4 error
 	cfg.Watchlist, err1 = validGlobs("watchlist", cfg.Watchlist)
 	cfg.IgnoreMajor, err2 = validGlobs("ignore_major", cfg.IgnoreMajor)
-	errs = append(errs, err1, err2)
+	cfg.Protected, err3 = validGlobs("protected", cfg.Protected)
+	cfg.ExtraCacheDirs, err4 = validGlobs("extra_cache_dirs", cfg.ExtraCacheDirs)
+	errs = append(errs, err1, err2, err3, err4)
 
 	return cfg, errors.Join(errs...)
 }
@@ -209,6 +255,22 @@ func (c Config) EffectiveWatchlist() []string {
 	}
 	all = append(all, c.Watchlist...)
 
+	return dedupe(all)
+}
+
+// EffectiveProtected returns the protected package globs: the user's
+// patterns added to DefaultProtected in extend mode, or just the user's
+// patterns in replace mode. Duplicates are removed.
+func (c Config) EffectiveProtected() []string {
+	var all []string
+	if c.ProtectedMode != WatchlistReplace {
+		all = append(all, DefaultProtected...)
+	}
+	all = append(all, c.Protected...)
+	return dedupe(all)
+}
+
+func dedupe(all []string) []string {
 	seen := map[string]bool{}
 	out := []string{}
 	for _, p := range all {
@@ -220,9 +282,27 @@ func (c Config) EffectiveWatchlist() []string {
 	return out
 }
 
+// PrivilegeArgv is the command that prefixes a write action: the
+// privilege_command, "sudo" if it's unset.
+func (c Config) PrivilegeArgv() []string {
+	if c.PrivilegeCommand == "" {
+		return []string{"sudo"}
+	}
+	return []string{c.PrivilegeCommand}
+}
+
+// PacdiffArgv is the command that merges .pacnew files:
+// pacdiff_command if set, else <privilege_command> pacdiff.
+func (c Config) PacdiffArgv() []string {
+	if fields := strings.Fields(c.PacdiffCommand); len(fields) > 0 {
+		return fields
+	}
+	return append(c.PrivilegeArgv(), "pacdiff")
+}
+
 // UpgradeArgv returns the command line used to upgrade the system:
 // upgrade_command if set, else the AUR helper's -Syu, else
-// sudo pacman -Syu.
+// <privilege_command> pacman -Syu.
 func (c Config) UpgradeArgv() []string {
 	if fields := strings.Fields(c.UpgradeCommand); len(fields) > 0 {
 		return fields
@@ -230,5 +310,5 @@ func (c Config) UpgradeArgv() []string {
 	if c.AURHelper != "" {
 		return []string{c.AURHelper, "-Syu"}
 	}
-	return []string{"sudo", "pacman", "-Syu"}
+	return append(c.PrivilegeArgv(), "pacman", "-Syu")
 }
