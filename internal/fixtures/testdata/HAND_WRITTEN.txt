@@ -80,3 +80,20 @@ package set as pacman_Qq.txt plus their dependencies and a few orphans):
                       spotify/paru fixtures use the "Mon 01 Sep 2025 10:01:00 AM UTC"
                       spelling, and the parser reads both.
   pacman_Qdtq.txt     pacman -Qdtq (orphans, one name per line)
+
+M14, removal, orphans and housekeeping (hand-written; PENDING CAPTURE from a
+real Arch system, see the M14 pull request for the read-only commands):
+
+  pacman_Rp.txt               pacman -Rnsp --print-format '%n %v' -- spotify
+                              (spotify plus alsa-lib, which -s pulls in)
+  pacman_Rp_breaks.stderr     the stderr of pacman -Rp -- libx11: the exact
+                              wording of the ":: removing X breaks dependency
+                              'Y' required by Z" lines is what cronen assumes;
+                              internal/ops also accepts the "Z: removing X
+                              breaks dependency 'Y'" spelling
+  diff_u_mirrorlist.txt       diff -u /etc/pacman.d/mirrorlist <that>.pacnew
+  systemctl_failed.txt        systemctl --failed --plain --no-legend
+  systemctl_failed_user.txt   the same with --user (nothing failed)
+
+The package cache listing (/var/cache/pacman/pkg/, a few files with sizes set
+by internal/fixtures.FS) and /etc/pacman.conf are made up in code.

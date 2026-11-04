@@ -1,0 +1,4 @@
+checking dependencies...
+error: failed to prepare transaction (could not satisfy dependencies)
+:: removing libx11 breaks dependency 'libx11' required by gtk3
+:: removing libx11 breaks dependency 'libx11' required by mesa
