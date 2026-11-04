@@ -409,7 +409,6 @@ func (m Model) packageDetail(pkg pacman.LocalPackage, w int) string {
 		{"Optional for", pkg.OptionalFor},
 		{"Provides", pkg.Provides},
 		{"Groups", pkg.Groups},
-		{"Backup files", pkg.BackupFiles},
 	} {
 		if len(sec.names) == 0 {
 			continue

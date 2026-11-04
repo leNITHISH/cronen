@@ -10,11 +10,12 @@ import (
 
 // The M14 fixtures are HAND-WRITTEN, pending capture (see HAND_WRITTEN.txt).
 const (
-	PacmanRp       = "pacman_Rp.txt"             // pacman -Rnsp --print-format '%n %v' -- spotify
+	PacmanRp       = "pacman_Rp.txt"             // pacman -Rsp --print-format '%n %v' -- spotify
 	PacmanRpBreaks = "pacman_Rp_breaks.stderr"   // the stderr of a removal that breaks dependencies
 	DiffMirrorlist = "diff_u_mirrorlist.txt"     // diff -u of the mirrorlist and its .pacnew
 	SystemctlFail  = "systemctl_failed.txt"      // systemctl --failed --plain --no-legend
 	SystemctlUser  = "systemctl_failed_user.txt" // the same with --user
+	PacmanQii      = "pacman_Qii.txt"            // pacman -Qii, the packages that have backup files
 )
 
 type qiBlock struct {
@@ -70,7 +71,39 @@ func depNames(v string) []string {
 	return out
 }
 
-// removeHandler answers the dry run `pacman -R<flags>p --print-format %n %v
+// qiiHandler answers `pacman -Qii -- names...` from the hand-written
+// pacman_Qii.txt; a package it holds no block for has no backup files.
+func qiiHandler(line string) (system.FakeResult, bool) {
+	rest, ok := strings.CutPrefix(line, "pacman -Qii -- ")
+	if !ok {
+		return system.FakeResult{}, false
+	}
+	have := map[string]string{}
+	for _, block := range strings.Split(string(Bytes(PacmanQii)), "\n\n") {
+		for l := range strings.Lines(block) {
+			if v, ok := strings.CutPrefix(l, "Name"); ok {
+				_, v, _ = strings.Cut(v, ":")
+				have[strings.TrimSpace(v)] = strings.TrimRight(block, "\n") + "\n"
+			}
+		}
+	}
+	blocks := qiBlocks()
+	var out []string
+	for _, n := range strings.Fields(rest) {
+		b, ok := blocks[n]
+		if !ok {
+			return system.FakeResult{Stderr: []byte("error: package '" + n + "' was not found\n"), Code: 1}, true
+		}
+		if h, ok := have[n]; ok {
+			out = append(out, h)
+		} else {
+			out = append(out, "Name            : "+n+"\nVersion         : "+b.version+"\nBackup Files    : (none)\n")
+		}
+	}
+	return system.FakeResult{Stdout: []byte(strings.Join(out, "\n"))}, true
+}
+
+// removeHandler answers the dry run `pacman -R<s>p --print-format %n %v
 // -- names...` the way pacman does for the fixture packages: unknown names
 // are "target not found", a package other installed packages need makes it
 // fail with the breaks-dependency error, and with -s the dependencies
@@ -81,7 +114,7 @@ func removeHandler(line string) (system.FakeResult, bool) {
 		return system.FakeResult{}, false
 	}
 	flags, rest, ok := strings.Cut(rest, "p --print-format %n %v -- ")
-	if !ok || strings.Trim(flags, "ns") != "" {
+	if !ok || strings.Trim(flags, "s") != "" {
 		return system.FakeResult{}, false
 	}
 	names := strings.Fields(rest)

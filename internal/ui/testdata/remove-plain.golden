@@ -4,7 +4,7 @@
 ────────────────────────────────────────────────────────────────────────────────────────────────────
  Remove 1 package?                                                                                  
                                                                                                     
- Dry run: pacman -Rnsp --print-format '%n %v' -- spotify                                            
+ Dry run: pacman -Rsp --print-format '%n %v' -- spotify                                             
  Options: s ☑ also remove unneeded dependencies (-s) · n ☑ no .pacsave backups (-n)                 
                                                                                                     
  This runs: sudo pacman -Rns -- spotify                                                             

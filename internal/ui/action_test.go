@@ -74,7 +74,7 @@ func TestRemoveHandoff(t *testing.T) {
 	m := markAndRemove(t, packagesScreen2(t, opts), "spotify")
 
 	// The dry run came first, as the user, with -- before the names.
-	want := "pacman -Rnsp --print-format %n %v -- spotify"
+	want := "pacman -Rsp --print-format %n %v -- spotify"
 	if !slicesContains(runner.Calls(), want) {
 		t.Fatalf("calls %q lack %q", runner.Calls(), want)
 	}
@@ -113,6 +113,9 @@ func TestRemoveToggleRerunsDryRun(t *testing.T) {
 	m = send(t, m, press("s"))
 	if !slicesContains(runner.Calls(), "pacman -Rp --print-format %n %v -- spotify") {
 		t.Fatalf("calls %q", runner.Calls())
+	}
+	if !slicesContains(runner.Calls(), "pacman -Qii -- spotify") {
+		t.Fatalf("backup files not read lazily: %q", runner.Calls())
 	}
 	send(t, m, press("y"))
 	if len(ex.argv) != 1 || !reflect.DeepEqual(ex.argv[0], []string{"sudo", "pacman", "-R", "--", "spotify"}) {
@@ -228,7 +231,7 @@ func TestOrphanCleanup(t *testing.T) {
 		t.Errorf("no new-orphans note: %v", m.act.plan.Warnings)
 	}
 	golden(t, "remove-orphans", plain(m))
-	if !slicesContains(runner.Calls(), "pacman -Rnsp --print-format %n %v -- libgbm-compat old-codec-lib paru-debug zstd-debug") {
+	if !slicesContains(runner.Calls(), "pacman -Rsp --print-format %n %v -- libgbm-compat old-codec-lib paru-debug zstd-debug") {
 		t.Fatalf("calls %q", runner.Calls())
 	}
 	m = send(t, m, press("y"))

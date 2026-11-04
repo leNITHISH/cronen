@@ -183,6 +183,9 @@ func infoHandler(line string) (system.FakeResult, bool) {
 	if r, ok := removeHandler(line); ok {
 		return r, true
 	}
+	if r, ok := qiiHandler(line); ok {
+		return r, true
+	}
 	var file string
 	var names []string
 	switch {

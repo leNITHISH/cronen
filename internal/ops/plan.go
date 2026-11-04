@@ -84,6 +84,11 @@ type RemoveInput struct {
 	Out, Stderr []byte
 	Failed      bool
 	RunErr      error
+	// Backups are the backup files of the packages the dry run printed, from
+	// `pacman -Qii`; BackupsErr says why they could not be read. Both are
+	// unused with NoSave.
+	Backups    map[string][]pacman.BackupFile
+	BackupsErr error
 }
 
 // BuildRemovePlan turns a finished dry run into the modal's plan. Names are
@@ -133,8 +138,8 @@ func BuildRemovePlan(in RemoveInput) (Plan, error) {
 	for _, pr := range printed {
 		it := Item{Name: pr.Name, Version: pr.Version, Selected: chosen[pr.Name], Protected: IsProtected(pr.Name, in.Protected)}
 		removed[pr.Name] = true
-		var lp pacman.LocalPackage
 		if in.DB != nil {
+			var lp pacman.LocalPackage
 			lp, _ = in.DB.Lookup(pr.Name)
 			it.Size = lp.InstalledSize
 		}
@@ -143,9 +148,12 @@ func BuildRemovePlan(in RemoveInput) (Plan, error) {
 		if it.Protected {
 			p.Protected = append(p.Protected, it.Name)
 		}
-		if !in.Options.NoSave {
-			p.Pacsave = append(p.Pacsave, lp.BackupFiles...)
+		if !in.Options.NoSave && in.BackupsErr == nil {
+			p.Pacsave = append(p.Pacsave, pacman.Modified(in.Backups[pr.Name])...)
 		}
+	}
+	if !in.Options.NoSave && in.BackupsErr != nil {
+		p.Warnings = append(p.Warnings, "could not read the packages' backup files, so any .pacsave files are not listed: "+in.BackupsErr.Error())
 	}
 	// Selected first, each group by name.
 	slices.SortStableFunc(p.Items, func(a, b Item) int {

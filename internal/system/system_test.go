@@ -382,3 +382,20 @@ func TestFakeFSReadDirAndGlob(t *testing.T) {
 		t.Errorf("Stat size = %d", info.Size())
 	}
 }
+
+func TestFakeRunnerRejectsNosavePrint(t *testing.T) {
+	r := NewFakeRunner()
+	for _, flags := range []string{"-Rnsp", "-Rnp", "-Rpn", "-Rsnp"} {
+		_, code, err := r.Run(context.Background(), "pacman", flags, "--print-format", "%n %v", "--", "a")
+		var ee *ExitError
+		if code != 1 || !errors.As(err, &ee) || !strings.Contains(string(ee.Stderr), "'--nosave' and '--print' may not be used together") {
+			t.Errorf("%s: code %d err %v", flags, code, err)
+		}
+	}
+	// -p without -n, and -n without -p, are not this mistake.
+	for _, args := range [][]string{{"-Rsp", "--", "a"}, {"-Rns", "--", "a"}} {
+		if _, _, err := r.Run(context.Background(), "pacman", args...); errors.Is(err, ErrUnexpectedCommand) == false {
+			t.Errorf("%v: err %v", args, err)
+		}
+	}
+}

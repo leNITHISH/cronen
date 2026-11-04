@@ -290,9 +290,11 @@ turns that off.
 
 Mark packages with `space` on the Packages screen and press `X`, or press `X`
 on the Housekeeping screen (`5`) to remove the marked orphans (all of them start
-marked). cronen first runs `pacman -R<flags>p --print-format '%n %v' -- <names>`
-as you, and the modal shows the exact command, what is selected and what `-s`
-pulls in, the size freed, the config files that become `.pacsave`, and warnings.
+marked). cronen first runs `pacman -R[s]p --print-format '%n %v' -- <names>`
+as you (never with `-n`: pacman refuses `-n` together with `-p`, and `-n` does
+not change what is removed), and the modal shows the exact command, what is selected and what `-s`
+pulls in, the size freed, the modified config files that become `.pacsave` (read lazily with
+`pacman -Qii -- <those packages>`, only without `-n`), and warnings.
 `s` and `n` toggle `-s` and `-n` and rerun the dry run (default `-Rns`; there is
 no `-c`). If the dry run fails, the modal shows pacman's error and offers no way
 to proceed. Packages matching `protected` need their name typed (then `ctrl+s`

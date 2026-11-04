@@ -26,6 +26,25 @@ func TestValidName(t *testing.T) {
 	}
 }
 
+func TestDryArgvNeverNoSave(t *testing.T) {
+	for _, rec := range []bool{false, true} {
+		for _, ns := range []bool{false, true} {
+			o := RemoveOptions{Recursive: rec, NoSave: ns}
+			dry, err := RemoveDryArgv(o, []string{"a"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(dry[1], "n") {
+				t.Errorf("%+v: dry run %v has n", o, dry)
+			}
+			h, _ := RemoveArgv([]string{"sudo"}, o, []string{"a"})
+			if strings.Contains(h[2], "n") != ns {
+				t.Errorf("%+v: hand-off %v, n should be %v", o, h, ns)
+			}
+		}
+	}
+}
+
 func TestArgv(t *testing.T) {
 	tests := []struct {
 		opts    RemoveOptions
@@ -34,7 +53,7 @@ func TestArgv(t *testing.T) {
 		handoff []string
 	}{
 		{DefaultRemoveOptions(), []string{"vim"},
-			[]string{"pacman", "-Rnsp", "--print-format", "%n %v", "--", "vim"},
+			[]string{"pacman", "-Rsp", "--print-format", "%n %v", "--", "vim"},
 			[]string{"sudo", "pacman", "-Rns", "--", "vim"}},
 		{RemoveOptions{}, []string{"a", "b"},
 			[]string{"pacman", "-Rp", "--print-format", "%n %v", "--", "a", "b"},
@@ -43,7 +62,7 @@ func TestArgv(t *testing.T) {
 			[]string{"pacman", "-Rsp", "--print-format", "%n %v", "--", "a"},
 			[]string{"sudo", "pacman", "-Rs", "--", "a"}},
 		{RemoveOptions{NoSave: true}, []string{"a"},
-			[]string{"pacman", "-Rnp", "--print-format", "%n %v", "--", "a"},
+			[]string{"pacman", "-Rp", "--print-format", "%n %v", "--", "a"},
 			[]string{"sudo", "pacman", "-Rn", "--", "a"}},
 	}
 	for _, tt := range tests {
@@ -161,9 +180,22 @@ func TestBuildRemovePlan(t *testing.T) {
 	in := base
 	in.Options.NoSave = false
 	in.Names, in.Out = []string{"sudo"}, []byte("sudo 1.9.17-1\n")
+	bk, err := pacman.ParseBackupFiles(fixtures.Bytes(fixtures.PacmanQii))
+	if err != nil {
+		t.Fatal(err)
+	}
+	in.Backups = bk
 	p, _ = BuildRemovePlan(in)
+	// Only the [modified] file becomes .pacsave.
 	if !reflect.DeepEqual(p.Pacsave, []string{"/etc/sudoers"}) || p.Token() != "sudo" {
 		t.Errorf("pacsave %v token %q", p.Pacsave, p.Token())
+	}
+
+	// A failed -Qii read warns and does not block.
+	in.Backups, in.BackupsErr = nil, errors.New("boom")
+	p, _ = BuildRemovePlan(in)
+	if p.Blocked() || len(p.Pacsave) != 0 || !strings.Contains(strings.Join(p.Warnings, "|"), "backup files") {
+		t.Errorf("blocked %v pacsave %v warnings %v", p.Blocked(), p.Pacsave, p.Warnings)
 	}
 
 	// A protected package pulled in counts too.

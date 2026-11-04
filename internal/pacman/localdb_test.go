@@ -2,6 +2,7 @@ package pacman_test
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -34,8 +35,8 @@ func TestLoadLocalDBFixture(t *testing.T) {
 	if got := strings.Join(g.DependsOn, ","); got != "linux-api-headers,tzdata,filesystem" {
 		t.Errorf("glibc depends on %q", got)
 	}
-	if len(g.RequiredBy) == 0 || len(g.BackupFiles) != 1 || g.BackupFiles[0] != "/etc/gai.conf" {
-		t.Errorf("glibc required by %v, backup %v", g.RequiredBy, g.BackupFiles)
+	if len(g.RequiredBy) == 0 {
+		t.Errorf("glibc required by %v", g.RequiredBy)
 	}
 	if g.InstallDate.IsZero() {
 		t.Error("install date not parsed")
@@ -66,8 +67,6 @@ Optional For    : paru
 Installed Size  : 1.50 MiB
 Install Date    : Sat 05 Jul 2025 09:02:00 AM UTC
 Install Reason  : Explicitly installed
-Backup Files    : [modified] /etc/bat.conf
-                  [unmodified] /etc/bat2.conf
 `
 	pkgs, err := pacman.ParseLocalDB([]byte(in), time.UTC)
 	if err != nil || len(pkgs) != 1 {
@@ -82,9 +81,6 @@ Backup Files    : [modified] /etc/bat.conf
 	}
 	if got := strings.Join(p.Provides, ","); got != "libfoo.so=1-64" {
 		t.Errorf("provides %q", got)
-	}
-	if got := strings.Join(p.BackupFiles, ","); got != "/etc/bat.conf,/etc/bat2.conf" {
-		t.Errorf("backup %q", got)
 	}
 	if want := time.Date(2025, 7, 5, 9, 2, 0, 0, time.UTC); !p.InstallDate.Equal(want) {
 		t.Errorf("date %v", p.InstallDate)
@@ -193,5 +189,40 @@ func TestParseLocalDBLarge(t *testing.T) {
 	root, _ := db.Lookup(chain[len(chain)-1])
 	if !root.Explicit {
 		t.Errorf("chain %v doesn't end at an explicit package", chain)
+	}
+}
+
+func TestParseBackupFiles(t *testing.T) {
+	in := `Name            : sudo
+Version         : 1.9.17.p2-1
+Backup Files    : /etc/pam.d/sudo [unmodified]
+                  /etc/sudoers [unreadable]
+                  /etc/sudoers.d/my conf [modified]
+
+Name            : bat
+Version         : 0.25.0-1
+Backup Files    : (none)
+
+Name            : old
+Version         : 1-1
+Backup Files    : [modified] /etc/old.conf
+                  [unmodified] /etc/old2.conf
+`
+	got, err := pacman.ParseBackupFiles([]byte(in))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []pacman.BackupFile{{Path: "/etc/pam.d/sudo", Status: "unmodified"}, {Path: "/etc/sudoers", Status: "unreadable"}, {Path: "/etc/sudoers.d/my conf", Status: "modified"}}
+	if !reflect.DeepEqual(got["sudo"], want) {
+		t.Errorf("sudo = %+v", got["sudo"])
+	}
+	if got["bat"] != nil || len(got) != 3 {
+		t.Errorf("bat = %+v, got %d", got["bat"], len(got))
+	}
+	if m := pacman.Modified(got["sudo"]); !reflect.DeepEqual(m, []string{"/etc/sudoers.d/my conf"}) {
+		t.Errorf("modified %v", m)
+	}
+	if m := pacman.Modified(got["old"]); !reflect.DeepEqual(m, []string{"/etc/old.conf"}) {
+		t.Errorf("old modified %v", m)
 	}
 }

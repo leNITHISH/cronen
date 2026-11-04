@@ -58,13 +58,24 @@ func (o RemoveOptions) Flags() string {
 	return f
 }
 
+// DryFlags are the option letters of the dry run. It never includes n:
+// pacman refuses -n together with -p ("'--nosave' and '--print' may not be
+// used together"), and -n does not change which packages are removed.
+func (o RemoveOptions) DryFlags() string {
+	if o.Recursive {
+		return "s"
+	}
+	return ""
+}
+
 // RemoveDryArgv is the dry run, run as the user:
-// pacman -R<flags>p --print-format '%n %v' -- <names>.
+// pacman -R<s>p --print-format '%n %v' -- <names>. The NoSave option is not
+// part of it.
 func RemoveDryArgv(o RemoveOptions, names []string) ([]string, error) {
 	if err := CheckNames(names); err != nil {
 		return nil, err
 	}
-	argv := []string{"pacman", "-R" + o.Flags() + "p", "--print-format", "%n %v", "--"}
+	argv := []string{"pacman", "-R" + o.DryFlags() + "p", "--print-format", "%n %v", "--"}
 	return append(argv, names...), nil
 }
 
@@ -79,6 +90,15 @@ func RemoveArgv(priv []string, o RemoveOptions, names []string) ([]string, error
 	argv := slices.Clone(priv)
 	argv = append(argv, "pacman", "-R"+o.Flags(), "--")
 	return append(argv, names...), nil
+}
+
+// BackupArgv reads the backup files of names, read-only, as the user: plain
+// `pacman -Qi` does not print them, `-Qii` does.
+func BackupArgv(names []string) ([]string, error) {
+	if err := CheckNames(names); err != nil {
+		return nil, err
+	}
+	return append([]string{"pacman", "-Qii", "--"}, names...), nil
 }
 
 // IsProtected reports whether name matches one of the protected globs.

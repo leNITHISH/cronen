@@ -41,7 +41,6 @@ Install Date    : Wed Oct 15 10:01:00 2025
 Install Reason  : Installed as a dependency for another package
 Install Script  : No
 Validated By    : Signature
-Backup Files   : /etc/bash.bashrc
 
 Name            : coreutils
 Version         : 9.8-1
@@ -86,7 +85,6 @@ Install Date    : Wed Oct 15 12:03:00 2025
 Install Reason  : Installed as a dependency for another package
 Install Script  : No
 Validated By    : Signature
-Backup Files   : /etc/fstab
 
 Name            : tzdata
 Version         : 2025b-1
@@ -131,7 +129,6 @@ Install Date    : Wed Oct 15 14:05:00 2025
 Install Reason  : Installed as a dependency for another package
 Install Script  : No
 Validated By    : Signature
-Backup Files   : /etc/gai.conf
 
 Name            : linux-api-headers
 Version         : 6.16-1
@@ -264,7 +261,6 @@ Install Date    : Wed Oct 15 12:11:00 2025
 Install Reason  : Installed as a dependency for another package
 Install Script  : No
 Validated By    : Signature
-Backup Files   : /etc/pacman.conf
 
 Name            : pacman-contrib
 Version         : 1.11.0-1
@@ -375,7 +371,6 @@ Install Date    : Wed Oct 15 09:16:00 2025
 Install Reason  : Explicitly installed
 Install Script  : No
 Validated By    : Signature
-Backup Files   : /etc/sudoers
 
 Name            : systemd
 Version         : 258.1-1
@@ -398,7 +393,6 @@ Install Date    : Wed Oct 15 10:17:00 2025
 Install Reason  : Installed as a dependency for another package
 Install Script  : No
 Validated By    : Signature
-Backup Files   : /etc/systemd/system.conf
 
 Name            : openssh
 Version         : 10.0p1-3
@@ -421,7 +415,6 @@ Install Date    : Wed Oct 15 11:18:00 2025
 Install Reason  : Explicitly installed
 Install Script  : No
 Validated By    : Signature
-Backup Files   : /etc/ssh/sshd_config
 
 Name            : vim
 Version         : 9.1.1800-1

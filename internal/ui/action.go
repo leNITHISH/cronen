@@ -33,6 +33,10 @@ type dryRunMsg struct {
 	out    []byte
 	stderr []byte
 	err    error
+	// backups and backupsErr are the lazy `pacman -Qii` read, only when the
+	// dry run succeeded and -n is off.
+	backups    map[string][]pacman.BackupFile
+	backupsErr error
 }
 
 // actionDoneMsg reports that the handed-off command exited.
@@ -44,7 +48,9 @@ type actionDoneMsg struct {
 }
 
 // dryRun runs the dry run as the user, through the runner.
-func dryRun(ctx context.Context, r system.Runner, seq int, argv []string) tea.Cmd {
+// Without -n it then reads, read-only, the backup files of just the packages
+// the dry run printed (plain `pacman -Qi` does not print them).
+func dryRun(ctx context.Context, r system.Runner, seq int, argv []string, readBackups bool) tea.Cmd {
 	return func() tea.Msg {
 		out, _, err := r.Run(ctx, argv[0], argv[1:]...)
 		msg := dryRunMsg{seq: seq, out: out, err: err}
@@ -52,8 +58,32 @@ func dryRun(ctx context.Context, r system.Runner, seq int, argv []string) tea.Cm
 		if errors.As(err, &exitErr) {
 			msg.stderr = exitErr.Stderr
 		}
+		if err == nil && readBackups {
+			msg.backups, msg.backupsErr = readBackupFiles(ctx, r, out)
+		}
 		return msg
 	}
+}
+
+// readBackupFiles runs `pacman -Qii -- <printed names>`.
+func readBackupFiles(ctx context.Context, r system.Runner, printed []byte) (map[string][]pacman.BackupFile, error) {
+	list, err := ops.ParsePrint(printed)
+	if err != nil || len(list) == 0 {
+		return nil, nil // BuildRemovePlan reports these
+	}
+	names := make([]string, len(list))
+	for i, pr := range list {
+		names[i] = pr.Name
+	}
+	argv, err := ops.BackupArgv(names)
+	if err != nil {
+		return nil, err
+	}
+	out, _, err := r.Run(ctx, argv[0], argv[1:]...)
+	if err != nil {
+		return nil, err
+	}
+	return pacman.ParseBackupFiles(out)
 }
 
 // startRemove opens the removal modal for names and starts the dry run.
@@ -83,7 +113,7 @@ func (m *Model) rerunDry() tea.Cmd {
 		a.plan = ops.Plan{Kind: a.kind, Failure: err.Error()}
 		return nil
 	}
-	return dryRun(m.ctx(), m.opts.Runner, a.seq, argv)
+	return dryRun(m.ctx(), m.opts.Runner, a.seq, argv, !a.opts.NoSave)
 }
 
 func (m *Model) handleDryRun(msg dryRunMsg) {
@@ -96,6 +126,7 @@ func (m *Model) handleDryRun(msg dryRunMsg) {
 		Kind: a.kind, Options: a.opts, Names: a.names,
 		Priv: m.cfg.PrivilegeArgv(), Protected: m.cfg.EffectiveProtected(), DB: m.localDB,
 		Out: msg.out, Stderr: msg.stderr, Failed: msg.err != nil, RunErr: msg.err,
+		Backups: msg.backups, BackupsErr: msg.backupsErr,
 	})
 	if err != nil {
 		plan = ops.Plan{Kind: a.kind, Options: a.opts, Failure: err.Error()}

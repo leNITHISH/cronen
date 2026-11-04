@@ -4,7 +4,7 @@
 ────────────────────────────────────────────────────────────────────────────────────────────────────
  Remove 4 orphans?                                                                                  
                                                                                                     
- Dry run: pacman -Rnsp --print-format '%n %v' -- libgbm-compat old-codec-lib paru-debug zstd-       
+ Dry run: pacman -Rsp --print-format '%n %v' -- libgbm-compat old-codec-lib paru-debug zstd-        
     debug                                                                                           
  Options: s ☑ also remove unneeded dependencies (-s) · n ☑ no .pacsave backups (-n)                 
                                                                                                     

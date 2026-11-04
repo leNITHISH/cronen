@@ -1,0 +1,9 @@
+Name            : sudo
+Version         : 1.9.17.p2-1
+Backup Files    : /etc/pam.d/sudo [unmodified]
+                  /etc/sudoers [modified]
+
+Name            : glibc
+Version         : 2.42+r17+g6f0cf3d0b5b0-1
+Backup Files    : /etc/gai.conf [unmodified]
+                  /etc/ld.so.conf [unreadable]
