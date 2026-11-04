@@ -41,7 +41,7 @@ func TestPreviewGroups(t *testing.T) {
 			sections = append(sections, r.text)
 		}
 	}
-	want := []string{"NEEDS ATTENTION (11)", "REPO (5)", "AUR (5 + 1 VCS)", "NEW (2)", "REMOVED (1)", "HELD (1)"}
+	want := []string{"NEEDS ATTENTION (12)", "REPO (4)", "AUR (5 + 1 VCS)", "NEW (2)", "REMOVED (1)", "HELD (1)"}
 	if strings.Join(sections, "|") != strings.Join(want, "|") {
 		t.Errorf("sections = %q, want %q", sections, want)
 	}
@@ -49,8 +49,8 @@ func TestPreviewGroups(t *testing.T) {
 	if got := len(m.result.Packages); got != 18 {
 		t.Errorf("%d updates, want 18", got)
 	}
-	if got := len(m.result.Flagged()); got != 11 {
-		t.Errorf("%d flagged, want 11: a held package must not count", got)
+	if got := len(m.result.Flagged()); got != 12 {
+		t.Errorf("%d flagged, want 12: a held package must not count", got)
 	}
 	golden(t, "preview-groups", plain(m))
 	checkSize(t, m, w, h)
@@ -75,7 +75,7 @@ func TestPreviewGroups(t *testing.T) {
 
 func TestPreviewStatusTotals(t *testing.T) {
 	m := loaded(t, fixtureOptions(), 100, 30)
-	if !strings.Contains(plain(m), " 18 updates · 886 MiB ↓ · +26 MiB · 11 flagged") {
+	if !strings.Contains(plain(m), " 18 updates · 886 MiB ↓ · +26 MiB · 12 flagged") {
 		t.Errorf("status bar lacks the totals:\n%s", plain(m))
 	}
 

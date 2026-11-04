@@ -229,7 +229,16 @@ flag_fresh_hours = 0       # flag updates built less than this many hours ago; 0
 preflight = true           # check /boot, free space, the db lock, a pending reboot, the keyring
 mirror_check = true        # also compare the first mirror with the reference mirror
 mirror_lag_hours = 6       # a mirror this far behind (or more) is reported
+rebuild_scan_elf = true    # also scan foreign packages' ELF files for libraries an upgrade drops
 ```
+
+Rebuild detection (needs `preview` and `aur`) flags the update behind each
+installed AUR package that will need a rebuild after the upgrade: one that
+depends on or links against a shared library version the update stops
+providing, or that is installed under the old `/usr/lib/python3.13/`-style
+directory of an updated interpreter. The ELF scan is the slow part, so its
+results are cached in `$XDG_CACHE_HOME/cronen/elf-needs.json` until a package's
+version changes (`r` rescans).
 
 cronen remembers read news and the last upgrade it ran in
 `$XDG_STATE_HOME/cronen/state.json`, and caches the news feed and AUR

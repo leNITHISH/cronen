@@ -6,7 +6,7 @@ URL             : https://www.spotify.com
 Licenses        : custom
 Groups          : None
 Provides        : None
-Depends On      : alsa-lib  gtk3  nss
+Depends On      : alsa-lib  gtk3  nss  libgbm.so=1-64
 Optional Deps   : None
 Required By     : None
 Optional For    : None

@@ -189,9 +189,13 @@ type env struct {
 	statePath string
 	// syncDB is the database checkupdates syncs.
 	syncDB string
-	now    func() time.Time
-	loc    *time.Location
-	exec   func(argv []string, done tea.ExecCallback) tea.Cmd
+	// opener reads ELF files for the rebuild scan, and cacheDir holds its
+	// cache (empty: none).
+	opener   system.Opener
+	cacheDir string
+	now      func() time.Time
+	loc      *time.Location
+	exec     func(argv []string, done tea.ExecCallback) tea.Cmd
 }
 
 // demoEnv serves fixture data only: no config, state or cache is read or
@@ -204,6 +208,7 @@ func demoEnv() env {
 		fs:      fixtures.FS(),
 		disk:    fixtures.Disk(),
 		syncDB:  fixtures.SyncDBPath,
+		opener:  fixtures.Opener(),
 		cfg:     config.Default(),
 		now:     func() time.Time { return fixtures.Now },
 		loc:     time.UTC,
@@ -224,6 +229,7 @@ func realEnv(stderr io.Writer) env {
 		disk:   system.OSDisk{},
 		cfg:    config.Default(),
 		syncDB: pacman.SyncDBPath(os.Getenv, os.Getuid()),
+		opener: system.OSOpener{},
 		exec: func(argv []string, done tea.ExecCallback) tea.Cmd {
 			return tea.ExecProcess(system.InteractiveCommand(argv), done)
 		},
@@ -242,6 +248,7 @@ func realEnv(stderr io.Writer) env {
 	}
 	e.statePath = paths.State
 	e.fetcher = system.NewHTTPClient(paths.CacheDir)
+	e.cacheDir = paths.CacheDir
 	return e
 }
 
@@ -258,6 +265,8 @@ func (e env) uiOptions(ctx context.Context) ui.Options {
 		State:     e.state,
 		StatePath: e.statePath,
 		SyncDB:    e.syncDB,
+		Opener:    e.opener,
+		CacheDir:  e.cacheDir,
 		Exec:      e.exec,
 		Now:       e.now,
 		Location:  e.loc,
@@ -273,6 +282,8 @@ func (e env) sources() summary.Sources {
 		Config:   e.cfg,
 		State:    e.state,
 		SyncDB:   e.syncDB,
+		Opener:   e.opener,
+		CacheDir: e.cacheDir,
 		Now:      e.now,
 		Location: e.loc,
 	}

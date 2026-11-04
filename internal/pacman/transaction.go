@@ -20,6 +20,9 @@ type UpdateDetail struct {
 	OldSize, NewSize int64
 	// BuildDate is when the new version was built, zero if unknown.
 	BuildDate time.Time
+	// OldProvides and NewProvides are the Provides of the installed and the
+	// new version (pacman -Qi and -Si), for soname changes.
+	OldProvides, NewProvides []string
 }
 
 // NewPackage is a package the upgrade pulls in: a new dependency or the
@@ -101,7 +104,8 @@ func BuildTransaction(in TransactionInput) Transaction {
 			d := UpdateDetail{
 				Update: u, Repo: p.Repo, DownloadSize: p.DownloadSize,
 				OldSize: in.Local[p.Name].InstalledSize, NewSize: sync.InstalledSize,
-				BuildDate: sync.BuildDate,
+				BuildDate:   sync.BuildDate,
+				OldProvides: in.Local[p.Name].Provides, NewProvides: sync.Provides,
 			}
 			tx.SizeDelta -= d.OldSize
 			tx.Updates = append(tx.Updates, d)

@@ -1,24 +1,24 @@
  cronen (demo)                                                             last upgrade: 2 days ago 
  ⚠ 1 news item requires manual intervention — press n to read                                       
 ────────────────────────────────────────┬───────────────────────────────────────────────────────────
- NEEDS ATTENTION (11)                   │ bash                                                      
+ NEEDS ATTENTION (12)                   │ bash                                                      
   linux-firmware    20251011→20251021 ‼ │ 5.3.3-1 → 5.3.3-2                                         
   nvidia-utils          580.95→590.44 ⚠ │                                                           
   python                    3.13→3.14 ⚠ │ Why flagged:                                              
   ripgrep                   14.1→15.0 ⚠ │  • Held by IgnorePkg: 5.3.3-1 → 5.3.3-2. Holding          
-  glibc             2.42+r17→2.42+r33 ℹ │    packages is a partial upgrade.                         
-  linux                     6.17→6.18 ℹ │                                                           
-  linux-api-headers       6.16→6.16.1 ℹ │ Held back:                                                
-  linux-headers             6.17→6.18 ℹ │  • not part of this upgrade: IgnorePkg or IgnoreGroup     
-  mesa                  25.2.4→25.2.5 ℹ │    keeps it at 5.3.3-1                                    
-  systemd                 258.1→258.2 ℹ │                                                           
-  vulkan-icd-loader   1.4.328→1.4.330 ℹ │ Links:                                                    
- REPO (5)                               │  • not found on archlinux.org                             
+  zstd                1.5.7-2→1.5.7-3 ⚠ │    packages is a partial upgrade.                         
+  glibc             2.42+r17→2.42+r33 ℹ │                                                           
+  linux                     6.17→6.18 ℹ │ Held back:                                                
+  linux-api-headers       6.16→6.16.1 ℹ │  • not part of this upgrade: IgnorePkg or IgnoreGroup     
+  linux-headers             6.17→6.18 ℹ │    keeps it at 5.3.3-1                                    
+  mesa                  25.2.4→25.2.5 ℹ │                                                           
+  systemd                 258.1→258.2 ℹ │ Links:                                                    
+  vulkan-icd-loader   1.4.328→1.4.330 ℹ │  • not found on archlinux.org                             
+ REPO (4)                               │                                                           
   firefox               144.0→144.0.1   │                                                           
   gnupg             2.4.8-1→1:2.4.8-2   │                                                           
   openssh               10.0p1→10.2p1   │                                                           
   vim               9.1.1800→9.1.1850   │                                                           
-  zstd                1.5.7-2→1.5.7-3   │                                                           
  AUR (5 + 1 VCS)                        │                                                           
   paru                2.1.0-1→2.1.0-2   │                                                           
   visual-studio-code… 1.105.0→1.105.1   │                                                           
@@ -45,4 +45,4 @@
                                         │                                                           
                                         │                                                           
 ────────────────────────────────────────┴───────────────────────────────────────────────────────────
- 18 updates · 886 MiB ↓ · +26 MiB · 11 flagged · 2 unread news · 1 .pacnew           ? help  q quit 
+ 18 updates · 886 MiB ↓ · +26 MiB · 12 flagged · 2 unread news · 1 .pacnew           ? help  q quit 

@@ -44,6 +44,9 @@ const (
 	PacmanSi    = "pacman_Si.txt"         // pacman -Si, for the printed packages
 	PacmanQiOld = "pacman_Qi-updates.txt" // pacman -Qi, for the installed side
 	PacmanQu    = "pacman_Qu.txt"         // pacman -Qu --dbpath, with an [ignored] line
+
+	// The rebuild detection fixtures are HAND-WRITTEN too.
+	PacmanQlForeign = "pacman_Ql-foreign.txt" // pacman -Ql, for the foreign packages
 )
 
 // URLs and paths the fakes answer for.
@@ -163,14 +166,23 @@ func infoHandler(line string) (system.FakeResult, bool) {
 	case strings.HasPrefix(line, "pacman -Qi -- "):
 		file = PacmanQiOld
 		names = strings.Fields(strings.TrimPrefix(line, "pacman -Qi -- "))
+	case strings.HasPrefix(line, "pacman -Ql -- "):
+		return qlHandler(strings.Fields(strings.TrimPrefix(line, "pacman -Ql -- ")))
 	default:
 		return system.FakeResult{}, false
 	}
-	blocks := map[string]string{}
-	for _, block := range strings.Split(string(Bytes(file)), "\n\n") {
-		for l := range strings.Lines(block) {
-			if name, ok := strings.CutPrefix(l, "Name            : "); ok {
-				blocks[strings.TrimSpace(name)] = strings.TrimRight(block, "\n") + "\n"
+	blocks := infoBlocks(file)
+	if file == PacmanQiOld {
+		// The installed foreign packages have one -Qi fixture each.
+		entries, err := files.ReadDir("testdata")
+		if err != nil {
+			panic(fmt.Sprintf("fixtures: %v", err))
+		}
+		for _, e := range entries {
+			if strings.HasPrefix(e.Name(), PacmanQiPrefix) {
+				for n, b := range infoBlocks(e.Name()) {
+					blocks[n] = b
+				}
 			}
 		}
 	}
@@ -185,6 +197,38 @@ func infoHandler(line string) (system.FakeResult, bool) {
 		out = append(out, b)
 	}
 	return system.FakeResult{Stdout: []byte(strings.Join(out, "\n"))}, true
+}
+
+// infoBlocks splits a pacman -Si/-Qi fixture into its blocks by name.
+func infoBlocks(file string) map[string]string {
+	blocks := map[string]string{}
+	for _, block := range strings.Split(string(Bytes(file)), "\n\n") {
+		for l := range strings.Lines(block) {
+			if name, ok := strings.CutPrefix(l, "Name            : "); ok {
+				blocks[strings.TrimSpace(name)] = strings.TrimRight(block, "\n") + "\n"
+			}
+		}
+	}
+	return blocks
+}
+
+// qlHandler answers pacman -Ql -- names with the lines of the fixture for
+// the packages named, in the order asked.
+func qlHandler(names []string) (system.FakeResult, bool) {
+	var out strings.Builder
+	for _, n := range names {
+		found := false
+		for l := range strings.Lines(string(Bytes(PacmanQlForeign))) {
+			if strings.HasPrefix(l, n+" ") {
+				out.WriteString(l)
+				found = true
+			}
+		}
+		if !found {
+			return system.FakeResult{Stderr: []byte("error: package '" + n + "' was not found\n"), Code: 1}, true
+		}
+	}
+	return system.FakeResult{Stdout: []byte(out.String())}, true
 }
 
 // Fetcher returns a FakeFetcher serving the news feed, the AUR RPC v5 info
@@ -264,4 +308,24 @@ func FS() *system.FakeFS {
 	files[SyncDBPath+"/sync/core.db"] = nil
 	files[SyncDBPath+"/sync/extra.db"] = nil
 	return system.NewFakeFS(files)
+}
+
+// Opener returns a FakeOpener serving the ELF files of the fixture foreign
+// packages (see pacman_Ql-foreign.txt), built with ELF:
+//
+//   - /opt/visual-studio-code/code links libzstd.so.1, which the fixture
+//     zstd update drops (the ELF signal);
+//   - /usr/bin/nvim (neovim-git) links no library the updates change;
+//   - /opt/spotify/spotify links libgbm.so.1, which mesa still provides;
+//   - /usr/lib/debug/usr/bin/paru.debug links libzstd.so.1, but is a debug
+//     split's file.
+func Opener() *system.FakeOpener {
+	return system.NewFakeOpener(map[string][]byte{
+		"/opt/visual-studio-code/code":      ELF(true, "libc.so.6", "libzstd.so.1"),
+		"/usr/bin/nvim":                     ELF(true, "libc.so.6", "libuv.so.1", "libluajit-5.1.so.2"),
+		"/usr/bin/paru":                     ELF(true, "libc.so.6", "libalpm.so.15"),
+		"/opt/spotify/spotify":              ELF(true, "libc.so.6", "libgbm.so.1"),
+		"/usr/lib/debug/usr/bin/paru.debug": ELF(true, "libzstd.so.1"),
+		"/usr/bin/wal":                      []byte("#!/usr/bin/python\n"),
+	})
 }

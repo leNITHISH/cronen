@@ -18,6 +18,7 @@ import (
 	"github.com/leNITHISH/cronen/internal/config"
 	"github.com/leNITHISH/cronen/internal/news"
 	"github.com/leNITHISH/cronen/internal/pacman"
+	"github.com/leNITHISH/cronen/internal/rebuild"
 	"github.com/leNITHISH/cronen/internal/risk"
 	"github.com/leNITHISH/cronen/internal/summary"
 	"github.com/leNITHISH/cronen/internal/system"
@@ -46,6 +47,11 @@ type Options struct {
 	// SyncDB is the database checkupdates syncs, which the transaction
 	// preview reads; see pacman.SyncDBPath.
 	SyncDB string
+
+	// Opener reads ELF files for the rebuild scan. Nil turns the scan off.
+	Opener system.Opener
+	// CacheDir holds the ELF scan cache. Empty means no cache.
+	CacheDir string
 
 	// Exec hands the terminal to the upgrade command and reports how it
 	// exited through done; the real one wraps tea.ExecProcess. Nil
@@ -120,6 +126,11 @@ type Model struct {
 	gen                              int
 	repoSec, aurSec, newsSec, logSec section
 	pacnewSec, previewSec            section
+	// rebuildSec and rebuilds are the foreign packages needing a rebuild;
+	// freshLoad is set once r asked for everything to be reloaded.
+	rebuildSec section
+	rebuilds   []rebuild.Finding
+	freshLoad  bool
 	// tx is the transaction preview, valid when previewed is set.
 	tx                     pacman.Transaction
 	previewed              bool
@@ -211,10 +222,11 @@ func (m *Model) markLoading() {
 	m.pacnewSec = section{loading: true}
 	m.previewSec = section{loading: m.cfg.Preview}
 	m.markPreflightLoading()
+	m.rebuildSec = section{loading: m.wantsRebuild()}
 }
 
 func (m Model) anyLoading() bool {
-	for _, s := range []section{m.repoSec, m.aurSec, m.newsSec, m.logSec, m.pacnewSec, m.previewSec} {
+	for _, s := range []section{m.repoSec, m.aurSec, m.newsSec, m.logSec, m.pacnewSec, m.previewSec, m.rebuildSec} {
 		if s.loading {
 			return true
 		}
@@ -247,6 +259,7 @@ func (m Model) Init() tea.Cmd {
 // refresh reloads everything, bypassing the cache.
 func (m *Model) refresh() tea.Cmd {
 	m.gen++
+	m.freshLoad = true
 	m.markLoading()
 	m.archweb = map[string]archwebResult{}
 	cmds := m.loadCmds(true)
@@ -290,6 +303,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// checkupdates has already said why.
 			m.previewSec = section{}
 			m.tx, m.previewed = pacman.Transaction{}, false
+			m.clearRebuild()
 			return m, tea.Batch(m.changed(), facts)
 		}
 		return m, tea.Batch(m.changed(), facts,
@@ -306,6 +320,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for _, u := range msg.tx.Updates {
 			m.txUpdates[u.Name] = u
 		}
+		if msg.err != nil || !m.wantsRebuild() {
+			m.clearRebuild()
+			return m, m.changed()
+		}
+		return m, tea.Batch(m.changed(), m.loadRebuild(msg.tx))
+
+	case rebuildMsg:
+		if msg.gen != m.gen {
+			return m, nil
+		}
+		m.rebuildSec = section{err: msg.err}
+		m.rebuilds = msg.findings
 		return m, m.changed()
 
 	case factsMsg, mirrorMsg:
@@ -532,7 +558,8 @@ func (m *Model) changed() tea.Cmd {
 	if m.previewed {
 		tx = &m.tx
 	}
-	m.result = summary.Assess(summary.Updates(m.repo, m.aurPkgs), m.unreadNews, tx, m.cfg, m.now())
+	m.result = summary.Assess(summary.Updates(m.repo, m.aurPkgs), m.unreadNews, tx, m.cfg, m.now(),
+		summary.WithRebuilds(m.rebuilds))
 	m.assessPreflight()
 
 	m.newsPane.move(0, len(m.newsItems))
@@ -734,6 +761,12 @@ func (m Model) statusLine(w int) string {
 		parts = append(parts, m.spinner.View()+" previewing")
 	case m.previewSec.err != nil:
 		parts = append(parts, m.styles.Error.Render("preview unavailable"))
+	}
+	switch {
+	case m.rebuildSec.loading && !m.previewSec.loading:
+		parts = append(parts, m.spinner.View()+" scanning rebuilds")
+	case m.rebuildSec.err != nil:
+		parts = append(parts, m.styles.Error.Render("rebuild scan failed"))
 	}
 	if m.newsDecided {
 		parts = append(parts, itoa(len(m.result.Flagged()))+" flagged")

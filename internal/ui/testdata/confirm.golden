@@ -7,7 +7,7 @@
    2026-10-22  linux-firmware >= 20251021-1 upgrade requires manual intervention                    
    press esc, then n to read it                                                                     
                                                                                                     
- 18 updates · 11 flagged · kernel update: reboot afterwards                                         
+ 18 updates · 12 flagged · kernel update: reboot afterwards                                         
                                                                                                     
  This runs: sudo pacman -Syu                                                                        
                                                                                                     

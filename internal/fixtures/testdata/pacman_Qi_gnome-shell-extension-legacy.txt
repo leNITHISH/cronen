@@ -6,7 +6,7 @@ URL             : https://example.org/legacy
 Licenses        : GPL-2.0-or-later
 Groups          : None
 Provides        : None
-Depends On      : gnome-shell
+Depends On      : gnome-shell  libzstd.so=1-64
 Optional Deps   : None
 Required By     : None
 Optional For    : None

@@ -6,7 +6,7 @@ URL             : https://github.com/morganamilo/paru
 Licenses        : GPL-3.0-or-later
 Groups          : None
 Provides        : None
-Depends On      : None
+Depends On      : libzstd.so=1-64
 Optional Deps   : None
 Required By     : None
 Optional For    : None

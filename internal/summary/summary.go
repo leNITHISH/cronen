@@ -20,6 +20,7 @@ import (
 	"github.com/leNITHISH/cronen/internal/news"
 	"github.com/leNITHISH/cronen/internal/pacman"
 	"github.com/leNITHISH/cronen/internal/preflight"
+	"github.com/leNITHISH/cronen/internal/rebuild"
 	"github.com/leNITHISH/cronen/internal/risk"
 	"github.com/leNITHISH/cronen/internal/system"
 )
@@ -125,7 +126,7 @@ func LoadPreview(ctx context.Context, r system.Runner, fsys system.FS, db string
 // Assess applies the risk rules with the user's configuration. tx is the
 // transaction preview, or nil while it is unavailable: the rules that need
 // it (held packages, fresh builds) then have nothing to look at.
-func Assess(updates []risk.Update, unread []news.Item, tx *pacman.Transaction, cfg config.Config, now time.Time) risk.Result {
+func Assess(updates []risk.Update, unread []news.Item, tx *pacman.Transaction, cfg config.Config, now time.Time, opts ...AssessOption) risk.Result {
 	in := risk.Input{
 		Updates:     updates,
 		UnreadNews:  unread,
@@ -143,6 +144,9 @@ func Assess(updates []risk.Update, unread []news.Item, tx *pacman.Transaction, c
 			in.Held = append(in.Held, risk.Update{Name: h.Name, OldVersion: h.OldVersion, NewVersion: h.NewVersion})
 		}
 	}
+	for _, o := range opts {
+		o(&in)
+	}
 	return risk.Assess(in)
 }
 
@@ -157,6 +161,10 @@ type Sources struct {
 	State  config.State
 	// SyncDB is the database checkupdates syncs; see pacman.SyncDBPath.
 	SyncDB string
+	// Opener reads ELF files for the rebuild scan. Nil turns the scan off.
+	Opener system.Opener
+	// CacheDir holds the ELF scan cache. Empty means no cache.
+	CacheDir string
 	// Now is the current time. Nil means time.Now.
 	Now func() time.Time
 	// Location is the time zone of pacman.log. Nil means time.Local.
@@ -191,6 +199,9 @@ type Summary struct {
 	// RebootPending is set when an earlier upgrade replaced the running
 	// kernel. It is only known when the preflight facts could be read.
 	RebootPending bool
+	// Rebuilds are the installed foreign packages the upgrade leaves
+	// needing a rebuild.
+	Rebuilds []rebuild.Finding
 	// Errors are the sources that failed. The rest of the summary holds
 	// what the others found.
 	Errors []error
@@ -214,6 +225,8 @@ func Gather(ctx context.Context, src Sources) Summary {
 		repo                     []pacman.Update
 		tx                       pacman.Transaction
 		txErr                    error
+		rebuilds                 []rebuild.Finding
+		rebuildErr               error
 		aurPkgs                  []aur.Package
 		items                    []news.Item
 		lastLog                  time.Time
@@ -229,6 +242,16 @@ func Gather(ctx context.Context, src Sources) Summary {
 		// waits for it, and a failed checkupdates has already said why.
 		if repoErr == nil && src.Config.Preview {
 			tx, txErr = LoadPreview(ctx, src.Runner, src.FS, src.SyncDB, repo, loc)
+			// Foreign packages are the AUR switch's business.
+			if txErr == nil && src.Config.AUR {
+				rebuilds, rebuildErr = LoadRebuild(ctx, RebuildSources{
+					Runner: src.Runner, Opener: src.Opener, FS: src.FS, CacheDir: src.CacheDir,
+					ScanELF: src.Config.RebuildScanELF,
+				}, tx)
+				if rebuildErr != nil {
+					rebuildErr = fmt.Errorf("rebuild detection: %w", rebuildErr)
+				}
+			}
 		}
 		// The facts need the pending kernels, so they wait for the list.
 		// Without it (checkupdates failed) they still check the rest.
@@ -253,7 +276,7 @@ func Gather(ctx context.Context, src Sources) Summary {
 	if newsErr != nil {
 		newsErr = fmt.Errorf("news: %w", newsErr)
 	}
-	for _, err := range []error{repoErr, aurErr, newsErr, txErr, factsErr, mirrorErr} {
+	for _, err := range []error{repoErr, aurErr, newsErr, txErr, factsErr, mirrorErr, rebuildErr} {
 		if err != nil {
 			s.Errors = append(s.Errors, err)
 		}
@@ -274,7 +297,8 @@ func Gather(ctx context.Context, src Sources) Summary {
 		s.Preflight = AssessPreflight(facts, txp, mp, LastUpgrade(lastLog, src.State), src.Config, t)
 		s.RebootPending = facts.RebootPending
 	}
-	res := Assess(Updates(repo, aurPkgs), unread, txp, src.Config, t)
+	res := Assess(Updates(repo, aurPkgs), unread, txp, src.Config, t, WithRebuilds(rebuilds))
+	s.Rebuilds = res.Rebuilds
 	s.Held = res.Held
 	for _, p := range res.Packages {
 		if p.AUR {
