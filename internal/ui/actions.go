@@ -195,7 +195,7 @@ func (m *Model) saveState() tea.Cmd {
 // the updates screen.
 func (m *Model) startFilter() tea.Cmd {
 	var cmd tea.Cmd
-	if m.screen != screenPackages {
+	if m.screen != screenPackages && m.screen != screenHistory {
 		cmd = m.setScreen(screenUpdates)
 	}
 	m.focus = focusList
@@ -224,6 +224,7 @@ func (m Model) handleFilterKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		// A new filter starts the selection over at the top.
 		m.updates.moved = false
 		m.pkgs.selName = ""
+		m.hist.selKey = ""
 		return m, tea.Batch(cmd, m.layout())
 	}
 	return m, cmd
@@ -235,6 +236,7 @@ func (m *Model) clearFilter() {
 	m.filter.Reset()
 	m.updates.moved = false
 	m.pkgs.selName = ""
+	m.hist.selKey = ""
 }
 
 // filterQuery is the lower-cased filter text, or "" if there is none.

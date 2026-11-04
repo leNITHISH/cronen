@@ -203,10 +203,9 @@ func TestTabsAndNumberKeys(t *testing.T) {
 	if m.screen != screenUpdates {
 		t.Errorf("esc: screen %v", m.screen)
 	}
-	// The placeholder screens say so and keep the layout.
 	m = send(t, m, press("4"))
-	if !strings.Contains(plain(m), "History isn't available yet.") {
-		t.Errorf("no placeholder:\n%s", plain(m))
+	if m.screen != screenHistory || !strings.Contains(plain(m), "pacman -S ripgrep") {
+		t.Errorf("history screen:\n%s", plain(m))
 	}
 	// Digits typed into the filter are text, not screen switches.
 	m = send(t, m, press("3"))

@@ -219,6 +219,13 @@ func (m *Model) handlePackagesKey(k tea.KeyPressMsg) (tea.Cmd, bool) {
 			return nil, true
 		}
 		return m.startRemove(ops.KindRemove, names), true
+	case key.Matches(k, keys.Downgrade):
+		pkg, ok := p.selected(m.localDB)
+		if !ok {
+			m.flash("nothing selected", false)
+			return nil, true
+		}
+		return m.startDowngrade(pkg.Name), true
 	case key.Matches(k, keys.Down):
 		delta = 1
 	case key.Matches(k, keys.Up):

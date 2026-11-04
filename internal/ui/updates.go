@@ -517,6 +517,9 @@ func (m *Model) refreshDetail() tea.Cmd {
 	if m.screen == screenPackages {
 		return m.refreshPackageDetail()
 	}
+	if m.screen == screenHistory {
+		return m.refreshHistoryDetail()
+	}
 	e, ok := m.updates.selected()
 	var content string
 	var cmd tea.Cmd

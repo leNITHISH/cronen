@@ -174,6 +174,11 @@ type Model struct {
 	localDB  *pacman.LocalDB
 	pkgs     packagesPane
 
+	// histSec and hist are pacman.log read into transactions, and the
+	// History screen; see history.go.
+	histSec section
+	hist    historyPane
+
 	// reviews is the AUR history of each pending AUR update, by package
 	// name; see review.go. diffView shows the diff of diffName. freshGen is
 	// the generation whose loads bypass the cache.
@@ -267,6 +272,7 @@ func (m *Model) markLoading() {
 	m.secSec = section{loading: m.cfg.Security}
 	m.issuesSec = section{loading: m.cfg.KnownIssues && m.cfg.Preview}
 	m.localSec = section{loading: m.cfg.PackageBrowser}
+	m.histSec = section{loading: m.cfg.History}
 	m.hk.diffSec = section{}
 	m.hk.cacheSec = section{loading: m.cfg.Housekeeping}
 	m.hk.unitsSec = section{loading: m.cfg.Housekeeping}
@@ -274,7 +280,7 @@ func (m *Model) markLoading() {
 }
 
 func (m Model) anyLoading() bool {
-	for _, s := range []section{m.repoSec, m.aurSec, m.newsSec, m.logSec, m.pacnewSec, m.previewSec, m.rebuildSec, m.localSec, m.hk.diffSec, m.hk.cacheSec, m.hk.unitsSec} {
+	for _, s := range []section{m.repoSec, m.aurSec, m.newsSec, m.logSec, m.pacnewSec, m.previewSec, m.rebuildSec, m.localSec, m.histSec, m.hk.diffSec, m.hk.cacheSec, m.hk.unitsSec} {
 		if s.loading {
 			return true
 		}
@@ -296,6 +302,9 @@ func (m Model) loadCmds(fresh bool) []tea.Cmd {
 	}
 	if m.cfg.PackageBrowser {
 		cmds = append(cmds, loadLocalDB(ctx, m.opts.Runner, m.location(), m.gen))
+	}
+	if m.cfg.History {
+		cmds = append(cmds, loadHistory(m.opts.FS, m.cfg.ExtraCacheDirs, m.opts.Home, m.location(), m.gen))
 	}
 	cmds = append(cmds, m.mirrorCmds(fresh)...)
 	cmds = append(cmds, m.housekeepingCmds()...)
@@ -403,6 +412,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case localDBMsg:
 		return m, m.handleLocalDB(msg)
+
+	case historyMsg:
+		return m, m.handleHistory(msg)
+
+	case versionsMsg:
+		m.handleVersions(msg)
+		return m, nil
 
 	case aurLogMsg:
 		return m, m.handleAURLog(msg)
@@ -546,6 +562,11 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 	}
+	if m.screen == screenHistory {
+		if cmd, ok := m.handleHistoryKey(msg); ok {
+			return m, cmd
+		}
+	}
 	if other && (key.Matches(msg, k.MarkRead) || key.Matches(msg, k.Upstream) ||
 		key.Matches(msg, k.Changelog) || key.Matches(msg, k.Diff) ||
 		key.Matches(msg, k.Acknowledge) || key.Matches(msg, k.ShowAcked)) {
@@ -560,7 +581,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, m.setScreen(screenNews)
 	case key.Matches(msg, k.Back):
 		switch {
-		case m.screen == screenPackages && m.filterQuery() != "":
+		case (m.screen == screenPackages || m.screen == screenHistory) && m.filterQuery() != "":
 			m.clearFilter()
 			return m, m.layout()
 		case m.screen != screenUpdates:
@@ -724,8 +745,8 @@ func (m Model) bodyHeight() int {
 // listWidth is the width of the left pane on both screens.
 func (m Model) listWidth() int {
 	w, _ := m.size()
-	if m.screen == screenPackages {
-		// The package list has columns, so it gets more room.
+	if m.screen == screenPackages || m.screen == screenHistory {
+		// These lists have columns, so they get more room.
 		return clamp(w*3/5, min(40, w/2), 80)
 	}
 	lw := clamp(w*2/5, min(28, w/2), 56)
@@ -768,6 +789,7 @@ func (m Model) paneWidth() int {
 func (m *Model) layout() tea.Cmd {
 	m.rebuildUpdates()
 	m.rebuildPackages()
+	m.rebuildHistory()
 	pw, bh := m.paneWidth(), m.bodyHeight()
 	w, _ := m.size()
 	m.help.SetWidth(w)
@@ -804,10 +826,6 @@ func (m Model) View() tea.View {
 
 	lw, pw, bh := m.listWidth(), m.paneWidth(), m.bodyHeight()
 	switch m.screen {
-	case screenHistory:
-		lines = append(lines, m.styles.Rule.Render(strings.Repeat("─", w)))
-		lines = append(lines, fitBlock(m.placeholderView(tabLabel(m.screen)), w, bh)...)
-		lines = append(lines, m.styles.Rule.Render(strings.Repeat("─", w)))
 	case screenHousekeeping:
 		lines = append(lines, m.styles.Rule.Render(strings.Repeat("─", w)))
 		lines = append(lines, fitBlock(m.housekeepingView(w, bh), w, bh)...)
@@ -834,6 +852,9 @@ func (m Model) View() tea.View {
 			right = fitBlock(m.newsView.View(), pw, bh)
 		case screenPackages:
 			left = fitBlock(m.packagesListView(lw, bh), lw, bh)
+			right = fitBlock(m.detail.View(), pw, bh)
+		case screenHistory:
+			left = fitBlock(m.historyListView(lw, bh), lw, bh)
 			right = fitBlock(m.detail.View(), pw, bh)
 		default:
 			left = fitBlock(m.updatesListView(lw, bh), lw, bh)
@@ -951,7 +972,7 @@ func (m Model) statusLine(w int) string {
 	case screenHousekeeping:
 		parts = m.housekeepingStatus()
 	case screenHistory:
-		parts = []string{tabLabel(m.screen)}
+		parts = m.historyStatus()
 	}
 	if q := m.filter.Value(); strings.TrimSpace(q) != "" {
 		parts = append(parts, "filter: "+q)
@@ -964,6 +985,9 @@ func (m Model) statusLine(w int) string {
 	}
 	if m.screen == screenPackages {
 		hints = append(hints, "f show", "s sort", "space mark")
+	}
+	if m.screen == screenHistory {
+		hints = append(hints, "/ package", "D downgrade")
 	}
 	if m.screen == screenHousekeeping {
 		hints = append(hints, "space mark", "X remove", "P pacdiff")
