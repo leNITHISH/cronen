@@ -93,8 +93,12 @@ Prints a short plain-text summary, most important first, and exits with:
 | `0` | nothing to do |
 | `10` | updates available |
 | `20` | attention needed: at least one update is flagged |
-| `30` | an unread news item requires manual intervention |
+| `30` | critical: an unread news item requires manual intervention, or a preflight check found a critical problem |
 | `1` | error: a source (checkupdates, the AUR, the news feed) failed |
+
+Exit code `30` changed meaning in this version: it used to mean only the news
+case, and now also covers a critical preflight problem (a full or unmounted
+`/boot` while a kernel updates, or too little free space for the upgrade).
 
 Any failed source makes the exit code `1`, even if the rest looked fine: with
 a source missing, cronen can't tell "nothing to do" from "didn't look". An
@@ -117,7 +121,7 @@ reboot after upgrading: the kernel is updated
 
 ```console
 $ cronen --json
-{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1}
+{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1,"preflight":[{"severity":"critical","message":"/boot is in fstab but not mounted while linux updates: …"}],"reboot_pending":false}
 ```
 
 `updates` counts repo and AUR updates together and `aur` the AUR ones.
@@ -130,6 +134,30 @@ change in installed size), `new` (packages the upgrade pulls in, including
 replacements), `replaced` (installed packages a replacement removes) and
 `held` (updates held back by `IgnorePkg`). Held packages are not updates and
 never count as flagged.
+
+`preflight` lists the preflight problems as `{"severity","message"}` objects,
+most severe first, and `reboot_pending` says an earlier upgrade replaced the
+running kernel and the system hasn't rebooted since.
+
+### Preflight
+
+Before you upgrade, cronen checks for the things that make an upgrade fail
+halfway. It shows the worst as a banner (several collapse into one line, and
+`U` lists them all) and in `--check`:
+
+- critical: `/boot` is in `/etc/fstab` but not mounted while a kernel is
+  updating, or the root filesystem, `/boot` or the pacman cache doesn't have
+  the free space the upgrade needs (the download for the cache, the installed
+  size change for `/`, the current size of the updating kernels' images for
+  `/boot`);
+- warning: `/var/lib/pacman/db.lck` exists, the first mirror in the mirrorlist
+  is more than `mirror_lag_hours` behind the reference mirror, or a reboot is
+  pending (the running kernel's `/usr/lib/modules/<release>` is gone);
+- info: `archlinux-keyring` is pending and the last full upgrade was more than
+  60 days ago.
+
+cronen only reports these; it never mounts, removes or runs anything. A mirror
+that can't be reached counts as a failed source (`--check` exits 1).
 
 ### Transaction preview
 
@@ -198,6 +226,9 @@ ignore_major = []          # globs whose major version bumps aren't flagged
 show_debug = false         # list makepkg <name>-debug splits
 preview = true             # transaction preview: new, replaced and held packages, sizes
 flag_fresh_hours = 0       # flag updates built less than this many hours ago; 0 = never
+preflight = true           # check /boot, free space, the db lock, a pending reboot, the keyring
+mirror_check = true        # also compare the first mirror with the reference mirror
+mirror_lag_hours = 6       # a mirror this far behind (or more) is reported
 ```
 
 cronen remembers read news and the last upgrade it ran in

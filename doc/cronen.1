@@ -42,7 +42,7 @@ below.
 Print a one-line JSON summary, for example
 .br
 .nf
-{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1}
+{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1,"preflight":[],"reboot_pending":false}
 .fi
 .I updates
 counts repo and AUR updates together,
@@ -215,6 +215,30 @@ exit 1 like any other failed source.
 .TP
 .BR flag_fresh_hours " (default " 0 )
 Flag updates whose new build is younger than this many hours. 0 never flags.
+.TP
+.BR preflight " (default " true )
+Check the system before an upgrade: /boot declared in fstab but not mounted
+while a kernel updates, free space on /, the pacman cache and /boot against
+what the upgrade needs, the pacman database lock, a pending reboot and an old
+archlinux\-keyring. Problems are shown as a banner and in
+.BR \-\-check ,
+and the json output lists them in
+.IR preflight .
+cronen only reports them. A critical problem makes
+.B \-\-check
+exit 30.
+.TP
+.BR mirror_check " (default " true )
+As part of the preflight checks, compare the first http(s) mirror in
+/etc/pacman.d/mirrorlist with the reference mirror (geo.mirror.pkgbuild.com)
+by their
+.I lastupdate
+files. A mirror that can't be reached makes
+.B \-\-check
+exit 1 like any other failed source.
+.TP
+.BR mirror_lag_hours " (default " 6 )
+How far behind the reference mirror the mirror may be before it is reported.
 .PP
 Example:
 .PP
@@ -239,7 +263,9 @@ Updates available.
 Attention needed: at least one update is flagged.
 .TP
 .B 30
-An unread news item requires manual intervention.
+Critical: an unread news item requires manual intervention, or a preflight
+check found a critical problem (an unmounted or full /boot, or too little free
+space for the upgrade). Before this version, only the news case exited 30.
 .TP
 .B 1
 Error: a source (checkupdates, the AUR, the news feed) failed.
