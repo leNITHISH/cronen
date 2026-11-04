@@ -1,23 +1,23 @@
- cronen                                                                      last upgrade: just now 
+ cronen                                               1 vulnerable, no fix · last upgrade: just now 
  ✓ upgrade finished · reboot to run the new kernel · 1 .pacnew file to merge (run pacdiff)          
 ────────────────────────────────────────┬───────────────────────────────────────────────────────────
- NEEDS ATTENTION (12)                   │ python                                                    
-▸ python                    3.13→3.14 ⚠ │ 3.13.7-1 → 3.14.0-1                                  core 
-  ripgrep                   14.1→15.0 ⚠ │                                                           
-  zstd                1.5.7-2→1.5.7-3 ⚠ │ Why flagged:                                              
-  glibc             2.42+r17→2.42+r33 ℹ │  • Python 3.13 → 3.14: rebuild these AUR packages:        
-  linux                     6.17→6.18 ℹ │    python-pywal                                           
-  linux-api-headers       6.16→6.16.1 ℹ │  • On your watchlist (python)                             
-  linux-firmware    20251011→20251021 ℹ │                                                           
-  linux-headers             6.17→6.18 ℹ │ Transaction:                                              
-  mesa                  25.2.4→25.2.5 ℹ │  • download: 14 MiB                                       
-  nvidia-utils          580.95→590.44 ℹ │  • installed size: 78 MiB → 80 MiB (+2.1 MiB)             
-  systemd                 258.1→258.2 ℹ │  • built 20 days ago (2026-10-03 10:00)                   
-  vulkan-icd-loader   1.4.328→1.4.330 ℹ │                                                           
- REPO (4)                               │ Links:                                                    
-  firefox               144.0→144.0.1   │  • upstream   https://www.python.org/                     
-  gnupg             2.4.8-1→1:2.4.8-2   │  • changelog  https://gitlab.archlinux.org/archlinux/pac… 
-  openssh               10.0p1→10.2p1   │                                                           
+ NEEDS ATTENTION (12)                   │ linux                                                     
+▸ linux                     6.17→6.18 ⚠ │ 6.17.4.arch1-1 → 6.18.1.arch1-1                      core 
+  python                    3.13→3.14 ⚠ │                                                           
+  ripgrep                   14.1→15.0 ⚠ │ Why flagged:                                              
+  zstd                1.5.7-2→1.5.7-3 ⚠ │  • 2 open issues since this build: 'Crash on startup      
+  glibc             2.42+r17→2.42+r33 ℹ │    with Wayland', 'Suspend broken on some ThinkPads'      
+  linux-api-headers       6.16→6.16.1 ℹ │  • On your watchlist (linux*)                             
+  linux-firmware    20251011→20251021 ℹ │  • Kernel update: reboot after upgrading                  
+  linux-headers             6.17→6.18 ℹ │                                                           
+  mesa                  25.2.4→25.2.5 ℹ │ Transaction:                                              
+  nvidia-utils          580.95→590.44 ℹ │  • download: 140 MiB                                      
+  systemd                 258.1→258.2 ℹ │  • installed size: 148 MiB → 151 MiB (+2.8 MiB)           
+  vulkan-icd-loader   1.4.328→1.4.330 ℹ │  • built 18 hours ago (2026-10-22 18:00)                  
+ REPO (4)                               │                                                           
+  firefox              144.0→144.0.1 🛡  │ Links:                                                    
+  gnupg             2.4.8-1→1:2.4.8-2   │  • upstream   https://github.com/archlinux/linux          
+  openssh              10.0p1→10.2p1 🛡  │  • changelog  https://gitlab.archlinux.org/archlinux/pac… 
   vim               9.1.1800→9.1.1850   │                                                           
  AUR (5 + 1 VCS)                        │                                                           
   paru                2.1.0-1→2.1.0-2   │                                                           

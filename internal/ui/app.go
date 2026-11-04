@@ -131,6 +131,12 @@ type Model struct {
 	rebuildSec section
 	rebuilds   []rebuild.Finding
 	freshLoad  bool
+	// secSec and issuesSec are the security tracker and GitLab feeds; see
+	// feeds.go. secStarted reports that the tracker load was started for
+	// this generation.
+	secSec, issuesSec section
+	secStarted        bool
+	feeds             summary.Feeds
 	// tx is the transaction preview, valid when previewed is set.
 	tx                     pacman.Transaction
 	previewed              bool
@@ -223,6 +229,9 @@ func (m *Model) markLoading() {
 	m.previewSec = section{loading: m.cfg.Preview}
 	m.markPreflightLoading()
 	m.rebuildSec = section{loading: m.wantsRebuild()}
+	m.secSec = section{loading: m.cfg.Security}
+	m.issuesSec = section{loading: m.cfg.KnownIssues && m.cfg.Preview}
+	m.secStarted = false
 }
 
 func (m Model) anyLoading() bool {
@@ -231,7 +240,7 @@ func (m Model) anyLoading() bool {
 			return true
 		}
 	}
-	return false
+	return m.feedsLoading()
 }
 
 // loadCmds returns one command per data source, for the current generation.
@@ -272,6 +281,9 @@ func (m *Model) refresh() tea.Cmd {
 
 // Update implements tea.Model.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if cmd, ok := m.handleFeeds(msg); ok {
+		return m, cmd
+	}
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
@@ -301,12 +313,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil || !m.cfg.Preview {
 			// Without the updates there is nothing to preview, and
 			// checkupdates has already said why.
-			m.previewSec = section{}
+			m.previewSec, m.issuesSec = section{}, section{}
 			m.tx, m.previewed = pacman.Transaction{}, false
 			m.clearRebuild()
-			return m, tea.Batch(m.changed(), facts)
+			return m, tea.Batch(m.changed(), facts, m.startSecurity())
 		}
-		return m, tea.Batch(m.changed(), facts,
+		return m, tea.Batch(m.changed(), facts, m.startSecurity(),
 			loadPreview(m.ctx(), m.opts.Runner, m.opts.FS, m.opts.SyncDB, msg.updates, m.location(), m.gen))
 
 	case previewMsg:
@@ -322,9 +334,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if msg.err != nil || !m.wantsRebuild() {
 			m.clearRebuild()
-			return m, m.changed()
+			return m, tea.Batch(m.changed(), m.startIssues())
 		}
-		return m, tea.Batch(m.changed(), m.loadRebuild(msg.tx))
+		return m, tea.Batch(m.changed(), m.startIssues(), m.loadRebuild(msg.tx))
 
 	case rebuildMsg:
 		if msg.gen != m.gen {
@@ -343,7 +355,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.aurSec = section{err: msg.err}
 		m.aurPkgs = msg.pkgs
-		return m, m.changed()
+		return m, tea.Batch(m.changed(), m.startSecurity())
 
 	case newsMsg:
 		if msg.gen != m.gen {
@@ -559,7 +571,7 @@ func (m *Model) changed() tea.Cmd {
 		tx = &m.tx
 	}
 	m.result = summary.Assess(summary.Updates(m.repo, m.aurPkgs), m.unreadNews, tx, m.cfg, m.now(),
-		summary.WithRebuilds(m.rebuilds))
+		summary.WithRebuilds(m.rebuilds), summary.WithFeeds(m.feeds, m.cfg))
 	m.assessPreflight()
 
 	m.newsPane.move(0, len(m.newsItems))
@@ -675,6 +687,8 @@ func (m Model) View() tea.View {
 		body := m.help.FullHelpView(m.keys.FullHelp())
 		if m.screen == screenConfirm {
 			body = m.confirmView(w)
+		} else {
+			body += "\n\n " + m.styles.Subtle.Render(helpNote)
 		}
 		lines = append(lines, m.styles.Rule.Render(strings.Repeat("─", w)))
 		lines = append(lines, fitBlock(body, w, bh)...)
@@ -720,7 +734,12 @@ func (m Model) headerLine(w int) string {
 	default:
 		last = "last upgrade: " + ago(t, m.now())
 	}
-	return spread(" "+m.styles.Title.Render(title), m.styles.Subtle.Render(last)+" ", w)
+	right := m.styles.Subtle.Render(last)
+	if n := len(m.result.Vulnerable); n > 0 {
+		// Installed and vulnerable with no fix yet: global, never a flag.
+		right = m.styles.Warn.Render(itoa(n)+" vulnerable, no fix") + m.styles.Subtle.Render(" · "+last)
+	}
+	return spread(" "+m.styles.Title.Render(title), right+" ", w)
 }
 
 func bannerText(n int) string {
@@ -774,6 +793,12 @@ func (m Model) statusLine(w int) string {
 	}
 	if m.newsSec.err != nil {
 		parts = append(parts, m.styles.Error.Render("news unavailable"))
+	}
+	if m.secSec.err != nil && !m.secSec.loading {
+		parts = append(parts, m.styles.Error.Render("security unavailable"))
+	}
+	if m.issuesSec.err != nil && !m.issuesSec.loading {
+		parts = append(parts, m.styles.Error.Render("known issues unavailable"))
 	}
 	if n := len(m.pacnew); n > 0 {
 		parts = append(parts, plural(n, ".pacnew", ".pacnew"))
