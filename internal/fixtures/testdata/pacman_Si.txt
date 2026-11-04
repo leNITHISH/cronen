@@ -139,7 +139,7 @@ Architecture    : x86_64
 URL             : https://example.org/mesa
 Licenses        : GPL-2.0-only
 Groups          : None
-Provides        : None
+Provides        : libgbm.so=1-64
 Depends On      : libdrm
 Optional Deps   : None
 Conflicts With  : None
@@ -291,7 +291,7 @@ Architecture    : x86_64
 URL             : https://example.org/zstd
 Licenses        : GPL-2.0-only
 Groups          : None
-Provides        : None
+Provides        : libzstd.so=2-64
 Depends On      : glibc
 Optional Deps   : None
 Conflicts With  : None

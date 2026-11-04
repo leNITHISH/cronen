@@ -30,3 +30,19 @@ The osrelease value, the /usr/lib/modules/<release>/ directory, the /boot kernel
 image names and sizes, and the statfs numbers (Disk()) are made up in code. The
 embedded files must keep the layout of the real ones (see the M9 pull request for
 the commands to capture them).
+
+M8, rebuild detection:
+
+  pacman_Ql-foreign.txt    pacman -Ql -- <foreign names>
+  pacman_Si.txt, pacman_Qi-updates.txt: the zstd and mesa blocks gained a Provides
+                           line. zstd goes libzstd.so=1-64 -> libzstd.so=2-64 (made up,
+                           real zstd keeps its soname) to give one soname change; mesa
+                           provides libgbm.so=1-64 in both (an unchanged soname).
+  pacman_Qi_gnome-shell-extension-legacy.txt, pacman_Qi_spotify.txt, pacman_Qi_paru-debug.txt:
+                           Depends On gained libzstd.so=1-64 / libgbm.so=1-64 entries
+                           (soname spelling "libfoo.so=N-64", the spelling the plan says to
+                           verify). The packages don't really depend on them.
+
+The ELF files the fake scans (fixtures.Opener) aren't checked in: fixtures.ELF builds
+them, a few hundred bytes each, with known DT_NEEDED entries. Capture a few real ones
+when verifying on Arch.
