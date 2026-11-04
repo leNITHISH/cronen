@@ -3,6 +3,7 @@ package ui
 import (
 	"cmp"
 	"context"
+	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/leNITHISH/cronen/internal/ops"
 	"github.com/leNITHISH/cronen/internal/pacman"
 	"github.com/leNITHISH/cronen/internal/system"
 )
@@ -55,7 +57,7 @@ type packagesPane struct {
 	sel     int
 	selName string
 	offset  int
-	// marked are the packages marked with space. Nothing acts on them yet.
+	// marked are the packages marked with space; X removes them.
 	marked map[string]bool
 }
 
@@ -210,6 +212,13 @@ func (m *Model) handlePackagesKey(k tea.KeyPressMsg) (tea.Cmd, bool) {
 			}
 		}
 		return m.refreshDetail(), true
+	case key.Matches(k, keys.Remove):
+		names := slices.Sorted(maps.Keys(p.marked))
+		if len(names) == 0 {
+			m.flash("mark packages with space first, then X", false)
+			return nil, true
+		}
+		return m.startRemove(ops.KindRemove, names), true
 	case key.Matches(k, keys.Down):
 		delta = 1
 	case key.Matches(k, keys.Up):

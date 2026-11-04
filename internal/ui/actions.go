@@ -291,6 +291,8 @@ func publishedBy(items []news.Item, t time.Time) []string {
 func (m Model) noticeText() string {
 	u := m.upgrade
 	switch {
+	case !u.done && m.actionNotice != "":
+		return m.actionNotice
 	case !u.done:
 		return ""
 	case u.err != nil:

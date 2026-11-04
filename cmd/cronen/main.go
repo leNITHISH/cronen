@@ -195,7 +195,9 @@ type env struct {
 	cacheDir string
 	now      func() time.Time
 	loc      *time.Location
-	exec     func(argv []string, done tea.ExecCallback) tea.Cmd
+	// home is the user's home directory, for ~/ in extra_cache_dirs.
+	home string
+	exec func(argv []string, done tea.ExecCallback) tea.Cmd
 }
 
 // demoEnv serves fixture data only: no config, state or cache is read or
@@ -246,6 +248,7 @@ func realEnv(stderr io.Writer) env {
 	if e.state, err = config.LoadState(fsys, paths.State); err != nil {
 		_, _ = fmt.Fprintln(stderr, "cronen:", err)
 	}
+	e.home, _ = os.UserHomeDir()
 	e.statePath = paths.State
 	e.fetcher = system.NewHTTPClient(paths.CacheDir)
 	e.cacheDir = paths.CacheDir
@@ -268,6 +271,7 @@ func (e env) uiOptions(ctx context.Context) ui.Options {
 		Opener:    e.opener,
 		CacheDir:  e.cacheDir,
 		Exec:      e.exec,
+		Home:      e.home,
 		Now:       e.now,
 		Location:  e.loc,
 	}

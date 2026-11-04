@@ -73,3 +73,15 @@ func PackageFiles(ctx context.Context, r system.Runner, names []string) (map[str
 	}
 	return files, nil
 }
+
+// IsPackageFile reports whether a file name in a cache directory is a
+// package: <name>-<pkgver>-<pkgrel>-<arch>.pkg.tar.{zst,xz,gz,bz2}. Signatures
+// and partial downloads are not.
+func IsPackageFile(name string) bool {
+	for _, ext := range []string{".zst", ".xz", ".gz", ".bz2", ".lz4", ".lzo", ".Z"} {
+		if base, ok := strings.CutSuffix(name, ".pkg.tar"+ext); ok && strings.Count(base, "-") >= 3 {
+			return true
+		}
+	}
+	return strings.HasSuffix(name, ".pkg.tar") && strings.Count(name, "-") >= 3
+}

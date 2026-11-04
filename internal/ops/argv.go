@@ -96,3 +96,12 @@ func IsProtected(name string, globs []string) bool {
 func ShellMeta(s string) bool {
 	return strings.ContainsAny(s, "\x00\n")
 }
+
+// DryArgvOrNil is RemoveDryArgv for display: nil if the names are refused.
+func DryArgvOrNil(o RemoveOptions, names []string) []string {
+	argv, err := RemoveDryArgv(o, names)
+	if err != nil {
+		return nil
+	}
+	return argv
+}
