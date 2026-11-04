@@ -25,6 +25,8 @@ func (m Model) confirmView(w int) string {
 		add("")
 	}
 
+	m.addPreflight(add)
+
 	var counts []string
 	if m.repoSec.loading || m.aurSec.loading {
 		counts = append(counts, "updates still loading")

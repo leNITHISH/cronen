@@ -299,6 +299,7 @@ func (m *Model) rebuildUpdates() {
 	if m.cfg.Preview && !m.repoSec.loading && m.repoSec.err == nil {
 		m.addPreviewRows(p, addEntries, note, newEntries, removedEntries, heldEntries)
 	}
+	m.addPreflightRows(p, note)
 
 	p.sel = slices.IndexFunc(p.entries, func(e entry) bool { return e.key == p.selKey })
 	if p.sel < 0 || !p.moved {

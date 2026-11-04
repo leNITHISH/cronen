@@ -61,7 +61,7 @@ func TestHelp(t *testing.T) {
 		t.Fatalf("exit code %d; stderr: %s", code, stderr.String())
 	}
 	out := stdout.String()
-	for _, want := range []string{"--check", "--json", "--waybar", "--demo", "--version", "30  an unread news item", "config.toml", "cronen(1)"} {
+	for _, want := range []string{"--check", "--json", "--waybar", "--demo", "--version", "30  critical: an unread news item", "config.toml", "cronen(1)"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("help does not mention %q:\n%s", want, out)
 		}
@@ -110,7 +110,7 @@ func TestDemoJSON(t *testing.T) {
 	if code := run(context.Background(), []string{"--demo", "--json"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit code %d; stderr: %s", code, stderr.String())
 	}
-	const want = `{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1}` + "\n"
+	const want = `{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1,"preflight":[{"severity":"critical","message":"/boot is in fstab but not mounted while linux updates: mount it before upgrading. The kernel would land on the root filesystem, where the bootloader won't find it."}],"reboot_pending":false}` + "\n"
 	if got := stdout.String(); got != want {
 		t.Errorf("got %s, want %s", got, want)
 	}

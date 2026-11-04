@@ -1,0 +1,5 @@
+# /etc/fstab (HAND-WRITTEN, see HAND_WRITTEN.txt)
+# <device>                                <dir>  <type> <options>        <dump> <pass>
+UUID=7b7d1f0e-0000-4000-8000-000000000001 /      ext4   rw,relatime      0 1
+UUID=ABCD-1234                            /boot  vfat   rw,relatime,fmask=0022,dmask=0022,shortname=mixed,utf8,errors=remount-ro 0 2
+UUID=7b7d1f0e-0000-4000-8000-000000000002 /home  ext4   rw,relatime      0 2

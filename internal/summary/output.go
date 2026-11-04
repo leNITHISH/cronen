@@ -52,6 +52,11 @@ func (s Summary) Text() string {
 				lines = append(lines, icon(sev)+" "+p.Name+": "+oneLine(p.Flags[0].Reason))
 			}
 		}
+		for _, p := range s.Preflight {
+			if p.Severity == sev {
+				lines = append(lines, icon(sev)+" preflight: "+oneLine(p.Message))
+			}
+		}
 	}
 	if s.Previewed {
 		lines = append(lines, "transaction: "+s.transactionLine())
@@ -73,37 +78,50 @@ func (s Summary) Text() string {
 // critical counts the unread news items requiring manual intervention.
 func (s Summary) JSON() []byte {
 	v := struct {
-		Updates    int      `json:"updates"`
-		AUR        int      `json:"aur"`
-		Flagged    int      `json:"flagged"`
-		Critical   int      `json:"critical"`
-		UnreadNews int      `json:"unread_news"`
-		Pacnew     int      `json:"pacnew"`
-		Reboot     bool     `json:"reboot"`
-		Download   int64    `json:"download_bytes"`
-		SizeDelta  int64    `json:"size_delta_bytes"`
-		New        int      `json:"new"`
-		Replaced   int      `json:"replaced"`
-		Held       int      `json:"held"`
-		Errors     []string `json:"errors,omitempty"`
+		Updates       int           `json:"updates"`
+		AUR           int           `json:"aur"`
+		Flagged       int           `json:"flagged"`
+		Critical      int           `json:"critical"`
+		UnreadNews    int           `json:"unread_news"`
+		Pacnew        int           `json:"pacnew"`
+		Reboot        bool          `json:"reboot"`
+		Download      int64         `json:"download_bytes"`
+		SizeDelta     int64         `json:"size_delta_bytes"`
+		New           int           `json:"new"`
+		Replaced      int           `json:"replaced"`
+		Held          int           `json:"held"`
+		Preflight     []problemJSON `json:"preflight"`
+		RebootPending bool          `json:"reboot_pending"`
+		Errors        []string      `json:"errors,omitempty"`
 	}{
-		Updates:    s.Updates(),
-		AUR:        s.AUR,
-		Flagged:    len(s.Flagged),
-		Critical:   len(s.Interventions),
-		UnreadNews: s.UnreadNews,
-		Pacnew:     s.Pacnew,
-		Reboot:     s.Reboot,
-		Download:   s.Transaction.DownloadBytes,
-		SizeDelta:  s.Transaction.SizeDelta,
-		New:        len(s.Transaction.New),
-		Replaced:   len(s.Transaction.Removed),
-		Held:       len(s.Held),
+		Updates:       s.Updates(),
+		AUR:           s.AUR,
+		Flagged:       len(s.Flagged),
+		Critical:      len(s.Interventions),
+		UnreadNews:    s.UnreadNews,
+		Pacnew:        s.Pacnew,
+		Reboot:        s.Reboot,
+		Download:      s.Transaction.DownloadBytes,
+		SizeDelta:     s.Transaction.SizeDelta,
+		New:           len(s.Transaction.New),
+		Replaced:      len(s.Transaction.Removed),
+		Held:          len(s.Held),
+		Preflight:     []problemJSON{},
+		RebootPending: s.RebootPending,
+	}
+	for _, p := range s.Preflight {
+		v.Preflight = append(v.Preflight, problemJSON{Severity: p.Severity.String(), Message: p.Message})
 	}
 	for _, err := range s.Errors {
 		v.Errors = append(v.Errors, err.Error())
 	}
 	return mustJSON(v)
+}
+
+// problemJSON is one preflight problem in the --json output.
+type problemJSON struct {
+	Severity string `json:"severity"`
+	Message  string `json:"message"`
 }
 
 // Class is the state name --waybar reports in "class" and "alt", matching
