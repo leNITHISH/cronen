@@ -1,4 +1,4 @@
- cronen (demo)                                                             last upgrade: 2 days ago 
+ cronen (demo)                                      1 vulnerable, no fix · last upgrade: 2 days ago 
  ⚠ 1 news item requires manual intervention — press n to read                                       
 ───────────────────────────────────────────────────────────┬────────────────────────────────────────
  NEEDS ATTENTION (11)                                      │ linux-firmware                         
@@ -14,9 +14,9 @@
   systemd                                    258.1→258.2 ℹ │ Links:                                 
   vulkan-icd-loader                      1.4.328→1.4.330 ℹ │  • not found on archlinux.org          
  REPO (5)                                                  │                                        
-  firefox                                  144.0→144.0.1   │                                        
+  firefox                                 144.0→144.0.1 🛡  │                                        
   gnupg                                2.4.8-1→1:2.4.8-2   │                                        
-  openssh                                  10.0p1→10.2p1   │                                        
+  openssh                                 10.0p1→10.2p1 🛡  │                                        
   vim                                  9.1.1800→9.1.1850   │                                        
   zstd                                   1.5.7-2→1.5.7-3   │                                        
  AUR (5 + 1 VCS)                                           │                                        

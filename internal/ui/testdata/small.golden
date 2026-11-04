@@ -1,14 +1,14 @@
- cronen (demo)                     last upgrade: 2 days ago 
+ cronen (demo)                                              
  ⚠ 1 news item requires manual intervention — press n to re…
 ────────────────────────────┬───────────────────────────────
  NEEDS ATTENTION (12)       │ linux-firmware                
 ▸ linux-fir… 20…→20251021 ‼ │ 20251011-1 → 20251021-1       
-  nvidia-ut… 580.…→590.44 ⚠ │                               
-  python        3.13→3.14 ⚠ │ Why flagged:                  
-  ripgrep       14.1→15.0 ⚠ │  • Manual intervention in     
-  zstd    1.5.7-2→1.5.7-3 ⚠ │    news: 'linux-firmware >=   
-  glibc 2.42+r17→2.42+r33 ℹ │    20251021-1 upgrade requires
-  linux         6.17→6.18 ℹ │    manual intervention'       
+  linux         6.17→6.18 ⚠ │                               
+  nvidia-ut… 580.…→590.44 ⚠ │ Why flagged:                  
+  python        3.13→3.14 ⚠ │  • Manual intervention in     
+  ripgrep       14.1→15.0 ⚠ │    news: 'linux-firmware >=   
+  zstd    1.5.7-2→1.5.7-3 ⚠ │    20251021-1 upgrade requires
+  glibc 2.42+r17→2.42+r33 ℹ │    manual intervention'       
   linux-api-… 6.16→6.16.1 ℹ │    (yesterday)                
   linux-headers 6.17→6.18 ℹ │  • On your watchlist          
   mesa      25.2.4→25.2.5 ℹ │    (linux*)                   

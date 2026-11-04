@@ -164,7 +164,7 @@ func TestJSON(t *testing.T) {
 	want := map[string]any{
 		"updates": 18.0, "aur": 2.0, "flagged": float64(len(s.Flagged)), "critical": 1.0,
 		"unread_news": 2.0, "pacnew": 1.0, "reboot": true,
-		"download_bytes": 929069795.0, "size_delta_bytes": 27053259.0, "new": 2.0, "replaced": 1.0, "held": 1.0, "rebuilds": 3.0,
+		"download_bytes": 929069795.0, "size_delta_bytes": 27053259.0, "new": 2.0, "replaced": 1.0, "held": 1.0, "rebuilds": 3.0, "security_fixes": 2.0, "vulnerable": 1.0,
 		"preflight": []any{}, "reboot_pending": false,
 	}
 	if !reflect.DeepEqual(got, want) {

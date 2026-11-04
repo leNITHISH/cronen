@@ -121,7 +121,7 @@ reboot after upgrading: the kernel is updated
 
 ```console
 $ cronen --json
-{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1,"preflight":[{"severity":"critical","message":"/boot is in fstab but not mounted while linux updates: …"}],"reboot_pending":false}
+{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1,"security_fixes":2,"vulnerable":1,"preflight":[{"severity":"critical","message":"/boot is in fstab but not mounted while linux updates: …"}],"reboot_pending":false}
 ```
 
 `updates` counts repo and AUR updates together and `aur` the AUR ones.
@@ -138,6 +138,9 @@ never count as flagged.
 `preflight` lists the preflight problems as `{"severity","message"}` objects,
 most severe first, and `reboot_pending` says an earlier upgrade replaced the
 running kernel and the system hasn't rebooted since.
+
+`security_fixes` counts the advisory groups (AVG-…) the pending updates fix and
+`vulnerable` the installed packages affected by a group no version fixes yet.
 
 ### Preflight
 
@@ -158,6 +161,21 @@ halfway. It shows the worst as a banner (several collapse into one line, and
 
 cronen only reports these; it never mounts, removes or runs anything. A mirror
 that can't be reached counts as a failed source (`--check` exits 1).
+
+### Security and known issues
+
+An update that fixes an advisory from
+[security.archlinux.org](https://security.archlinux.org) is marked with a 🛡
+and the detail pane says which ("Fixes AVG-2901 (High): CVE-…"). It is a reason
+to upgrade, so it never counts as flagged and never changes the exit codes. An
+installed package that an unfixed advisory affects is counted in the header
+("1 vulnerable, no fix") and listed by `--check`. The tracker sometimes lags: it
+is a hint, not a guarantee. Set `security = false` to turn it off.
+
+A pending repo update with open issues on the Arch packaging GitLab since its
+new build is flagged ("2 open issues since this build: …"), as a warning when
+one has a critical or high severity label. Set `known_issues = false` to turn
+it off. With either off, cronen makes no request to that service at all.
 
 ### Transaction preview
 
@@ -230,6 +248,8 @@ preflight = true           # check /boot, free space, the db lock, a pending reb
 mirror_check = true        # also compare the first mirror with the reference mirror
 mirror_lag_hours = 6       # a mirror this far behind (or more) is reported
 rebuild_scan_elf = true    # also scan foreign packages' ELF files for libraries an upgrade drops
+security = true            # security.archlinux.org advisories
+known_issues = true        # open GitLab issues for pending repo updates
 ```
 
 Rebuild detection (needs `preview` and `aur`) flags the update behind each

@@ -22,6 +22,7 @@ import (
 	"github.com/leNITHISH/cronen/internal/preflight"
 	"github.com/leNITHISH/cronen/internal/rebuild"
 	"github.com/leNITHISH/cronen/internal/risk"
+	"github.com/leNITHISH/cronen/internal/security"
 	"github.com/leNITHISH/cronen/internal/system"
 )
 
@@ -202,6 +203,12 @@ type Summary struct {
 	// Rebuilds are the installed foreign packages the upgrade leaves
 	// needing a rebuild.
 	Rebuilds []rebuild.Finding
+	// Security are the pending updates that fix an advisory. They are a
+	// reason to upgrade and never count as flagged.
+	Security []risk.Package
+	// Vulnerable are installed packages with a known problem no version
+	// fixes yet.
+	Vulnerable []security.Vulnerable
 	// Errors are the sources that failed. The rest of the summary holds
 	// what the others found.
 	Errors []error
@@ -297,9 +304,22 @@ func Gather(ctx context.Context, src Sources) Summary {
 		s.Preflight = AssessPreflight(facts, txp, mp, LastUpgrade(lastLog, src.State), src.Config, t)
 		s.RebootPending = facts.RebootPending
 	}
-	res := Assess(Updates(repo, aurPkgs), unread, txp, src.Config, t, WithRebuilds(rebuilds))
+	updates := Updates(repo, aurPkgs)
+	feeds, feedErrs := loadFeeds(ctx, src, updates, txp)
+	for _, err := range feedErrs {
+		if err != nil {
+			s.Errors = append(s.Errors, err)
+		}
+	}
+	res := Assess(updates, unread, txp, src.Config, t, WithRebuilds(rebuilds), WithFeeds(feeds, src.Config))
 	s.Rebuilds = res.Rebuilds
 	s.Held = res.Held
+	s.Vulnerable = res.Vulnerable
+	for _, p := range res.Packages {
+		if len(p.Security) > 0 {
+			s.Security = append(s.Security, p)
+		}
+	}
 	for _, p := range res.Packages {
 		if p.AUR {
 			s.AUR++

@@ -1,4 +1,4 @@
- cronen (demo)                                                             last upgrade: 2 days ago 
+ cronen (demo)                                      1 vulnerable, no fix · last upgrade: 2 days ago 
  ⚠ 1 news item requires manual intervention — press n to read                                       
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 k/↑ up        ctrl+d half page down     n news              U   upgrade                             
@@ -7,7 +7,7 @@ g   top       tab    switch pane        o open upstream     esc back
 G   bottom    /      filter packages    c open changelog    ?   help                                
                                                             q   quit                                
                                                                                                     
-                                                                                                    
+ Security data comes from security.archlinux.org, which can lag: a hint, not a guarantee.           
                                                                                                     
                                                                                                     
                                                                                                     

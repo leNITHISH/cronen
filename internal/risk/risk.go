@@ -9,8 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/leNITHISH/cronen/internal/gitlab"
 	"github.com/leNITHISH/cronen/internal/news"
 	"github.com/leNITHISH/cronen/internal/rebuild"
+	"github.com/leNITHISH/cronen/internal/security"
 )
 
 // Severity ranks how much a flag needs the user's attention. The zero value
@@ -52,6 +54,7 @@ const (
 	RuleFresh
 	RuleHeld
 	RuleRebuild
+	RuleKnownIssues
 )
 
 func (r Rule) String() string {
@@ -72,6 +75,8 @@ func (r Rule) String() string {
 		return "held"
 	case RuleRebuild:
 		return "rebuild"
+	case RuleKnownIssues:
+		return "known-issues"
 	}
 	return fmt.Sprintf("Rule(%d)", int(r))
 }
@@ -114,6 +119,9 @@ type Package struct {
 	Update
 	// Flags are ordered by severity, highest first.
 	Flags []Flag
+	// Security lists the advisory groups updating the package fixes. They
+	// are a reason to upgrade, not a flag: they never count as flagged.
+	Security []security.Fix
 }
 
 // Severity is the highest severity among p's flags, or None.
@@ -156,6 +164,14 @@ type Input struct {
 	// a rebuild; see internal/rebuild. Each is flagged on the update to
 	// blame. Nil when detection didn't run.
 	Rebuilds []rebuild.Finding
+
+	// Fixes maps a package name to the advisory groups its update fixes.
+	Fixes map[string][]security.Fix
+	// Issues maps a package name to the open issues since its new build.
+	Issues map[string][]gitlab.Issue
+	// Vulnerable are installed packages with a known problem no version
+	// fixes yet.
+	Vulnerable []security.Vulnerable
 }
 
 // Result is the outcome of Assess.
@@ -173,6 +189,9 @@ type Result struct {
 	Held []Package
 	// Rebuilds are the findings Assess was given, for counting them.
 	Rebuilds []rebuild.Finding
+	// Vulnerable are installed packages with a known, unfixed problem.
+	// They are global, never a package flag.
+	Vulnerable []security.Vulnerable
 }
 
 // Flagged returns the packages with at least one flag, in input order.
@@ -223,6 +242,9 @@ func Assess(in Input) Result {
 		if f, ok := freshFlag(u, in); ok {
 			flags = append(flags, f)
 		}
+		if f, ok := knownIssuesFlag(in.Issues[u.Name], u); ok {
+			flags = append(flags, f)
+		}
 		if IsKernel(u.Name) {
 			res.RebootRequired = true
 			flags = append(flags, Flag{Rule: RuleKernel, Severity: Info, Reason: "Kernel update: reboot after upgrading"})
@@ -230,8 +252,9 @@ func Assess(in Input) Result {
 		slices.SortStableFunc(flags, func(a, b Flag) int {
 			return cmp.Or(cmp.Compare(b.Severity, a.Severity), cmp.Compare(a.Rule, b.Rule))
 		})
-		res.Packages = append(res.Packages, Package{Update: u, Flags: flags})
+		res.Packages = append(res.Packages, Package{Update: u, Flags: flags, Security: securityFixes(in.Fixes[u.Name], u)})
 	}
+	res.Vulnerable = sortedVulnerable(in.Vulnerable)
 	for _, u := range in.Held {
 		res.Held = append(res.Held, Package{Update: u, Flags: []Flag{{
 			Rule: RuleHeld, Severity: Info,

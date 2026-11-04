@@ -46,3 +46,12 @@ M8, rebuild detection:
 The ELF files the fake scans (fixtures.Opener) aren't checked in: fixtures.ELF builds
 them, a few hundred bytes each, with known DT_NEEDED entries. Capture a few real ones
 when verifying on Arch.
+M10, security and known issues (hand-written; the AVG ids, CVE ids, project
+ids are invented (labels use the real severity::2-high style), and the JSON field names are what cronen assumes
+the services use):
+
+  security_all.json          https://security.archlinux.org/all.json (an array of groups)
+  gitlab_issues_linux.json   .../api/v4/projects/archlinux%2Fpackaging%2Fpackages%2Flinux/issues
+  gitlab_issues_mesa.json    the same for mesa; every other project answers 404
+  pacman_Qn.txt              pacman -Qn, the native packages with their versions
+  vercmp.txt                 gained the comparisons the security fixtures need

@@ -1,16 +1,16 @@
- cronen (demo)                                                             last upgrade: 2 days ago 
+ cronen (demo)                                      1 vulnerable, no fix · last upgrade: 2 days ago 
  ⚠ 1 news item requires manual intervention — press n to read                                       
 ────────────────────────────────────────┬───────────────────────────────────────────────────────────
-  linux                     6.17→6.18 ℹ │ bash                                                      
+  glibc             2.42+r17→2.42+r33 ℹ │ bash                                                      
   linux-api-headers       6.16→6.16.1 ℹ │ 5.3.3-1 → 5.3.3-2                                         
   linux-headers             6.17→6.18 ℹ │                                                           
   mesa                  25.2.4→25.2.5 ℹ │ Why flagged:                                              
   systemd                 258.1→258.2 ℹ │  • Held by IgnorePkg: 5.3.3-1 → 5.3.3-2. Holding          
   vulkan-icd-loader   1.4.328→1.4.330 ℹ │    packages is a partial upgrade.                         
  REPO (4)                               │                                                           
-  firefox               144.0→144.0.1   │ Held back:                                                
+  firefox              144.0→144.0.1 🛡  │ Held back:                                                
   gnupg             2.4.8-1→1:2.4.8-2   │  • not part of this upgrade: IgnorePkg or IgnoreGroup     
-  openssh               10.0p1→10.2p1   │    keeps it at 5.3.3-1                                    
+  openssh              10.0p1→10.2p1 🛡  │    keeps it at 5.3.3-1                                    
   vim               9.1.1800→9.1.1850   │                                                           
  AUR (5 + 1 VCS)                        │ Links:                                                    
   paru                2.1.0-1→2.1.0-2   │  • not found on archlinux.org                             

@@ -54,7 +54,7 @@ func run(t *testing.T, m Model, cmd tea.Cmd) Model {
 		for _, c := range msg {
 			m = run(t, m, c)
 		}
-	case repoMsg, aurMsg, newsMsg, logMsg, pacnewMsg, previewMsg, rebuildMsg, factsMsg, mirrorMsg, archwebMsg, openedMsg, stateSavedMsg, upgradedMsg:
+	case repoMsg, aurMsg, newsMsg, logMsg, pacnewMsg, previewMsg, securityMsg, issuesMsg, rebuildMsg, factsMsg, mirrorMsg, archwebMsg, openedMsg, stateSavedMsg, upgradedMsg:
 		m = send(t, m, msg)
 	}
 	return m
@@ -301,6 +301,10 @@ func TestSelectionFollowsPackage(t *testing.T) {
 			m = send(t, m, msg)
 		}
 	}
+	// Move the selection, so it follows its package even when linux (which
+	// the known-issues rule flags early) is already the first entry.
+	m = send(t, m, press("j"))
+	m = send(t, m, press("k"))
 	for m.updates.entries[m.updates.sel].pkg.Name != "linux" {
 		before := m.updates.sel
 		m = send(t, m, press("j"))

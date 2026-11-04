@@ -301,6 +301,8 @@ func (m *Model) rebuildUpdates() {
 	}
 	m.addPreflightRows(p, note)
 
+	m.addFeedErrorRows(p, note)
+
 	p.sel = slices.IndexFunc(p.entries, func(e entry) bool { return e.key == p.selKey })
 	if p.sel < 0 || !p.moved {
 		p.sel = 0
@@ -418,6 +420,10 @@ func (m Model) entryLine(e entry, selected bool, w int) string {
 		icon = "?"
 	}
 	icon = " " + m.styles.Severity(sev).Render(icon) + " "
+	if len(e.pkg.Security) > 0 {
+		// The shield marks an update that fixes a security issue.
+		icon = " 🛡" + icon[1:]
+	}
 
 	name := e.pkg.Name
 	if selected && m.focus == focusList && m.screen == screenUpdates {
@@ -641,6 +647,14 @@ func (m Model) detailContent(e entry, w int) string {
 		line(" " + version)
 		if where != "" {
 			line(" " + s.Subtle.Render(where))
+		}
+	}
+
+	if lines := securityLines(e.pkg); len(lines) > 0 {
+		line("")
+		line(" Security:")
+		for _, l := range lines {
+			bullet(s.Severity(risk.Info).Render(l))
 		}
 	}
 
