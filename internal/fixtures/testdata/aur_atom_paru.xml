@@ -4,29 +4,29 @@
 <subtitle>[cgit] AUR Package Repositories</subtitle>
 <entry>
 <title>upgpkg: paru 2.1.0-2</title>
-<updated>2025-10-20T10:00:00+00:00</updated>
+<updated>2025-10-20T10:00:00Z</updated>
 <author><name>Morganamilo</name></author>
-<published>2025-10-20T10:00:00+00:00</published>
-<link rel='alternate' type='text/html' href='https://aur.archlinux.org/cgit/aur.git/commit/?h=paru&amp;id=458ead7339be968b3bc98bee9ed4276d91a75ec4'/>
-<id>458ead7339be968b3bc98bee9ed4276d91a75ec4</id>
+<published>2025-10-20T10:00:00Z</published>
+<link rel='alternate' type='text/html' href='http://aur.archlinux.org/cgit/aur.git/commit/?id=458ead7339be968b3bc98bee9ed4276d91a75ec4&amp;h=paru'/>
+<id>urn:sha1:458ead7339be968b3bc98bee9ed4276d91a75ec4</id>
 <content type='text'>commit message</content>
 </entry>
 <entry>
 <title>upgpkg: paru 2.1.0-1</title>
-<updated>2025-07-01T08:00:00+00:00</updated>
+<updated>2025-07-01T08:00:00Z</updated>
 <author><name>Morganamilo</name></author>
-<published>2025-07-01T08:00:00+00:00</published>
-<link rel='alternate' type='text/html' href='https://aur.archlinux.org/cgit/aur.git/commit/?h=paru&amp;id=b12d807c6b93d13a5287fb134db33a7ae335da10'/>
-<id>b12d807c6b93d13a5287fb134db33a7ae335da10</id>
+<published>2025-07-01T08:00:00Z</published>
+<link rel='alternate' type='text/html' href='http://aur.archlinux.org/cgit/aur.git/commit/?id=b12d807c6b93d13a5287fb134db33a7ae335da10&amp;h=paru'/>
+<id>urn:sha1:b12d807c6b93d13a5287fb134db33a7ae335da10</id>
 <content type='text'>commit message</content>
 </entry>
 <entry>
 <title>upgpkg: paru 2.0.4-1</title>
-<updated>2025-03-02T08:00:00+00:00</updated>
+<updated>2025-03-02T08:00:00Z</updated>
 <author><name>Morganamilo</name></author>
-<published>2025-03-02T08:00:00+00:00</published>
-<link rel='alternate' type='text/html' href='https://aur.archlinux.org/cgit/aur.git/commit/?h=paru&amp;id=10fab639ac79bcc9bcccf691b7ddd67438e166c5'/>
-<id>10fab639ac79bcc9bcccf691b7ddd67438e166c5</id>
+<published>2025-03-02T08:00:00Z</published>
+<link rel='alternate' type='text/html' href='http://aur.archlinux.org/cgit/aur.git/commit/?id=10fab639ac79bcc9bcccf691b7ddd67438e166c5&amp;h=paru'/>
+<id>urn:sha1:10fab639ac79bcc9bcccf691b7ddd67438e166c5</id>
 <content type='text'>commit message</content>
 </entry>
 </feed>

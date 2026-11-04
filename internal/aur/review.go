@@ -65,7 +65,8 @@ func ParseAtom(data []byte) ([]Commit, error) {
 	}
 	var commits []Commit
 	for _, e := range feed.Entries {
-		id := strings.TrimSpace(e.ID)
+		// cgit writes the id as "urn:sha1:<sha>".
+		id := strings.TrimPrefix(strings.TrimSpace(e.ID), "urn:sha1:")
 		if !commitIDRe.MatchString(id) {
 			// cgit puts the commit id in the link too.
 			id = ""

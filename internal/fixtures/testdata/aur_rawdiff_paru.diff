@@ -1,3 +1,16 @@
+diff --git a/.SRCINFO b/.SRCINFO
+index ed857a9efe30..dd8056187190 100644
+--- a/.SRCINFO
++++ b/.SRCINFO
+@@ -1,7 +1,7 @@
+ pkgbase = paru
+ 	pkgdesc = Feature packed AUR helper
+ 	pkgver = 2.1.0
+-	pkgrel = 1
++	pkgrel = 2
+ 	url = https://github.com/Morganamilo/paru
+-	source = paru-2.1.0.tar.gz::https://github.com/Morganamilo/paru/archive/v2.1.0.tar.gz
++	source = paru-2.1.0.tar.gz::https://example.org/paru/v2.1.0.tar.gz
 diff --git a/PKGBUILD b/PKGBUILD
 index 1111111..2222222 100644
 --- a/PKGBUILD

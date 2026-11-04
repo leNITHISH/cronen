@@ -73,6 +73,8 @@ func TestResolvePaths(t *testing.T) {
 
 func TestParse(t *testing.T) {
 	def := Default()
+	eagerDef := def
+	eagerDef.AURReview = AURReviewEager
 	tests := []struct {
 		name    string
 		toml    string
@@ -172,7 +174,7 @@ known_issues = false
 			want:    Config{AUR: true, Preview: true, Security: true, KnownIssues: true, Preflight: true, MirrorCheck: true, RebuildScanELF: true, MirrorLagHours: 6, IgnoreMajor: []string{"polkit"}, WatchlistMode: WatchlistExtend, NewsDays: 30},
 			wantErr: `ignore_major pattern "[x"`,
 		},
-		{name: "aur_review eager", toml: `aur_review = "eager"`, want: Config{AUR: true, Preview: true, WatchlistMode: WatchlistExtend, NewsDays: 30, AURReview: AURReviewEager}},
+		{name: "aur_review eager", toml: `aur_review = "eager"`, want: eagerDef},
 		{name: "bad aur_review", toml: `aur_review = "always"`, want: def, wantErr: "aur_review"},
 		{name: "wrong type for show_debug", toml: `show_debug = "yes"`, want: def, wantErr: "show_debug"},
 	}

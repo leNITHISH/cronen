@@ -4,29 +4,29 @@
 <subtitle>[cgit] AUR Package Repositories</subtitle>
 <entry>
 <title>Update to 1.105.1</title>
-<updated>2025-10-21T07:30:00+00:00</updated>
+<updated>2025-10-21T07:30:00Z</updated>
 <author><name>dcelasun</name></author>
-<published>2025-10-21T07:30:00+00:00</published>
-<link rel='alternate' type='text/html' href='https://aur.archlinux.org/cgit/aur.git/commit/?h=visual-studio-code-bin&amp;id=ac86a540f18540e69ccc9ddb6f8af380e8ab38c9'/>
-<id>ac86a540f18540e69ccc9ddb6f8af380e8ab38c9</id>
+<published>2025-10-21T07:30:00Z</published>
+<link rel='alternate' type='text/html' href='http://aur.archlinux.org/cgit/aur.git/commit/?id=ac86a540f18540e69ccc9ddb6f8af380e8ab38c9&amp;h=visual-studio-code-bin'/>
+<id>urn:sha1:ac86a540f18540e69ccc9ddb6f8af380e8ab38c9</id>
 <content type='text'>commit message</content>
 </entry>
 <entry>
 <title>Update to 1.105.0</title>
-<updated>2025-09-01T06:00:00+00:00</updated>
+<updated>2025-09-01T06:00:00Z</updated>
 <author><name>dcelasun</name></author>
-<published>2025-09-01T06:00:00+00:00</published>
-<link rel='alternate' type='text/html' href='https://aur.archlinux.org/cgit/aur.git/commit/?h=visual-studio-code-bin&amp;id=9588b81463d3787661270a1174760183bcfd3c85'/>
-<id>9588b81463d3787661270a1174760183bcfd3c85</id>
+<published>2025-09-01T06:00:00Z</published>
+<link rel='alternate' type='text/html' href='http://aur.archlinux.org/cgit/aur.git/commit/?id=9588b81463d3787661270a1174760183bcfd3c85&amp;h=visual-studio-code-bin'/>
+<id>urn:sha1:9588b81463d3787661270a1174760183bcfd3c85</id>
 <content type='text'>commit message</content>
 </entry>
 <entry>
 <title>Update to 1.104.3</title>
-<updated>2025-08-12T06:00:00+00:00</updated>
+<updated>2025-08-12T06:00:00Z</updated>
 <author><name>dcelasun</name></author>
-<published>2025-08-12T06:00:00+00:00</published>
-<link rel='alternate' type='text/html' href='https://aur.archlinux.org/cgit/aur.git/commit/?h=visual-studio-code-bin&amp;id=dd33e88a81cb149d62ac1206a22fc617ee39b9d8'/>
-<id>dd33e88a81cb149d62ac1206a22fc617ee39b9d8</id>
+<published>2025-08-12T06:00:00Z</published>
+<link rel='alternate' type='text/html' href='http://aur.archlinux.org/cgit/aur.git/commit/?id=dd33e88a81cb149d62ac1206a22fc617ee39b9d8&amp;h=visual-studio-code-bin'/>
+<id>urn:sha1:dd33e88a81cb149d62ac1206a22fc617ee39b9d8</id>
 <content type='text'>commit message</content>
 </entry>
 </feed>

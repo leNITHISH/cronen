@@ -71,7 +71,7 @@ func TestDiffScreenSuspicious(t *testing.T) {
 }
 
 func TestDiffScreenClean(t *testing.T) {
-	m := loaded(t, fixtureOptions(), 110, 30)
+	m := loaded(t, fixtureOptions(), 110, 45)
 	m = selectPackage(t, m, "paru")
 	m = send(t, m, press("d"))
 	out := plain(m)
