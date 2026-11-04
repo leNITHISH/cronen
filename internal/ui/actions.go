@@ -301,3 +301,50 @@ func (m Model) noticeText() string {
 	}
 	return strings.Join(parts, " · ")
 }
+
+// acknowledge acknowledges every non-critical flag on the selected package
+// for its exact new version. Critical flags stay: read the news instead.
+func (m *Model) acknowledge() tea.Cmd {
+	e, ok := m.updates.selected()
+	if !ok || e.kind != entryUpdate || !e.pending() {
+		m.flash("no flagged update selected", false)
+		return nil
+	}
+	if len(e.pkg.Flags) == 0 {
+		m.flash("nothing to acknowledge on "+e.pkg.Name, false)
+		return nil
+	}
+	rules := risk.AcknowledgeableRules(e.pkg)
+	if len(rules) == 0 {
+		m.flash("critical flags can't be acknowledged: read the news (m) or fix the problem", true)
+		return nil
+	}
+	st := m.opts.State.Clone()
+	if !summary.Acknowledge(&st, e.pkg, m.aurPkgs) {
+		return nil
+	}
+	m.opts.State = st
+	var left int
+	for _, f := range e.pkg.Flags {
+		if !risk.Acknowledgeable(f) {
+			left++
+		}
+	}
+	msg := "acknowledged " + plural(len(e.pkg.Flags)-left, "flag", "flags") + " on " + e.pkg.Name + " " + e.pkg.NewVersion
+	if left > 0 {
+		msg += "; " + plural(left, "critical flag", "critical flags") + " can't be"
+	}
+	m.flash(msg, false)
+	return tea.Batch(m.changed(), m.saveState())
+}
+
+// toggleAcked shows or hides acknowledged packages in the updates list.
+func (m *Model) toggleAcked() tea.Cmd {
+	m.hideAcked = !m.hideAcked
+	if m.hideAcked {
+		m.flash("acknowledged packages hidden", false)
+	} else {
+		m.flash("acknowledged packages shown", false)
+	}
+	return m.layout()
+}

@@ -18,6 +18,10 @@ type KeyMap struct {
 	Upstream  key.Binding
 	Changelog key.Binding
 	Diff      key.Binding
+	// Acknowledge acknowledges the flags on the selected package.
+	Acknowledge key.Binding
+	// ShowAcked shows or hides acknowledged packages.
+	ShowAcked key.Binding
 	Upgrade   key.Binding
 	Back      key.Binding
 	Refresh   key.Binding
@@ -86,6 +90,14 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("d"),
 			key.WithHelp("d", "review AUR diff"),
 		),
+		Acknowledge: key.NewBinding(
+			key.WithKeys("a"),
+			key.WithHelp("a", "acknowledge flags"),
+		),
+		ShowAcked: key.NewBinding(
+			key.WithKeys("A"),
+			key.WithHelp("A", "show/hide acknowledged"),
+		),
 		Upgrade: key.NewBinding(
 			key.WithKeys("U"),
 			key.WithHelp("U", "upgrade"),
@@ -132,6 +144,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.Up, k.Down, k.Top, k.Bottom},
 		{k.HalfDown, k.HalfUp, k.Focus, k.Filter},
 		{k.News, k.MarkRead, k.Upstream, k.Changelog, k.Diff},
+		{k.Acknowledge, k.ShowAcked},
 		{k.Upgrade, k.Refresh, k.Back, k.Help, k.Quit},
 	}
 }
