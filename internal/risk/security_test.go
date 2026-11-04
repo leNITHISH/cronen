@@ -71,7 +71,7 @@ func TestVulnerableRule(t *testing.T) {
 func TestKnownIssuesRule(t *testing.T) {
 	u := Update{Name: "linux", OldVersion: "6.17.4.arch1-1", NewVersion: "6.18.1.arch1-1"}
 	plain := gitlab.Issue{Title: "Crash on startup with Wayland"}
-	severe := gitlab.Issue{Title: "No boot", Labels: []string{"severity::critical"}}
+	severe := gitlab.Issue{Title: "No boot", Labels: []string{"severity::1-critical"}}
 
 	tests := []struct {
 		name   string

@@ -36,14 +36,18 @@ type Issue struct {
 }
 
 // severeLabels are the severity names that make an issue worth a warning.
-// UNVERIFIED: the label names Arch's packaging GitLab uses for severity
-// haven't been confirmed (see "Needs checking on Arch" in PLAN.md), so the
-// match is deliberately loose: a label that is one of these words, or
-// scoped like "severity::high", "priority::critical" or "severity/high".
-var severeLabels = []string{"critical", "high"}
+//
+// Observed on the live Arch packaging GitLab (2026-11-04): numbered scoped
+// labels severity::2-high, severity::3-medium, severity::4-low,
+// severity::5-lowest and priority::1-urgent, priority::2-high,
+// priority::3-normal, priority::4-low. Still UNVERIFIED: severity::1-* was
+// never seen (most likely severity::1-critical). The match stays loose: after
+// the scope and a leading "<digits>-" are stripped, the name must be one of
+// these words; bare ("high") and slash ("severity/high") forms count too.
+var severeLabels = []string{"critical", "urgent", "high"}
 
-// Severe reports whether the issue carries a critical or high severity
-// label.
+// Severe reports whether the issue carries a critical, urgent or high
+// severity or priority label.
 func (i Issue) Severe() bool {
 	for _, l := range i.Labels {
 		l = strings.ToLower(strings.TrimSpace(l))
@@ -51,6 +55,10 @@ func (i Issue) Severe() bool {
 			if !strings.HasPrefix(l, "severity") && !strings.HasPrefix(l, "priority") {
 				continue
 			}
+			l = l[k+1:]
+		}
+		// Numbered labels: "2-high" is "high".
+		if k := strings.IndexByte(l, '-'); k > 0 && strings.Trim(l[:k], "0123456789") == "" {
 			l = l[k+1:]
 		}
 		for _, s := range severeLabels {

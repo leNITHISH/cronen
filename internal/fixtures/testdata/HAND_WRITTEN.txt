@@ -47,7 +47,7 @@ The ELF files the fake scans (fixtures.Opener) aren't checked in: fixtures.ELF b
 them, a few hundred bytes each, with known DT_NEEDED entries. Capture a few real ones
 when verifying on Arch.
 M10, security and known issues (hand-written; the AVG ids, CVE ids, project
-ids and labels are invented, and the JSON field names are what cronen assumes
+ids are invented (labels use the real severity::2-high style), and the JSON field names are what cronen assumes
 the services use):
 
   security_all.json          https://security.archlinux.org/all.json (an array of groups)

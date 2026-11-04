@@ -15,7 +15,7 @@ import (
 // is pending capture from the real Arch GitLab.
 const issuesJSON = `[
  {"id":1,"iid":7,"title":"Crash on startup with Wayland","web_url":"https://gitlab.archlinux.org/archlinux/packaging/packages/linux/-/issues/7",
-  "labels":["severity::high"],"created_at":"2026-10-22T08:00:00.000Z","state":"opened"},
+  "labels":["severity::2-high"],"created_at":"2026-10-22T08:00:00.000Z","state":"opened"},
  {"id":2,"iid":8,"title":"Docs typo\u0007","web_url":"https://gitlab.archlinux.org/archlinux/packaging/packages/linux/-/issues/8",
   "labels":[],"created_at":"2026-10-22T09:00:00.000Z","state":"opened"}
 ]`
@@ -69,6 +69,17 @@ func TestSevere(t *testing.T) {
 		{[]string{"priority::critical"}, true},
 		{[]string{"severity::low"}, false},
 		{[]string{"bug", "severity/critical"}, true},
+		{[]string{"severity::1-critical"}, true},
+		{[]string{"severity::2-high"}, true},
+		{[]string{"priority::1-urgent"}, true},
+		{[]string{"priority::2-high"}, true},
+		{[]string{"severity::3-medium"}, false},
+		{[]string{"severity::4-low"}, false},
+		{[]string{"severity::5-lowest"}, false},
+		{[]string{"priority::3-normal"}, false},
+		{[]string{"priority::4-low"}, false},
+		{[]string{"bug", "priority::3-normal", "severity::2-high"}, true},
+		{[]string{"area::2-high"}, false},
 		{[]string{"area::high-level"}, false},
 		{[]string{"area::high"}, false},
 	} {
