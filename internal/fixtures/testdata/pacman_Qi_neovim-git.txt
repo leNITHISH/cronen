@@ -14,7 +14,7 @@ Conflicts With  : neovim
 Replaces        : None
 Installed Size  : 28.40 MiB
 Packager        : Unknown Packager
-Build Date      : Sun 19 Oct 2026 08:00:00 PM UTC
+Build Date      : Mon Oct 19 20:00:00 2026
 Install Date    : Sun 19 Oct 2026 08:05:00 PM UTC
 Install Reason  : Explicitly installed
 Install Script  : No

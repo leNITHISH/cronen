@@ -78,6 +78,9 @@ func (r Rule) String() string {
 	case RuleKnownIssues:
 		return "known-issues"
 	}
+	if name, ok := aurRuleName(r); ok {
+		return name
+	}
 	return fmt.Sprintf("Rule(%d)", int(r))
 }
 
