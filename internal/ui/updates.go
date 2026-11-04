@@ -514,6 +514,9 @@ type archwebResult struct {
 // the package's archlinux.org metadata hasn't been looked up yet, it returns
 // the command that does.
 func (m *Model) refreshDetail() tea.Cmd {
+	if m.screen == screenPackages {
+		return m.refreshPackageDetail()
+	}
 	e, ok := m.updates.selected()
 	var content string
 	var cmd tea.Cmd

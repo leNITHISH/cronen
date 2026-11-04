@@ -1,0 +1,4 @@
+libgbm-compat
+old-codec-lib
+paru-debug
+zstd-debug

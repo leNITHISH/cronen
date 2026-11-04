@@ -1,0 +1,20 @@
+ cronen (demo)                                              
+  1 Updates   2 News   3 Packages   4 History   5 Housekeep…
+ ⚠ 1 news item requires manual intervention — press n to re…
+────────────────────────────────────┬───────────────────────
+    name            version      EFO│ alsa-lib 1.2.14-1     
+▸   alsa-lib        1.2.14-1     D  │ An alternative        
+    base            3-2          E  │ implementation of     
+    bash            5.3.3-1      D  │ Linux sound support   
+    coreutils       9.8-1        D  │                       
+    expat           2.7.3-1      D  │ installed as a        
+    filesystem      2025.10.12-1 D  │ dependency            
+    firefox         144.0-1      E  │ 1.9 MiB · installed 20
+    glibc           2.42+r17+g6… D  │                       
+    gnome-shell-ex… 3.2.0-1      EF │ Why it's installed    
+    gnupg           2.4.8-1      E  │   alsa-lib ←          
+    gtk3            3.24.51-1    D  │     spotify           
+    kmod            34.2-1       D  │     (explicit)        
+    libarchive      3.8.2-1      D  │                       
+────────────────────────────────────┴───────────────────────
+ 47 packages · show: all · sort: name                       

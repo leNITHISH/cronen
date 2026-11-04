@@ -23,10 +23,17 @@ type KeyMap struct {
 	// ShowAcked shows or hides acknowledged packages.
 	ShowAcked key.Binding
 	Upgrade   key.Binding
-	Back      key.Binding
-	Refresh   key.Binding
-	Help      key.Binding
-	Quit      key.Binding
+	// Screens switches to a screen by number, 1 to 5.
+	Screens key.Binding
+	// Mark marks a package on the Packages screen; CycleFilter and
+	// CycleSort change what it lists and in which order.
+	Mark        key.Binding
+	CycleFilter key.Binding
+	CycleSort   key.Binding
+	Back        key.Binding
+	Refresh     key.Binding
+	Help        key.Binding
+	Quit        key.Binding
 
 	// Accept ends filter input, keeping the filter.
 	Accept key.Binding
@@ -102,6 +109,22 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("U"),
 			key.WithHelp("U", "upgrade"),
 		),
+		Screens: key.NewBinding(
+			key.WithKeys("1", "2", "3", "4", "5"),
+			key.WithHelp("1-5", "switch screen"),
+		),
+		Mark: key.NewBinding(
+			key.WithKeys("space"),
+			key.WithHelp("space", "mark"),
+		),
+		CycleFilter: key.NewBinding(
+			key.WithKeys("f"),
+			key.WithHelp("f", "package filter"),
+		),
+		CycleSort: key.NewBinding(
+			key.WithKeys("s"),
+			key.WithHelp("s", "package sort"),
+		),
 		Back: key.NewBinding(
 			key.WithKeys("esc"),
 			key.WithHelp("esc", "back"),
@@ -142,7 +165,7 @@ func (k KeyMap) ShortHelp() []key.Binding {
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Top, k.Bottom},
-		{k.HalfDown, k.HalfUp, k.Focus, k.Filter},
+		{k.HalfDown, k.HalfUp, k.Focus, k.Filter, k.Screens, k.Mark, k.CycleFilter, k.CycleSort},
 		{k.News, k.MarkRead, k.Upstream, k.Changelog, k.Diff},
 		{k.Acknowledge, k.ShowAcked},
 		{k.Upgrade, k.Refresh, k.Back, k.Help, k.Quit},

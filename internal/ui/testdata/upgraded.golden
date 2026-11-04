@@ -1,4 +1,5 @@
  cronen                                               1 vulnerable, no fix · last upgrade: just now 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
  ✓ upgrade finished · reboot to run the new kernel · 1 .pacnew file to merge (run pacdiff)          
 ────────────────────────────────────────┬───────────────────────────────────────────────────────────
  NEEDS ATTENTION (12)                   │ linux                                                     
@@ -25,6 +26,5 @@
   gnome-shell-extension-l… not in AUR ? │                                                           
   neovim-git                      VCS   │                                                           
   python-pywal               orphaned ? │                                                           
-  ttf-ms-fonts            out of date ? │                                                           
 ────────────────────────────────────────┴───────────────────────────────────────────────────────────
  18 updates · 886 MiB ↓ · +26 MiB · 12 flagged · 0 unread news · 1 .pacnew           ? help  q quit 

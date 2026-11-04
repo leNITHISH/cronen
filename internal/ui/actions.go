@@ -191,11 +191,16 @@ func (m *Model) saveState() tea.Cmd {
 	}
 }
 
-// startFilter focuses the filter input on the updates screen.
+// startFilter focuses the filter input on the Packages screen, or else on
+// the updates screen.
 func (m *Model) startFilter() tea.Cmd {
-	m.screen, m.focus = screenUpdates, focusList
+	var cmd tea.Cmd
+	if m.screen != screenPackages {
+		cmd = m.setScreen(screenUpdates)
+	}
+	m.focus = focusList
 	m.filtering = true
-	return m.filter.Focus()
+	return tea.Batch(cmd, m.filter.Focus())
 }
 
 // handleFilterKey sends keys to the filter input while it has focus, so
@@ -218,6 +223,7 @@ func (m Model) handleFilterKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.filter.Value() != before {
 		// A new filter starts the selection over at the top.
 		m.updates.moved = false
+		m.pkgs.selName = ""
 		return m, tea.Batch(cmd, m.layout())
 	}
 	return m, cmd
@@ -228,6 +234,7 @@ func (m *Model) clearFilter() {
 	m.filter.Blur()
 	m.filter.Reset()
 	m.updates.moved = false
+	m.pkgs.selName = ""
 }
 
 // filterQuery is the lower-cased filter text, or "" if there is none.

@@ -52,6 +52,10 @@ const (
 	PacmanQn         = "pacman_Qn.txt"     // pacman -Qn
 	SecurityAll      = "security_all.json" // https://security.archlinux.org/all.json
 	GitLabIssuesPref = "gitlab_issues_"    // + project + ".json"; other projects 404
+
+	// The M13 fixtures are HAND-WRITTEN too (see HAND_WRITTEN.txt).
+	PacmanQiAll = "pacman_Qi.txt"   // pacman -Qi, every installed package
+	PacmanQdtq  = "pacman_Qdtq.txt" // pacman -Qdtq, the orphans
 )
 
 // URLs and paths the fakes answer for.
@@ -141,6 +145,8 @@ func Runner() *system.FakeRunner {
 	r.Set("pacman -Qm", system.FakeResult{Stdout: Bytes(PacmanQm)})
 	r.Set("pacman -Qn", system.FakeResult{Stdout: Bytes(PacmanQn)})
 	r.Set("pacman -Qq", system.FakeResult{Stdout: Bytes(PacmanQq)})
+	r.Set("pacman -Qi", system.FakeResult{Stdout: Bytes(PacmanQiAll)})
+	r.Set("pacman -Qdtq", system.FakeResult{Stdout: Bytes(PacmanQdtq)})
 	r.Set("pacdiff -o", system.FakeResult{Stdout: Bytes(PacdiffO)})
 	r.Set("pacman -Sup --dbpath "+SyncDBPath+" --logfile /dev/null --noconfirm --print-format %n %v %r %s",
 		system.FakeResult{Stdout: Bytes(PacmanSup)})

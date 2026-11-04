@@ -147,20 +147,33 @@ type Info struct {
 // continuation lines indented, packages separated by blank lines. Build
 // dates are local times, read in loc.
 func ParseInfo(data []byte, loc *time.Location) ([]Info, error) {
+	blocks, err := parseBlocks(data)
+	if err != nil {
+		return nil, err
+	}
 	var infos []Info
-	var cur map[string]string
-	lastKey := ""
-	flush := func() error {
-		if len(cur) == 0 {
-			return nil
-		}
-		info, err := infoFrom(cur, loc)
+	for _, kv := range blocks {
+		info, err := infoFrom(kv, loc)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		infos = append(infos, info)
+	}
+	return infos, nil
+}
+
+// parseBlocks splits pacman -Si/-Qi output into one key/value map per
+// package. Continuation lines are appended to their key, separated by two
+// spaces.
+func parseBlocks(data []byte) ([]map[string]string, error) {
+	var blocks []map[string]string
+	var cur map[string]string
+	lastKey := ""
+	flush := func() {
+		if len(cur) > 0 {
+			blocks = append(blocks, cur)
+		}
 		cur, lastKey = nil, ""
-		return nil
 	}
 	sc := bufio.NewScanner(bytes.NewReader(data))
 	sc.Buffer(nil, 1<<20)
@@ -168,9 +181,7 @@ func ParseInfo(data []byte, loc *time.Location) ([]Info, error) {
 		line := sc.Text()
 		switch {
 		case strings.TrimSpace(line) == "":
-			if err := flush(); err != nil {
-				return nil, err
-			}
+			flush()
 		case line[0] == ' ' || line[0] == '\t':
 			if cur != nil && lastKey != "" {
 				cur[lastKey] += "  " + strings.TrimSpace(line)
@@ -190,10 +201,8 @@ func ParseInfo(data []byte, loc *time.Location) ([]Info, error) {
 	if err := sc.Err(); err != nil {
 		return nil, fmt.Errorf("pacman info: %w", err)
 	}
-	if err := flush(); err != nil {
-		return nil, err
-	}
-	return infos, nil
+	flush()
+	return blocks, nil
 }
 
 func infoFrom(kv map[string]string, loc *time.Location) (Info, error) {

@@ -68,7 +68,10 @@ documents everything, including the config keys.
 | `ctrl+d`/`ctrl+u` | half-page in the detail or news pane |
 | `tab` | switch focus between panes |
 | `/` | filter the package list (`enter` keeps the filter, `esc` clears it) |
+| `1`–`5` | switch screen: Updates, News, Packages, History, Housekeeping (the last two aren't built yet) |
 | `n` | news screen |
+| `f` / `s` | Packages: cycle what is listed (all, explicit, dependencies, foreign, orphans) / the sort (name, size, install date) |
+| `space` | Packages: mark the selected package (nothing acts on marks yet) |
 | `m` | mark the selected news item read (on the updates screen: the news behind the selected package's flags) |
 | `o` | open the upstream URL (on the news screen: the post) with `xdg-open` |
 | `c` | open the packaging changelog with `xdg-open` |
@@ -251,6 +254,7 @@ mirror_lag_hours = 6       # a mirror this far behind (or more) is reported
 rebuild_scan_elf = true    # also scan foreign packages' ELF files for libraries an upgrade drops
 security = true            # security.archlinux.org advisories
 known_issues = true        # open GitLab issues for pending repo updates
+package_browser = true    # the Packages screen: one `pacman -Qi` for every installed package
 aur_review = "lazy"        # "lazy": fetch PKGBUILD diffs when opened (d); "eager": for every pending AUR update
 ```
 
@@ -261,6 +265,18 @@ providing, or that is installed under the old `/usr/lib/python3.13/`-style
 directory of an updated interpreter. The ELF scan is the slow part, so its
 results are cached in `$XDG_CACHE_HOME/cronen/elf-needs.json` until a package's
 version changes (`r` rescans).
+
+### Packages
+
+`3` lists every installed package with its version, size and install date, and
+the badges `E` explicit, `D` dependency, `F` foreign and `O` orphan. The detail
+pane shows what a package depends on, what requires it, and **why it's
+installed**: the shortest chain of "required by" links up to a package you
+installed explicitly (`libx11 ← gtk3 ← firefox (explicit)`). `/` filters by
+name, `f` and `s` change the filter and the order, and `space` marks packages.
+It is read-only for now. cronen reads the package database once per load with
+`pacman -Qi`, `pacman -Qm` and `pacman -Qdtq`; `package_browser = false`
+turns that off.
 
 ### AUR review
 

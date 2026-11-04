@@ -1,4 +1,5 @@
  cronen (demo)                                                                      last upgrade: ⠋ 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
 ────────────────────────────────────────┬───────────────────────────────────────────────────────────
  NEEDS ATTENTION (0)                    │ Checking for updates…                                     
    ⠋ checking news…                     │                                                           
@@ -6,7 +7,6 @@
    ⠋ running checkupdates…              │                                                           
  AUR                                    │                                                           
    ⠋ querying the AUR…                  │                                                           
-                                        │                                                           
                                         │                                                           
                                         │                                                           
                                         │                                                           

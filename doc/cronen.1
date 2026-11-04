@@ -117,8 +117,22 @@ keeps the filter,
 .B esc
 clears it.
 .TP
+.BR 1 ... 5
+Switch screen: Updates, News, Packages, History, Housekeeping. The last two are
+not built yet.
+.TP
 .B n
 News screen.
+.TP
+.B f
+Packages screen: cycle what is listed (all, explicit, dependencies, foreign,
+orphans).
+.TP
+.B s
+Packages screen: cycle the sort (name, size, install date).
+.TP
+.B space
+Packages screen: mark the selected package. Nothing acts on marks yet.
 .TP
 .B m
 Mark the selected news item read (on the updates screen: the news behind
@@ -267,6 +281,14 @@ request to it.
 Look up open issues on the Arch packaging GitLab for pending repo updates, since
 their new build, and flag the update. With this off cronen makes no request to
 GitLab.
+.TP
+.BR package_browser " (default " true )
+Read every installed package once per load (with
+.BR "pacman \-Qi" ,
+.B "pacman \-Qm"
+and
+.BR "pacman \-Qdtq" )
+for the Packages screen. With this off cronen runs none of them.
 .TP
 .BR aur_review " (default " lazy )
 .B lazy

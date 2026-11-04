@@ -76,6 +76,9 @@ const (
 	screenHelp
 	screenConfirm
 	screenDiff
+	screenPackages
+	screenHistory
+	screenHousekeeping
 )
 
 type focus int
@@ -162,6 +165,12 @@ type Model struct {
 	detail, newsView       viewport.Model
 	detailKey, newsViewKey string
 
+	// localSec, localDB and pkgs are the installed packages and the
+	// Packages screen; see packages.go.
+	localSec section
+	localDB  *pacman.LocalDB
+	pkgs     packagesPane
+
 	// reviews is the AUR history of each pending AUR update, by package
 	// name; see review.go. diffView shows the diff of diffName. freshGen is
 	// the generation whose loads bypass the cache.
@@ -245,11 +254,12 @@ func (m *Model) markLoading() {
 	m.rebuildSec = section{loading: m.wantsRebuild()}
 	m.secSec = section{loading: m.cfg.Security}
 	m.issuesSec = section{loading: m.cfg.KnownIssues && m.cfg.Preview}
+	m.localSec = section{loading: m.cfg.PackageBrowser}
 	m.secStarted = false
 }
 
 func (m Model) anyLoading() bool {
-	for _, s := range []section{m.repoSec, m.aurSec, m.newsSec, m.logSec, m.pacnewSec, m.previewSec, m.rebuildSec} {
+	for _, s := range []section{m.repoSec, m.aurSec, m.newsSec, m.logSec, m.pacnewSec, m.previewSec, m.rebuildSec, m.localSec} {
 		if s.loading {
 			return true
 		}
@@ -268,6 +278,9 @@ func (m Model) loadCmds(fresh bool) []tea.Cmd {
 	}
 	if m.cfg.AUR {
 		cmds = append(cmds, loadAUR(ctx, m.opts.Runner, m.opts.Fetcher, m.gen, fresh))
+	}
+	if m.cfg.PackageBrowser {
+		cmds = append(cmds, loadLocalDB(ctx, m.opts.Runner, m.location(), m.gen))
 	}
 	cmds = append(cmds, m.mirrorCmds(fresh)...)
 	return cmds
@@ -371,6 +384,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.aurSec = section{err: msg.err}
 		m.aurPkgs = msg.pkgs
 		return m, tea.Batch(m.aurLoaded(), m.changed(), m.startSecurity())
+
+	case localDBMsg:
+		return m, m.handleLocalDB(msg)
 
 	case aurLogMsg:
 		return m, m.handleAURLog(msg)
@@ -477,19 +493,38 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	if key.Matches(msg, k.Screens) {
+		if s, ok := screenForKey(msg.String()); ok {
+			return m, m.setScreen(s)
+		}
+	}
+	// Screens other than Updates and News have keys of their own, and
+	// none of the updates-only ones.
+	other := m.screen != screenUpdates && m.screen != screenNews
+	if m.screen == screenPackages {
+		if cmd, ok := m.handlePackagesKey(msg); ok {
+			return m, cmd
+		}
+	}
+	if other && (key.Matches(msg, k.MarkRead) || key.Matches(msg, k.Upstream) ||
+		key.Matches(msg, k.Changelog) || key.Matches(msg, k.Diff) ||
+		key.Matches(msg, k.Acknowledge) || key.Matches(msg, k.ShowAcked)) {
+		return m, nil
+	}
+
 	switch {
 	case key.Matches(msg, k.News):
 		if m.screen == screenNews {
-			m.screen = screenUpdates
-		} else {
-			m.screen = screenNews
-			m.refreshNewsView()
+			return m, m.setScreen(screenUpdates)
 		}
-		return m, nil
+		return m, m.setScreen(screenNews)
 	case key.Matches(msg, k.Back):
 		switch {
+		case m.screen == screenPackages && m.filterQuery() != "":
+			m.clearFilter()
+			return m, m.layout()
 		case m.screen != screenUpdates:
-			m.screen = screenUpdates
+			return m, m.setScreen(screenUpdates)
 		case m.filterQuery() != "":
 			m.clearFilter()
 			return m, m.layout()
@@ -542,6 +577,9 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, k.Bottom):
 			vp.GotoBottom()
 		}
+		return m, nil
+	}
+	if other {
 		return m, nil
 	}
 
@@ -612,10 +650,10 @@ func (m *Model) changed() tea.Cmd {
 	return m.layout()
 }
 
-// chromeHeight is the number of lines outside the body: header, optional
-// banner, two rules and the status bar.
+// chromeHeight is the number of lines outside the body: header, tab bar,
+// optional banners, two rules and the status bar.
 func (m Model) chromeHeight() int {
-	h := 4
+	h := 5
 	if len(m.result.Interventions) > 0 {
 		h++
 	}
@@ -643,6 +681,10 @@ func (m Model) bodyHeight() int {
 // listWidth is the width of the left pane on both screens.
 func (m Model) listWidth() int {
 	w, _ := m.size()
+	if m.screen == screenPackages {
+		// The package list has columns, so it gets more room.
+		return clamp(w*3/5, min(40, w/2), 80)
+	}
 	lw := clamp(w*2/5, min(28, w/2), 56)
 	// Widen the list so a section error fits on one line, as long as the
 	// detail pane keeps minDetailWidth. Narrower terminals wrap it.
@@ -682,6 +724,7 @@ func (m Model) paneWidth() int {
 // body and re-renders their content.
 func (m *Model) layout() tea.Cmd {
 	m.rebuildUpdates()
+	m.rebuildPackages()
 	pw, bh := m.paneWidth(), m.bodyHeight()
 	w, _ := m.size()
 	m.help.SetWidth(w)
@@ -701,7 +744,7 @@ func (m *Model) layout() tea.Cmd {
 func (m Model) View() tea.View {
 	w, h := m.size()
 	var lines []string
-	lines = append(lines, m.headerLine(w))
+	lines = append(lines, m.headerLine(w), m.tabBar(w))
 	if n := len(m.result.Interventions); n > 0 {
 		lines = append(lines, fitLine(m.styles.Banner.Render(bannerText(n)), w))
 	}
@@ -718,6 +761,10 @@ func (m Model) View() tea.View {
 
 	lw, pw, bh := m.listWidth(), m.paneWidth(), m.bodyHeight()
 	switch m.screen {
+	case screenHistory, screenHousekeeping:
+		lines = append(lines, m.styles.Rule.Render(strings.Repeat("─", w)))
+		lines = append(lines, fitBlock(m.placeholderView(tabLabel(m.screen)), w, bh)...)
+		lines = append(lines, m.styles.Rule.Render(strings.Repeat("─", w)))
 	case screenHelp, screenConfirm, screenDiff:
 		body := m.help.FullHelpView(m.keys.FullHelp())
 		if m.screen == screenConfirm {
@@ -734,10 +781,14 @@ func (m Model) View() tea.View {
 	default:
 		lines = append(lines, m.rule(lw, pw, "┬"))
 		var left, right []string
-		if m.screen == screenNews {
+		switch m.screen {
+		case screenNews:
 			left = fitBlock(m.newsListView(lw, bh), lw, bh)
 			right = fitBlock(m.newsView.View(), pw, bh)
-		} else {
+		case screenPackages:
+			left = fitBlock(m.packagesListView(lw, bh), lw, bh)
+			right = fitBlock(m.detail.View(), pw, bh)
+		default:
 			left = fitBlock(m.updatesListView(lw, bh), lw, bh)
 			right = fitBlock(m.detail.View(), pw, bh)
 		}
@@ -844,6 +895,12 @@ func (m Model) statusLine(w int) string {
 	if n := len(m.pacnew); n > 0 {
 		parts = append(parts, plural(n, ".pacnew", ".pacnew"))
 	}
+	switch m.screen {
+	case screenPackages:
+		parts = m.packagesStatus()
+	case screenHistory, screenHousekeeping:
+		parts = []string{tabLabel(m.screen)}
+	}
 	if q := m.filter.Value(); strings.TrimSpace(q) != "" {
 		parts = append(parts, "filter: "+q)
 	}
@@ -852,6 +909,9 @@ func (m Model) statusLine(w int) string {
 	var hints []string
 	if m.screen != screenUpdates {
 		hints = append(hints, helpHint(m.keys.Back))
+	}
+	if m.screen == screenPackages {
+		hints = append(hints, "f show", "s sort", "space mark")
 	}
 	hints = append(hints, helpHint(m.keys.Help), helpHint(m.keys.Quit))
 	return spread(left, m.styles.Subtle.Render(strings.Join(hints, "  "))+" ", w)

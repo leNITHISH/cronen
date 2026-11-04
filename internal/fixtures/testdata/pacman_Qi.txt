@@ -1,0 +1,1040 @@
+Name            : base
+Version         : 3-2
+Description     : Minimal package set to define a basic Arch Linux installation
+Architecture    : x86_64
+URL             : https://example.org/base
+Licenses        : GPL-2.0-only
+Groups          : -
+Provides        : None
+Depends On      : filesystem  glibc  bash  coreutils  pacman
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 0.01 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 09:00:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : bash
+Version         : 5.3.3-1
+Description     : The GNU Bourne Again shell
+Architecture    : x86_64
+URL             : https://example.org/bash
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : base  pacman  pacman-contrib
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 9.20 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 10:01:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+Backup Files   : /etc/bash.bashrc
+
+Name            : coreutils
+Version         : 9.8-1
+Description     : The basic file, shell and text manipulation utilities
+Architecture    : x86_64
+URL             : https://example.org/coreutils
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : base  linux
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 7.90 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 11:02:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : filesystem
+Version         : 2025.10.12-1
+Description     : Base Arch Linux files
+Architecture    : x86_64
+URL             : https://example.org/filesystem
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : None
+Optional Deps   : None
+Required By     : base  glibc
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 0.02 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 12:03:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+Backup Files   : /etc/fstab
+
+Name            : tzdata
+Version         : 2025b-1
+Description     : Sources for time zone and daylight saving time data
+Architecture    : x86_64
+URL             : https://example.org/tzdata
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : glibc
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 1.20 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 13:04:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : glibc
+Version         : 2.42+r17+g6f0cf3d0b5b0-1
+Description     : GNU C Library
+Architecture    : x86_64
+URL             : https://example.org/glibc
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : linux-api-headers  tzdata  filesystem
+Optional Deps   : None
+Required By     : alsa-lib  base  bash  coreutils  expat  firefox  gnupg  gtk3  kmod  libarchive  libgbm-compat  libx11  mesa  neovim-git  nss  nvidia-utils  old-codec-lib  openssh  pacman  python  ripgrep  sudo  systemd  tzdata  vim  vulkan-icd-loader  zstd
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 47.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 14:05:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+Backup Files   : /etc/gai.conf
+
+Name            : linux-api-headers
+Version         : 6.16-1
+Description     : Kernel headers sanitized for use in userspace
+Architecture    : x86_64
+URL             : https://example.org/linux-api-headers
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : None
+Optional Deps   : None
+Required By     : glibc
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 5.10 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 15:06:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : linux
+Version         : 6.17.4.arch1-1
+Description     : The Linux kernel and modules
+Architecture    : x86_64
+URL             : https://example.org/linux
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : coreutils  kmod
+Optional Deps   : linux-firmware: optional support
+Required By     : linux-headers  nvidia
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 140.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 16:07:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : linux-headers
+Version         : 6.17.4.arch1-1
+Description     : Headers and scripts for building modules for the Linux kernel
+Architecture    : x86_64
+URL             : https://example.org/linux-headers
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : linux
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 140.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 09:08:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : linux-firmware
+Version         : 20251011-1
+Description     : Firmware files for Linux
+Architecture    : x86_64
+URL             : https://example.org/linux-firmware
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : None
+Optional Deps   : None
+Required By     : None
+Optional For    : linux
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 420.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 10:09:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : kmod
+Version         : 34.2-1
+Description     : Linux kernel module handling
+Architecture    : x86_64
+URL             : https://example.org/kmod
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : linux  systemd
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 0.60 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 11:10:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : pacman
+Version         : 7.1.0-1
+Description     : A library-based package manager with dependency support
+Architecture    : x86_64
+URL             : https://example.org/pacman
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : bash  glibc  libarchive
+Optional Deps   : pacman-contrib: optional support
+Required By     : base  pacman-contrib  paru
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 4.70 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 12:11:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+Backup Files   : /etc/pacman.conf
+
+Name            : pacman-contrib
+Version         : 1.11.0-1
+Description     : Contributed scripts and tools for pacman systems
+Architecture    : x86_64
+URL             : https://example.org/pacman-contrib
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : pacman  bash
+Optional Deps   : None
+Required By     : None
+Optional For    : pacman
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 0.30 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 13:12:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : libarchive
+Version         : 3.8.2-1
+Description     : Multi-format archive and compression library
+Architecture    : x86_64
+URL             : https://example.org/libarchive
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc  zstd
+Optional Deps   : None
+Required By     : gnupg  pacman
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 1.10 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 14:13:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : zstd
+Version         : 1.5.7-2
+Description     : Zstandard - Fast real-time compression algorithm
+Architecture    : x86_64
+URL             : https://example.org/zstd
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : libarchive  zstd-debug
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 1.80 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 15:14:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : gnupg
+Version         : 2.4.8-1
+Description     : Complete and free implementation of the OpenPGP standard
+Architecture    : x86_64
+URL             : https://example.org/gnupg
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc  libarchive
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 13.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 16:15:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : sudo
+Version         : 1.9.17.p2-1
+Description     : Give certain users the ability to run some commands as root
+Architecture    : x86_64
+URL             : https://example.org/sudo
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 6.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 09:16:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+Backup Files   : /etc/sudoers
+
+Name            : systemd
+Version         : 258.1-1
+Description     : system and service manager
+Architecture    : x86_64
+URL             : https://example.org/systemd
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc  kmod
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 33.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 10:17:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+Backup Files   : /etc/systemd/system.conf
+
+Name            : openssh
+Version         : 10.0p1-3
+Description     : Premier connectivity tool for remote login with the SSH protocol
+Architecture    : x86_64
+URL             : https://example.org/openssh
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 5.30 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 11:18:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+Backup Files   : /etc/ssh/sshd_config
+
+Name            : vim
+Version         : 9.1.1800-1
+Description     : Vi Improved, a highly configurable, improved version of the vi text editor
+Architecture    : x86_64
+URL             : https://example.org/vim
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc  vim-runtime
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 3.50 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 12:19:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : vim-runtime
+Version         : 9.1.1800-1
+Description     : Runtime for vim and gvim
+Architecture    : x86_64
+URL             : https://example.org/vim-runtime
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : None
+Optional Deps   : None
+Required By     : vim
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 38.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 13:20:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : ripgrep
+Version         : 14.1.1-1
+Description     : A search tool that combines the usability of ag with the raw speed of grep
+Architecture    : x86_64
+URL             : https://example.org/ripgrep
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 5.20 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 14:21:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : python
+Version         : 3.13.7-1
+Description     : The Python programming language
+Architecture    : x86_64
+URL             : https://example.org/python
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc  expat
+Optional Deps   : None
+Required By     : python-pywal
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 75.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 15:22:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : expat
+Version         : 2.7.3-1
+Description     : An XML parser library
+Architecture    : x86_64
+URL             : https://example.org/expat
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : python
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 0.50 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 16:23:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : firefox
+Version         : 144.0-1
+Description     : Fast, Private & Safe Web Browser
+Architecture    : x86_64
+URL             : https://example.org/firefox
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : gtk3  libxt  glibc
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 268.10 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 09:24:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : gtk3
+Version         : 3.24.51-1
+Description     : GObject-based multi-platform GUI toolkit
+Architecture    : x86_64
+URL             : https://example.org/gtk3
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc  libx11
+Optional Deps   : None
+Required By     : firefox  gnome-shell-extension-legacy  spotify  visual-studio-code-bin
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 57.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 10:25:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : libx11
+Version         : 1.8.12-1
+Description     : X11 client-side library
+Architecture    : x86_64
+URL             : https://example.org/libx11
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : gtk3  libxt  mesa
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 3.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 11:26:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : libxt
+Version         : 1.3.1-1
+Description     : X11 toolkit intrinsics library
+Architecture    : x86_64
+URL             : https://example.org/libxt
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : libx11
+Optional Deps   : None
+Required By     : firefox
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 1.40 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 12:27:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : mesa
+Version         : 1:25.2.4-1
+Description     : Open-source OpenGL drivers
+Architecture    : x86_64
+URL             : https://example.org/mesa
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc  libx11
+Optional Deps   : None
+Required By     : nvidia-utils
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 180.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 13:28:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : vulkan-icd-loader
+Version         : 1.4.328-1
+Description     : Vulkan Installable Client Driver (ICD) Loader
+Architecture    : x86_64
+URL             : https://example.org/vulkan-icd-loader
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 0.60 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 14:29:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : nvidia
+Version         : 580.95.05-1
+Description     : NVIDIA kernel modules
+Architecture    : x86_64
+URL             : https://example.org/nvidia
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : linux  nvidia-utils
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 95.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 15:30:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : nvidia-utils
+Version         : 580.95.05-1
+Description     : NVIDIA drivers utilities
+Architecture    : x86_64
+URL             : https://example.org/nvidia-utils
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc  mesa
+Optional Deps   : None
+Required By     : nvidia
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 310.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 16:31:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : alsa-lib
+Version         : 1.2.14-1
+Description     : An alternative implementation of Linux sound support
+Architecture    : x86_64
+URL             : https://example.org/alsa-lib
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : spotify
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 1.90 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 09:32:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : nss
+Version         : 3.116-1
+Description     : Network Security Services
+Architecture    : x86_64
+URL             : https://example.org/nss
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : spotify  visual-studio-code-bin
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 5.20 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 10:33:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : libgbm-compat
+Version         : 1.0-1
+Description     : Compatibility shim left behind by a removed package
+Architecture    : x86_64
+URL             : https://example.org/libgbm-compat
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 0.10 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 11:34:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : libfoo-cycle-a
+Version         : 1.0-1
+Description     : Fixture: one half of a dependency cycle
+Architecture    : x86_64
+URL             : https://example.org/libfoo-cycle-a
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : libfoo-cycle-b
+Optional Deps   : None
+Required By     : libfoo-cycle-b
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 0.10 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 12:35:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : libfoo-cycle-b
+Version         : 1.0-1
+Description     : Fixture: the other half of a dependency cycle
+Architecture    : x86_64
+URL             : https://example.org/libfoo-cycle-b
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : libfoo-cycle-a
+Optional Deps   : None
+Required By     : libfoo-cycle-a
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 0.10 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 13:36:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : old-codec-lib
+Version         : 0.9-3
+Description     : Fixture: orphaned library nothing needs any more
+Architecture    : x86_64
+URL             : https://example.org/old-codec-lib
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 2.40 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 14:37:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : gnome-shell-extension-legacy
+Version         : 3.2.0-1
+Description     : Legacy GNOME Shell extension (AUR)
+Architecture    : x86_64
+URL             : https://example.org/gnome-shell-extension-legacy
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : gtk3  libzstd.so=1-64
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 0.20 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 15:38:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : neovim-git
+Version         : 0.12.0.r1234.gabcdef0-1
+Description     : Fork of Vim aiming to improve user experience (git)
+Architecture    : x86_64
+URL             : https://example.org/neovim-git
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : glibc
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 30.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 16:39:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : paru
+Version         : 2.1.0-1
+Description     : Feature packed AUR helper
+Architecture    : x86_64
+URL             : https://example.org/paru
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : pacman  libalpm.so=15-64
+Optional Deps   : None
+Required By     : paru-debug
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 8.12 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 09:40:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : paru-debug
+Version         : 2.1.0-1
+Description     : Detached debugging symbols for paru
+Architecture    : x86_64
+URL             : https://example.org/paru-debug
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : paru
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 120.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 10:41:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
+
+Name            : python-pywal
+Version         : 3.3.0-9
+Description     : Generate and change color-schemes on the fly (AUR)
+Architecture    : x86_64
+URL             : https://example.org/python-pywal
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : python
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 0.40 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 11:42:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : spotify
+Version         : 1:1.2.74.477-1
+Description     : A proprietary music streaming service
+Architecture    : x86_64
+URL             : https://example.org/spotify
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : alsa-lib  gtk3  nss  libgbm.so=1-64
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 1.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 12:43:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : ttf-ms-fonts
+Version         : 2.0-12
+Description     : Core TTF Fonts from Microsoft (AUR)
+Architecture    : x86_64
+URL             : https://example.org/ttf-ms-fonts
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : None
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 8.50 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 13:44:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : visual-studio-code-bin
+Version         : 1.105.0-1
+Description     : Editor for building and debugging modern web and cloud applications
+Architecture    : x86_64
+URL             : https://example.org/visual-studio-code-bin
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : gtk3  nss
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 330.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 14:45:00 2025
+Install Reason  : Explicitly installed
+Install Script  : No
+Validated By    : Signature
+
+Name            : zstd-debug
+Version         : 1.5.7-2
+Description     : Detached debugging symbols for zstd
+Architecture    : x86_64
+URL             : https://example.org/zstd-debug
+Licenses        : GPL-2.0-only
+Groups          : None
+Provides        : None
+Depends On      : zstd
+Optional Deps   : None
+Required By     : None
+Optional For    : None
+Conflicts With  : None
+Replaces        : None
+Installed Size  : 20.00 MiB
+Packager        : Unknown Packager
+Build Date      : Mon Oct  6 12:00:00 2025
+Install Date    : Wed Oct 15 15:46:00 2025
+Install Reason  : Installed as a dependency for another package
+Install Script  : No
+Validated By    : Signature
