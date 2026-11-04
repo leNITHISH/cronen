@@ -32,6 +32,8 @@ type Options struct {
 	Runner  system.Runner
 	Fetcher system.Fetcher
 	FS      system.FS
+	// Disk reports free space for the preflight checks. Nil turns them off.
+	Disk system.Disk
 
 	// Config is the user configuration. Nil means config.Default().
 	Config *config.Config
@@ -121,6 +123,7 @@ type Model struct {
 	// tx is the transaction preview, valid when previewed is set.
 	tx                     pacman.Transaction
 	previewed              bool
+	pf                     preflightState
 	txUpdates              map[string]pacman.UpdateDetail
 	repo                   []pacman.Update
 	aurPkgs                []aur.Package
@@ -207,6 +210,7 @@ func (m *Model) markLoading() {
 	m.logSec = section{loading: true}
 	m.pacnewSec = section{loading: true}
 	m.previewSec = section{loading: m.cfg.Preview}
+	m.markPreflightLoading()
 }
 
 func (m Model) anyLoading() bool {
@@ -230,6 +234,7 @@ func (m Model) loadCmds(fresh bool) []tea.Cmd {
 	if m.cfg.AUR {
 		cmds = append(cmds, loadAUR(ctx, m.opts.Runner, m.opts.Fetcher, m.gen, fresh))
 	}
+	cmds = append(cmds, m.mirrorCmds(fresh)...)
 	return cmds
 }
 
@@ -279,14 +284,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.repoSec = section{err: msg.err}
 		m.repo = msg.updates
+		facts := m.factsCmd(msg.updates)
 		if msg.err != nil || !m.cfg.Preview {
 			// Without the updates there is nothing to preview, and
 			// checkupdates has already said why.
 			m.previewSec = section{}
 			m.tx, m.previewed = pacman.Transaction{}, false
-			return m, m.changed()
+			return m, tea.Batch(m.changed(), facts)
 		}
-		return m, tea.Batch(m.changed(),
+		return m, tea.Batch(m.changed(), facts,
 			loadPreview(m.ctx(), m.opts.Runner, m.opts.FS, m.opts.SyncDB, msg.updates, m.location(), m.gen))
 
 	case previewMsg:
@@ -301,6 +307,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.txUpdates[u.Name] = u
 		}
 		return m, m.changed()
+
+	case factsMsg, mirrorMsg:
+		return m.updatePreflight(msg)
 
 	case aurMsg:
 		if msg.gen != m.gen {
@@ -524,6 +533,7 @@ func (m *Model) changed() tea.Cmd {
 		tx = &m.tx
 	}
 	m.result = summary.Assess(summary.Updates(m.repo, m.aurPkgs), m.unreadNews, tx, m.cfg, m.now())
+	m.assessPreflight()
 
 	m.newsPane.move(0, len(m.newsItems))
 	// The banner may have appeared or gone, changing the body height.
@@ -535,6 +545,9 @@ func (m *Model) changed() tea.Cmd {
 func (m Model) chromeHeight() int {
 	h := 4
 	if len(m.result.Interventions) > 0 {
+		h++
+	}
+	if len(m.pf.problems) > 0 {
 		h++
 	}
 	if m.noticeText() != "" {
@@ -580,7 +593,7 @@ func (m Model) errorNotes() []string {
 	if m.newsSec.err != nil && !m.newsSec.loading {
 		notes = append(notes, newsErrorNote)
 	}
-	for _, s := range []section{m.repoSec, m.aurSec, m.previewSec} {
+	for _, s := range []section{m.repoSec, m.aurSec, m.previewSec, m.pf.factsSec, m.pf.mirrorSec} {
 		if s.err != nil && !s.loading {
 			notes = append(notes, "✗ "+s.err.Error())
 		}
@@ -617,6 +630,9 @@ func (m Model) View() tea.View {
 	lines = append(lines, m.headerLine(w))
 	if n := len(m.result.Interventions); n > 0 {
 		lines = append(lines, fitLine(m.styles.Banner.Render(bannerText(n)), w))
+	}
+	if line := m.preflightBanner(w); line != "" {
+		lines = append(lines, line)
 	}
 	if notice := m.noticeText(); notice != "" {
 		style := m.styles.Bold
