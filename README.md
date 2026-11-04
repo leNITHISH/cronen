@@ -93,7 +93,7 @@ Prints a short plain-text summary, most important first, and exits with:
 |---|---|
 | `0` | nothing to do |
 | `10` | updates available |
-| `20` | attention needed: at least one update is flagged |
+| `20` | attention needed: at least one update is flagged (acknowledged flags don't count) |
 | `30` | critical: an unread news item requires manual intervention, or a preflight check found a critical problem |
 | `1` | error: a source (checkupdates, the AUR, the news feed) failed |
 
@@ -122,7 +122,7 @@ reboot after upgrading: the kernel is updated
 
 ```console
 $ cronen --json
-{"updates":18,"aur":2,"flagged":11,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1,"security_fixes":2,"vulnerable":1,"preflight":[{"severity":"critical","message":"/boot is in fstab but not mounted while linux updates: …"}],"reboot_pending":false}
+{"updates":18,"aur":2,"flagged":11,"acknowledged":0,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1,"security_fixes":2,"vulnerable":1,"preflight":[{"severity":"critical","message":"/boot is in fstab but not mounted while linux updates: …"}],"reboot_pending":false}
 ```
 
 `updates` counts repo and AUR updates together and `aur` the AUR ones.
@@ -283,6 +283,20 @@ PKGBUILD diff between the commit your installed build most likely came from
 
 These are hints for a human review, not a verdict: cronen can't tell a
 legitimate mirror change from a malicious one.
+
+### Acknowledging flags
+
+`a` acknowledges every non-critical flag on the selected package, for that
+exact new version. The package leaves NEEDS ATTENTION for its normal group, marked
+`✓`, and its flags stay in the detail pane, dimmed. A newer version brings the
+package back, and so does a rule you hadn't acknowledged. For a maintainer change
+(rule 12), acknowledging also records the current maintainers as accepted.
+`A` hides or shows acknowledged packages in the list.
+
+Manual-intervention news and preflight problems are critical and can't be
+acknowledged: read the news (`m`) or fix the problem. `--check`, `--json` and the
+exit codes ignore acknowledged flags; the summary says "2 acknowledged" and
+`--json` has an `acknowledged` field. Acknowledgements live in the state file.
 
 cronen remembers read news and the last upgrade it ran in
 `$XDG_STATE_HOME/cronen/state.json`, and caches the news feed and AUR
