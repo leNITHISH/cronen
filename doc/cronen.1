@@ -131,6 +131,9 @@ Open the upstream URL (on the news screen: the post) with
 .B c
 Open the packaging changelog.
 .TP
+.B d
+Review the PKGBUILD diff of the selected pending AUR update.
+.TP
 .B r
 Refresh everything, bypassing the cache.
 .TP
@@ -254,6 +257,17 @@ request to it.
 Look up open issues on the Arch packaging GitLab for pending repo updates, since
 their new build, and flag the update. With this off cronen makes no request to
 GitLab.
+.TP
+.BR aur_review " (default " lazy )
+.B lazy
+fetches the PKGBUILD diff of a pending AUR update when it is opened with
+.BR d ;
+.B eager
+fetches it for every pending AUR update, which also makes
+.B \-\-check
+and
+.B \-\-json
+evaluate the suspicious\-change rule.
 .PP
 Example:
 .PP

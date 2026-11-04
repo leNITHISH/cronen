@@ -72,6 +72,7 @@ documents everything, including the config keys.
 | `m` | mark the selected news item read (on the updates screen: the news behind the selected package's flags) |
 | `o` | open the upstream URL (on the news screen: the post) with `xdg-open` |
 | `c` | open the packaging changelog with `xdg-open` |
+| `d` | review the PKGBUILD diff of the selected pending AUR update (`esc` or `d` closes it) |
 | `r` | refresh everything, bypassing the cache |
 | `U` | upgrade: confirm with `y`, then cronen hands the terminal to the upgrade command |
 | `?` | help |
@@ -250,6 +251,7 @@ mirror_lag_hours = 6       # a mirror this far behind (or more) is reported
 rebuild_scan_elf = true    # also scan foreign packages' ELF files for libraries an upgrade drops
 security = true            # security.archlinux.org advisories
 known_issues = true        # open GitLab issues for pending repo updates
+aur_review = "lazy"        # "lazy": fetch PKGBUILD diffs when opened (d); "eager": for every pending AUR update
 ```
 
 Rebuild detection (needs `preview` and `aur`) flags the update behind each
@@ -259,6 +261,28 @@ providing, or that is installed under the old `/usr/lib/python3.13/`-style
 directory of an updated interpreter. The ELF scan is the slow part, so its
 results are cached in `$XDG_CACHE_HOME/cronen/elf-needs.json` until a package's
 version changes (`r` rescans).
+
+### AUR review
+
+The detail pane of a pending AUR update shows the maintainer and
+co-maintainers and the latest commits of its AUR git history. `d` opens the
+PKGBUILD diff between the commit your installed build most likely came from
+(the newest one dated at or before its build date) and the newest commit, with
+`+`/`-` colouring. Two rules raise a warning:
+
+- **Maintainer changed.** The maintainer or co-maintainers differ from the
+  ones cronen recorded (an orphan being adopted counts). The first maintainers
+  cronen sees are the baseline, so nothing is flagged on a first run. The record
+  only changes after a successful upgrade, so the flag stays across restarts.
+- **Suspicious PKGBUILD change**, once the diff is loaded (when you open it, or
+  for every update with `aur_review = "eager"`, which also makes `--check` and
+  `--json` fetch them). Added lines that change the host of a `source=` URL,
+  add or change an `install=` script, pipe a download into a shell, decode and
+  run data (`base64 -d`, `eval`, `xxd -r`) or set a checksum to `SKIP` for a
+  non-VCS source. The matching lines are highlighted.
+
+These are hints for a human review, not a verdict: cronen can't tell a
+legitimate mirror change from a malicious one.
 
 cronen remembers read news and the last upgrade it ran in
 `$XDG_STATE_HOME/cronen/state.json`, and caches the news feed and AUR
