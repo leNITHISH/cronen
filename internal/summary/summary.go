@@ -16,8 +16,10 @@ import (
 
 	"github.com/leNITHISH/cronen/internal/aur"
 	"github.com/leNITHISH/cronen/internal/config"
+	"github.com/leNITHISH/cronen/internal/mirror"
 	"github.com/leNITHISH/cronen/internal/news"
 	"github.com/leNITHISH/cronen/internal/pacman"
+	"github.com/leNITHISH/cronen/internal/preflight"
 	"github.com/leNITHISH/cronen/internal/risk"
 	"github.com/leNITHISH/cronen/internal/system"
 )
@@ -149,8 +151,10 @@ type Sources struct {
 	Runner  system.Runner
 	Fetcher system.Fetcher
 	FS      system.FS
-	Config  config.Config
-	State   config.State
+	// Disk reports free space for the preflight checks.
+	Disk   system.Disk
+	Config config.Config
+	State  config.State
 	// SyncDB is the database checkupdates syncs; see pacman.SyncDBPath.
 	SyncDB string
 	// Now is the current time. Nil means time.Now.
@@ -181,6 +185,12 @@ type Summary struct {
 	// Held are the updates IgnorePkg or IgnoreGroup hold back. They are
 	// not pending updates and never count as flagged.
 	Held []risk.Package
+	// Preflight are the problems with the system that would make the
+	// upgrade fail or leave it in a bad state, most severe first.
+	Preflight []preflight.Problem
+	// RebootPending is set when an earlier upgrade replaced the running
+	// kernel. It is only known when the preflight facts could be read.
+	RebootPending bool
 	// Errors are the sources that failed. The rest of the summary holds
 	// what the others found.
 	Errors []error
@@ -209,6 +219,9 @@ func Gather(ctx context.Context, src Sources) Summary {
 		lastLog                  time.Time
 		pacnew                   []string
 		repoErr, aurErr, newsErr error
+		facts                    preflight.Facts
+		factsErr, mirrorErr      error
+		mir                      mirror.Result
 	)
 	wg.Go(func() {
 		repo, repoErr = pacman.CheckUpdates(ctx, src.Runner)
@@ -217,7 +230,15 @@ func Gather(ctx context.Context, src Sources) Summary {
 		if repoErr == nil && src.Config.Preview {
 			tx, txErr = LoadPreview(ctx, src.Runner, src.FS, src.SyncDB, repo, loc)
 		}
+		// The facts need the pending kernels, so they wait for the list.
+		// Without it (checkupdates failed) they still check the rest.
+		if src.Config.Preflight && src.Disk != nil {
+			wg.Go(func() { facts, factsErr = LoadPreflight(src.FS, src.Disk, repo) })
+		}
 	})
+	if src.Config.Preflight && src.Config.MirrorCheck && src.Disk != nil {
+		wg.Go(func() { mir, mirrorErr = LoadMirror(ctx, src.FS, src.Fetcher, false) })
+	}
 	if src.Config.AUR {
 		wg.Go(func() { aurPkgs, aurErr = LoadAUR(ctx, src.Runner, src.Fetcher, false) })
 	}
@@ -232,7 +253,7 @@ func Gather(ctx context.Context, src Sources) Summary {
 	if newsErr != nil {
 		newsErr = fmt.Errorf("news: %w", newsErr)
 	}
-	for _, err := range []error{repoErr, aurErr, newsErr, txErr} {
+	for _, err := range []error{repoErr, aurErr, newsErr, txErr, factsErr, mirrorErr} {
 		if err != nil {
 			s.Errors = append(s.Errors, err)
 		}
@@ -244,6 +265,14 @@ func Gather(ctx context.Context, src Sources) Summary {
 	if src.Config.Preview && repoErr == nil && txErr == nil {
 		txp = &tx
 		s.Transaction, s.Previewed = tx, true
+	}
+	if src.Config.Preflight && src.Disk != nil {
+		var mp *mirror.Result
+		if src.Config.MirrorCheck && mirrorErr == nil {
+			mp = &mir
+		}
+		s.Preflight = AssessPreflight(facts, txp, mp, LastUpgrade(lastLog, src.State), src.Config, t)
+		s.RebootPending = facts.RebootPending
 	}
 	res := Assess(Updates(repo, aurPkgs), unread, txp, src.Config, t)
 	s.Held = res.Held
@@ -276,14 +305,15 @@ const (
 	ExitIntervention = 30
 )
 
-// ExitCode is the --check exit code. Any failed source makes it ExitError:
+// ExitCode is the --check exit code. ExitIntervention (30) means critical:
+// manual-intervention news or a critical preflight problem. Any failed source makes it ExitError:
 // with a source missing, "nothing to do" can't be told apart from "didn't
 // look", so cronen doesn't guess.
 func (s Summary) ExitCode() int {
 	switch {
 	case len(s.Errors) > 0:
 		return ExitError
-	case len(s.Interventions) > 0:
+	case len(s.Interventions) > 0 || CriticalProblems(s.Preflight) > 0:
 		return ExitIntervention
 	case len(s.Flagged) > 0:
 		return ExitAttention

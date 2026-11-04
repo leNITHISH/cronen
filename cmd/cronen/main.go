@@ -63,7 +63,8 @@ Exit codes of --check:
   0   nothing to do
   10  updates available
   20  attention needed: at least one update is flagged
-  30  an unread news item requires manual intervention
+  30  critical: an unread news item requires manual intervention, or a
+      preflight check found a critical problem (such as a full /boot)
   1   error: a source (checkupdates, the AUR, the news feed, the preview) failed
 --json always exits 0 once it has printed; failures are in its "errors".
 Bad flags exit 2.
@@ -182,6 +183,7 @@ type env struct {
 	runner    system.Runner
 	fetcher   system.Fetcher
 	fs        system.FS
+	disk      system.Disk
 	cfg       config.Config
 	state     config.State
 	statePath string
@@ -200,6 +202,7 @@ func demoEnv() env {
 		runner:  fixtures.Runner(),
 		fetcher: fixtures.Fetcher(),
 		fs:      fixtures.FS(),
+		disk:    fixtures.Disk(),
 		syncDB:  fixtures.SyncDBPath,
 		cfg:     config.Default(),
 		now:     func() time.Time { return fixtures.Now },
@@ -218,6 +221,7 @@ func realEnv(stderr io.Writer) env {
 	e := env{
 		runner: system.ExecRunner{},
 		fs:     fsys,
+		disk:   system.OSDisk{},
 		cfg:    config.Default(),
 		syncDB: pacman.SyncDBPath(os.Getenv, os.Getuid()),
 		exec: func(argv []string, done tea.ExecCallback) tea.Cmd {
@@ -249,6 +253,7 @@ func (e env) uiOptions(ctx context.Context) ui.Options {
 		Runner:    e.runner,
 		Fetcher:   e.fetcher,
 		FS:        e.fs,
+		Disk:      e.disk,
 		Config:    &cfg,
 		State:     e.state,
 		StatePath: e.statePath,
@@ -264,6 +269,7 @@ func (e env) sources() summary.Sources {
 		Runner:   e.runner,
 		Fetcher:  e.fetcher,
 		FS:       e.fs,
+		Disk:     e.disk,
 		Config:   e.cfg,
 		State:    e.state,
 		SyncDB:   e.syncDB,

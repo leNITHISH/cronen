@@ -17,3 +17,16 @@ M7, the transaction preview:
 pacman_Qq.txt gained "iptables" (the package the fixture replacement removes).
 The checkupdates database directory (/tmp/checkup-db-1000/sync/) is only
 simulated by internal/fixtures.FS().
+
+M9, preflight (see preflight.go):
+
+  fstab.txt                  /etc/fstab, with a /boot entry
+  proc_self_mounts.txt       /proc/self/mounts, deliberately WITHOUT /boot
+  mirrorlist.txt             /etc/pacman.d/mirrorlist, with a file:// mirror first
+  lastupdate_mirror.txt      <mirror>/lastupdate (Unix time, 6800 s before the reference)
+  lastupdate_reference.txt   https://geo.mirror.pkgbuild.com/lastupdate
+
+The osrelease value, the /usr/lib/modules/<release>/ directory, the /boot kernel
+image names and sizes, and the statfs numbers (Disk()) are made up in code. The
+embedded files must keep the layout of the real ones (see the M9 pull request for
+the commands to capture them).

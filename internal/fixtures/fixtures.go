@@ -199,6 +199,9 @@ func Fetcher() *system.FakeFetcher {
 }
 
 func handle(rawURL string) (system.FakeResponse, bool) {
+	if r, ok := preflightResponse(rawURL); ok {
+		return r, true
+	}
 	u, err := url.Parse(rawURL)
 	if err != nil {
 		return system.FakeResponse{}, false
@@ -252,12 +255,13 @@ func mustMarshal(v any) []byte {
 	return b
 }
 
-// FS returns a FakeFS holding the fixture pacman.log at PacmanLogPath and
-// the sync database checkupdates leaves behind at SyncDBPath.
+// FS returns a FakeFS holding the fixture pacman.log at PacmanLogPath, the
+// sync database checkupdates leaves behind at SyncDBPath, and the files
+// preflight reads (see preflight.go).
 func FS() *system.FakeFS {
-	return system.NewFakeFS(map[string][]byte{
-		PacmanLogPath:                 Bytes(PacmanLog),
-		SyncDBPath + "/sync/core.db":  nil,
-		SyncDBPath + "/sync/extra.db": nil,
-	})
+	files := preflightFiles()
+	files[PacmanLogPath] = Bytes(PacmanLog)
+	files[SyncDBPath+"/sync/core.db"] = nil
+	files[SyncDBPath+"/sync/extra.db"] = nil
+	return system.NewFakeFS(files)
 }
