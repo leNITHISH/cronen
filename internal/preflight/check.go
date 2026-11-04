@@ -122,7 +122,7 @@ func Check(f Facts) []Problem {
 	bootBroken := len(kernels) > 0 && f.BootDeclared && !f.BootMounted
 	if bootBroken {
 		ps = append(ps, Problem{risk.Critical, CheckBootUnmounted, fmt.Sprintf(
-			"/boot is in fstab but not mounted, and %s is updating: the kernel would be installed on the root filesystem, where the bootloader won't find it. Mount /boot before upgrading.",
+			"/boot is in fstab but not mounted while %s updates: mount it before upgrading. The kernel would land on the root filesystem, where the bootloader won't find it.",
 			strings.Join(kernels, ", "))})
 	}
 

@@ -53,7 +53,7 @@ func TestCheck(t *testing.T) {
 			mutate:   func(f *Facts) { f.BootMounted = false },
 			want:     []ID{CheckBootUnmounted},
 			wantSev:  []risk.Severity{risk.Critical},
-			contains: []string{"/boot is in fstab but not mounted"},
+			contains: []string{"/boot is in fstab but not mounted while linux updates"},
 		},
 		{
 			name: "boot unmounted but no kernel updating",

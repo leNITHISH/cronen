@@ -52,15 +52,27 @@ type Config struct {
 	// FlagFreshHours flags updates whose new build is younger than this
 	// many hours. 0 never flags.
 	FlagFreshHours int `toml:"flag_fresh_hours"`
+	// Preflight enables the preflight checks: free space, /boot, the
+	// database lock, a pending reboot and the keyring.
+	Preflight bool `toml:"preflight"`
+	// MirrorCheck compares the first mirror in the mirrorlist with the
+	// reference mirror, as part of the preflight checks.
+	MirrorCheck bool `toml:"mirror_check"`
+	// MirrorLagHours is how far behind the reference mirror counts as
+	// stale.
+	MirrorLagHours int `toml:"mirror_lag_hours"`
 }
 
 // Default returns the configuration used when there is no config file.
 func Default() Config {
 	return Config{
-		AUR:           true,
-		Preview:       true,
-		WatchlistMode: WatchlistExtend,
-		NewsDays:      30,
+		AUR:            true,
+		Preview:        true,
+		Preflight:      true,
+		MirrorCheck:    true,
+		WatchlistMode:  WatchlistExtend,
+		NewsDays:       30,
+		MirrorLagHours: 6,
 	}
 }
 
@@ -122,6 +134,11 @@ func Parse(data []byte) (Config, error) {
 	if cfg.FlagFreshHours < 0 {
 		errs = append(errs, fmt.Errorf("flag_fresh_hours %d: must not be negative", cfg.FlagFreshHours))
 		cfg.FlagFreshHours = def.FlagFreshHours
+	}
+
+	if cfg.MirrorLagHours <= 0 {
+		errs = append(errs, fmt.Errorf("mirror_lag_hours %d: must be positive", cfg.MirrorLagHours))
+		cfg.MirrorLagHours = def.MirrorLagHours
 	}
 
 	var err1, err2 error

@@ -2,7 +2,6 @@ package preflight
 
 import (
 	"errors"
-	"fmt"
 	"io/fs"
 	"path"
 	"slices"
@@ -28,7 +27,7 @@ const (
 // images in /boot. updated are the names of the pending repo updates.
 //
 // A fact that can't be read is left unknown and reported in the error,
-// which wraps every such failure; the facts that could be read are still
+// which lists every such failure on one line; the facts that could be read are still
 // returned. A file that doesn't exist is a fact (no fstab entry, no lock),
 // not a failure.
 //
@@ -92,10 +91,24 @@ func Gather(fsys system.FS, disk system.Disk, updated []string) (Facts, error) {
 	}
 
 	if len(errs) > 0 {
-		return f, fmt.Errorf("preflight: %w", errors.Join(errs...))
+		return f, readErrors(errs)
 	}
 	return f, nil
 }
+
+// readErrors reports every fact that couldn't be read on one line, and
+// unwraps to each of them.
+type readErrors []error
+
+func (e readErrors) Error() string {
+	msgs := make([]string, len(e))
+	for i, err := range e {
+		msgs[i] = err.Error()
+	}
+	return "preflight: " + strings.Join(msgs, "; ")
+}
+
+func (e readErrors) Unwrap() []error { return e }
 
 // rebootPending reports whether the running kernel's module directory is
 // gone, which means an upgrade replaced the kernel since boot.
