@@ -47,6 +47,11 @@ const (
 
 	// The rebuild detection fixtures are HAND-WRITTEN too.
 	PacmanQlForeign = "pacman_Ql-foreign.txt" // pacman -Ql, for the foreign packages
+	// The M10 fixtures are HAND-WRITTEN too, pending capture from the real
+	// services.
+	PacmanQ          = "pacman_Q.txt"      // pacman -Q
+	SecurityAll      = "security_all.json" // https://security.archlinux.org/all.json
+	GitLabIssuesPref = "gitlab_issues_"    // + project + ".json"; other projects 404
 )
 
 // URLs and paths the fakes answer for.
@@ -54,7 +59,11 @@ const (
 	NewsURL          = "https://archlinux.org/feeds/news/"
 	AURInfoURL       = "https://aur.archlinux.org/rpc/v5/info"
 	ArchwebSearchURL = "https://archlinux.org/packages/search/json/"
-	PacmanLogPath    = "/var/log/pacman.log"
+	SecurityURL      = "https://security.archlinux.org/all.json"
+	// GitLabProjectsURL is the root of the GitLab project API; the project
+	// path follows, URL-escaped, then /issues.
+	GitLabProjectsURL = "https://gitlab.archlinux.org/api/v4/projects/"
+	PacmanLogPath     = "/var/log/pacman.log"
 	// SyncDBPath is where the fake checkupdates left its database.
 	SyncDBPath        = "/tmp/checkup-db-1000"
 	vercmpCommandName = "vercmp"
@@ -127,6 +136,7 @@ func Runner() *system.FakeRunner {
 	r := system.NewFakeRunner()
 	r.Set("checkupdates", CheckupdatesResult())
 	r.Set("pacman -Qm", system.FakeResult{Stdout: Bytes(PacmanQm)})
+	r.Set("pacman -Q", system.FakeResult{Stdout: Bytes(PacmanQ)})
 	r.Set("pacman -Qq", system.FakeResult{Stdout: Bytes(PacmanQq)})
 	r.Set("pacdiff -o", system.FakeResult{Stdout: Bytes(PacdiffO)})
 	r.Set("pacman -Sup --dbpath "+SyncDBPath+" --logfile /dev/null --noconfirm --print-format %n %v %r %s",
@@ -238,13 +248,39 @@ func qlHandler(names []string) (system.FakeResult, bool) {
 func Fetcher() *system.FakeFetcher {
 	f := system.NewFakeFetcher()
 	f.Set(NewsURL, system.FakeResponse{Body: Bytes(News)})
+	f.Set(SecurityURL, system.FakeResponse{Body: Bytes(SecurityAll)})
 	f.Handler = handle
 	return f
+}
+
+// handleGitLab answers the issues of the projects that have a fixture and
+// 404s for the others, like GitLab does for a project that doesn't exist.
+func handleGitLab(rawURL string) (system.FakeResponse, bool) {
+	rest, ok := strings.CutPrefix(rawURL, GitLabProjectsURL)
+	if !ok {
+		return system.FakeResponse{}, false
+	}
+	escaped, _, ok := strings.Cut(rest, "/issues")
+	if !ok {
+		return system.FakeResponse{}, false
+	}
+	full, err := url.PathUnescape(escaped)
+	if err != nil {
+		return system.FakeResponse{}, false
+	}
+	name := GitLabIssuesPref + path.Base(full) + ".json"
+	if _, err := files.ReadFile(path.Join("testdata", name)); err != nil {
+		return system.FakeResponse{Status: 404}, true
+	}
+	return system.FakeResponse{Body: Bytes(name)}, true
 }
 
 func handle(rawURL string) (system.FakeResponse, bool) {
 	if r, ok := preflightResponse(rawURL); ok {
 		return r, true
+	}
+	if resp, ok := handleGitLab(rawURL); ok {
+		return resp, true
 	}
 	u, err := url.Parse(rawURL)
 	if err != nil {

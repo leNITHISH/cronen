@@ -1,0 +1,8 @@
+[
+  {"name": "AVG-2915", "packages": ["firefox"], "status": "Fixed", "severity": "Critical", "type": "arbitrary code execution", "affected": "144.0-1", "fixed": "144.0.1-1", "ticket": null, "issues": ["CVE-2025-60002", "CVE-2025-60003"], "advisories": []},
+  {"name": "AVG-2901", "packages": ["openssh"], "status": "Fixed", "severity": "High", "type": "authentication bypass", "affected": "10.0p1-1", "fixed": "10.2p1-1", "ticket": null, "issues": ["CVE-2025-60001"], "advisories": []},
+  {"name": "AVG-2820", "packages": ["glibc"], "status": "Fixed", "severity": "Medium", "type": "denial of service", "affected": "2.41-1", "fixed": "2.42+r17+g6f0cf3d0b5b0-1", "ticket": null, "issues": ["CVE-2025-60004"], "advisories": []},
+  {"name": "AVG-2930", "packages": ["sudo"], "status": "Vulnerable", "severity": "High", "type": "privilege escalation", "affected": "1.9.17.p2-1", "fixed": null, "ticket": null, "issues": ["CVE-2025-60005"], "advisories": []},
+  {"name": "AVG-2931", "packages": ["vim"], "status": "Vulnerable", "severity": "Low", "type": "denial of service", "affected": "9.2.0-1", "fixed": null, "ticket": null, "issues": ["CVE-2025-60006"], "advisories": []},
+  {"name": "AVG-2932", "packages": ["python"], "status": "Not affected", "severity": "Medium", "type": "denial of service", "affected": "3.13.0-1", "fixed": null, "ticket": null, "issues": ["CVE-2025-60007"], "advisories": []}
+]

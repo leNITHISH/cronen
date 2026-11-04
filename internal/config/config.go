@@ -65,6 +65,12 @@ type Config struct {
 	// for libraries an upgrade drops. It is the slow part of rebuild
 	// detection, so its results are cached.
 	RebuildScanELF bool `toml:"rebuild_scan_elf"`
+	// Security enables the security.archlinux.org advisories: updates that
+	// fix one, and installed packages that are vulnerable with no fix yet.
+	Security bool `toml:"security"`
+	// KnownIssues enables the GitLab lookup of open issues for pending repo
+	// updates. With it off, cronen makes no GitLab requests at all.
+	KnownIssues bool `toml:"known_issues"`
 }
 
 // Default returns the configuration used when there is no config file.
@@ -72,6 +78,8 @@ func Default() Config {
 	return Config{
 		AUR:            true,
 		Preview:        true,
+		Security:       true,
+		KnownIssues:    true,
 		Preflight:      true,
 		MirrorCheck:    true,
 		RebuildScanELF: true,
