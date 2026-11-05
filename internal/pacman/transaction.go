@@ -57,6 +57,11 @@ type Transaction struct {
 	Held []Held
 	// DownloadBytes is the total download.
 	DownloadBytes int64
+	// PrefetchedBytes is the size of the packages already in the cache,
+	// which the print lists with a download size of 0: what a prefetch (or
+	// an earlier, interrupted upgrade) already brought in. The whole
+	// download is DownloadBytes + PrefetchedBytes.
+	PrefetchedBytes int64
 	// SizeDelta is the change in installed size, in bytes: what the new and
 	// upgraded packages take, minus what the replaced and removed ones
 	// took.
@@ -94,6 +99,9 @@ func BuildTransaction(in TransactionInput) Transaction {
 	for _, p := range in.Printed {
 		tx.DownloadBytes += p.DownloadSize
 		sync := in.Sync[p.Name]
+		if p.DownloadSize == 0 {
+			tx.PrefetchedBytes += sync.DownloadSize
+		}
 		tx.SizeDelta += sync.InstalledSize
 
 		if in.Installed[p.Name] {
@@ -166,6 +174,18 @@ func depName(d string) string {
 		return d[:i]
 	}
 	return d
+}
+
+// TotalBytes is the whole download of the upgrade, counting what is
+// already in the cache.
+func (t Transaction) TotalBytes() int64 {
+	return t.DownloadBytes + t.PrefetchedBytes
+}
+
+// Packages is how many packages the upgrade installs: the upgraded and the
+// new ones.
+func (t Transaction) Packages() int {
+	return len(t.Updates) + len(t.New)
 }
 
 // PreviewTransaction asks pacman what -Syu would do, against the database

@@ -17,6 +17,7 @@ const (
 	KindOrphans
 	KindPacdiff
 	KindDowngrade
+	KindPrefetch
 )
 
 // Item is one package a removal affects.

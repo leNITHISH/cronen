@@ -392,3 +392,21 @@ func TestPreviewTransactionFailures(t *testing.T) {
 		}
 	})
 }
+
+func TestTransactionPrefetchedBytes(t *testing.T) {
+	tx := BuildTransaction(TransactionInput{
+		Updates: []Update{{Name: "a", OldVersion: "1", NewVersion: "2"}, {Name: "b", OldVersion: "1", NewVersion: "2"}},
+		Printed: []Printed{
+			{Name: "a", Version: "2", Repo: "core", DownloadSize: 100 << 20}, // still to download
+			{Name: "b", Version: "2", Repo: "core", DownloadSize: 0},         // already in the cache
+		},
+		Installed: map[string]bool{"a": true, "b": true},
+		Sync:      map[string]Info{"a": {DownloadSize: 100 << 20}, "b": {DownloadSize: 70 << 20}},
+	})
+	if tx.DownloadBytes != 100<<20 || tx.PrefetchedBytes != 70<<20 || tx.TotalBytes() != 170<<20 {
+		t.Errorf("download %d, prefetched %d, total %d", tx.DownloadBytes, tx.PrefetchedBytes, tx.TotalBytes())
+	}
+	if tx.Packages() != 2 {
+		t.Errorf("Packages = %d, want 2", tx.Packages())
+	}
+}
