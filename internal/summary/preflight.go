@@ -43,6 +43,9 @@ func AssessPreflight(facts preflight.Facts, tx *pacman.Transaction, mir *mirror.
 	if tx != nil {
 		facts.Download, facts.SizeDelta = tx.DownloadBytes, tx.SizeDelta
 	}
+	if MeteredEnabled(cfg) {
+		facts.MeteredLimit = int64(cfg.MeteredWarnMiB) << 20
+	}
 	if mir != nil {
 		facts.MirrorKnown = true
 		facts.MirrorRoot = mir.Root

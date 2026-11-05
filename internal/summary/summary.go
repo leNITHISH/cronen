@@ -212,6 +212,10 @@ type Summary struct {
 	// Vulnerable are installed packages with a known problem no version
 	// fixes yet.
 	Vulnerable []security.Vulnerable
+	// Bandwidth is what the upgrade costs in bytes and time, set when
+	// Previewed. Metered is what NetworkManager says about the connection.
+	Bandwidth BandwidthInfo
+	Metered   MeteredInfo
 	// Errors are the sources that failed. The rest of the summary holds
 	// what the others found.
 	Errors []error
@@ -245,6 +249,7 @@ func Gather(ctx context.Context, src Sources) Summary {
 		facts                    preflight.Facts
 		factsErr, mirrorErr      error
 		mir                      mirror.Result
+		metered                  MeteredInfo
 	)
 	wg.Go(func() {
 		repo, repoErr = pacman.CheckUpdates(ctx, src.Runner)
@@ -275,6 +280,9 @@ func Gather(ctx context.Context, src Sources) Summary {
 	if src.Config.AUR {
 		wg.Go(func() { aurPkgs, aurErr = LoadAUR(ctx, src.Runner, src.Fetcher, false) })
 	}
+	if MeteredEnabled(src.Config) {
+		wg.Go(func() { metered = LoadMetered(ctx, src.Runner, src.FS) })
+	}
 	wg.Go(func() { items, newsErr = news.Fetch(ctx, src.Fetcher, false) })
 	// An unreadable log only makes the last upgrade unknown, and a missing
 	// pacdiff only hides the .pacnew count, as in the TUI.
@@ -304,8 +312,13 @@ func Gather(ctx context.Context, src Sources) Summary {
 		if src.Config.MirrorCheck && mirrorErr == nil {
 			mp = &mir
 		}
+		facts.Metered, facts.MeteredDevice = metered.Metered, metered.Device
 		s.Preflight = AssessPreflight(facts, txp, mp, LastUpgrade(lastLog, src.State), src.Config, t)
 		s.RebootPending = facts.RebootPending
+	}
+	s.Metered = metered
+	if txp != nil {
+		s.Bandwidth = Bandwidth(tx, LastUpgrade(lastLog, src.State), t, src.State)
 	}
 	updates := Updates(repo, aurPkgs)
 	feeds, feedErrs := loadFeeds(ctx, src, updates, txp)

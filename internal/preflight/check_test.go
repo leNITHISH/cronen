@@ -238,6 +238,35 @@ func TestCheck(t *testing.T) {
 			mutate: func(f *Facts) { f.LastUpgrade = now.Add(-400 * 24 * time.Hour) },
 		},
 
+		// metered connection
+		{
+			name: "metered and over the limit",
+			mutate: func(f *Facts) {
+				f.Metered, f.MeteredDevice, f.MeteredLimit, f.Download = true, "wlan0", 100<<20, 800<<20
+			},
+			want:     []ID{CheckMetered},
+			wantSev:  []risk.Severity{risk.Warn},
+			contains: []string{"wlan0", "metered", "800 MiB", "100 MiB"},
+		},
+		{
+			name: "metered, download under the limit",
+			mutate: func(f *Facts) {
+				f.Metered, f.MeteredLimit, f.Download = true, 100<<20, 99<<20
+			},
+		},
+		{
+			name: "over the limit but not metered",
+			mutate: func(f *Facts) {
+				f.MeteredLimit, f.Download = 100<<20, 800<<20
+			},
+		},
+		{
+			name: "metered with the check off (limit 0)",
+			mutate: func(f *Facts) {
+				f.Metered, f.Download = true, 800<<20
+			},
+		},
+
 		// ordering
 		{
 			name: "most severe first, ties in check order",

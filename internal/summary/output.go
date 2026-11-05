@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/leNITHISH/cronen/internal/pacman"
 	"github.com/leNITHISH/cronen/internal/risk"
@@ -75,6 +76,9 @@ func (s Summary) Text() string {
 	}
 	if s.Previewed {
 		lines = append(lines, "transaction: "+s.transactionLine())
+		if s.Bandwidth.Shown() {
+			lines = append(lines, "bandwidth: "+s.Bandwidth.Line())
+		}
 	}
 	for _, p := range s.Held {
 		lines = append(lines, icon(risk.Info)+" "+p.Name+": "+oneLine(p.Flags[0].Reason))
@@ -132,6 +136,10 @@ func (s Summary) JSON() []byte {
 		Vulnerable    int           `json:"vulnerable"`
 		Preflight     []problemJSON `json:"preflight"`
 		RebootPending bool          `json:"reboot_pending"`
+		DaysBehind    int           `json:"days_behind"`
+		ETASeconds    *int64        `json:"eta_seconds,omitempty"`
+		Prefetched    int64         `json:"prefetched_bytes"`
+		Metered       bool          `json:"metered"`
 		Errors        []string      `json:"errors,omitempty"`
 	}{
 		Updates:       s.Updates(),
@@ -152,6 +160,17 @@ func (s Summary) JSON() []byte {
 		Vulnerable:    len(s.Vulnerable),
 		Preflight:     []problemJSON{},
 		RebootPending: s.RebootPending,
+		Prefetched:    s.Transaction.PrefetchedBytes,
+		Metered:       s.Metered.Metered,
+	}
+	if s.Previewed {
+		if s.Bandwidth.DaysKnown {
+			v.DaysBehind = s.Bandwidth.DaysBehind
+		}
+		if s.Bandwidth.Estimate.OK {
+			eta := int64(s.Bandwidth.Estimate.Duration.Round(time.Second) / time.Second)
+			v.ETASeconds = &eta
+		}
 	}
 	for _, p := range s.Preflight {
 		v.Preflight = append(v.Preflight, problemJSON{Severity: p.Severity.String(), Message: p.Message})

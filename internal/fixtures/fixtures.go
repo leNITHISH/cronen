@@ -155,6 +155,7 @@ func Runner() *system.FakeRunner {
 	r.Set("pacman -Sup --dbpath "+SyncDBPath+" --logfile /dev/null --noconfirm --print-format %n %v %r %s",
 		system.FakeResult{Stdout: Bytes(PacmanSup)})
 	r.Set("pacman -Qu --dbpath "+SyncDBPath+" --logfile /dev/null", system.FakeResult{Stdout: Bytes(PacmanQu)})
+	r.Set(NmcliMeteredCommand, nmcliResult(NmcliMeteredNo))
 	r.Handler = infoHandler
 
 	entries, err := files.ReadDir("testdata")
@@ -199,7 +200,11 @@ func infoHandler(line string) (system.FakeResult, bool) {
 		file = PacmanQiOld
 		names = strings.Fields(strings.TrimPrefix(line, "pacman -Qi -- "))
 	case strings.HasPrefix(line, "pacman -Ql -- "):
-		return qlHandler(strings.Fields(strings.TrimPrefix(line, "pacman -Ql -- ")))
+		names := strings.Fields(strings.TrimPrefix(line, "pacman -Ql -- "))
+		if res, ok := qlRepo(names); ok {
+			return res, true
+		}
+		return qlHandler(names)
 	default:
 		return system.FakeResult{}, false
 	}
@@ -384,6 +389,9 @@ func mustMarshal(v any) []byte {
 // preflight reads (see preflight.go).
 func FS() *system.FakeFS {
 	files := preflightFiles()
+	for p, b := range bandwidthFiles() {
+		files[p] = b
+	}
 	files[PacmanLogPath] = Bytes(PacmanLog)
 	files[SyncDBPath+"/sync/core.db"] = nil
 	files[PacmanConfPath] = []byte("[options]\nCacheDir = " + CacheDir + "\n")
@@ -395,6 +403,7 @@ func FS() *system.FakeFS {
 	for name, size := range cacheFiles {
 		fsys.SetSize(CacheDir+name, size)
 	}
+	setBandwidthFS(fsys)
 	return fsys
 }
 
