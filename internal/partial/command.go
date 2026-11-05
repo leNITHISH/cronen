@@ -19,6 +19,9 @@ type Command struct {
 	Refresh int
 	// Upgrade reports -u / --sysupgrade.
 	Upgrade bool
+	// OtherRoot reports -r/--root, -b/--dbpath or --sysroot: the command
+	// works on another installation, not on the running system.
+	OtherRoot bool
 	// Targets are the non-option arguments, and everything after "--".
 	Targets []string
 }
@@ -27,9 +30,11 @@ type Command struct {
 // and installs targets without upgrading the system: pacman -Sy X,
 // -Syy X, -S -y X, -yS X and --sync --refresh X. A full upgrade
 // (-Syu, -Syyu, -Suy, --sync --refresh --sysupgrade) does not match, and
-// neither does -Sy with nothing to install, which changes nothing.
+// neither does -Sy with nothing to install, which changes nothing. A
+// command aimed at another root or database path (archinstall's
+// pacman -r /mnt -Sy) does not touch this system and does not match.
 func (c Command) SyncsWithoutUpgrade() bool {
-	return c.Sync && c.Refresh > 0 && !c.Upgrade && len(c.Targets) > 0
+	return c.Sync && c.Refresh > 0 && !c.Upgrade && !c.OtherRoot && len(c.Targets) > 0
 }
 
 // programs are the commands that take pacman's sync options, the ones the
@@ -94,6 +99,8 @@ func ParseCommand(line string) (c Command, ok bool) {
 				c.Refresh++
 			case "sysupgrade":
 				c.Upgrade = true
+			case "root", "dbpath", "sysroot":
+				c.OtherRoot = true
 			}
 			if !hasValue && longWithArg[name] && i+1 < len(words) {
 				i++
@@ -113,6 +120,7 @@ func ParseCommand(line string) (c Command, ok bool) {
 					c.Upgrade = true
 				}
 				if shortWithArg[ch] {
+					c.OtherRoot = true
 					if j == len(cluster)-1 && i+1 < len(words) {
 						i++
 					}
