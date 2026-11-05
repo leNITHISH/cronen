@@ -248,3 +248,57 @@ func TestScanLinkageDriver(t *testing.T) {
 		t.Errorf("clean text = %q", got)
 	}
 }
+
+func TestLinkageFixes(t *testing.T) {
+	src := fixtureSources()
+	cacheFile := "/var/cache/pacman/pkg/firefox-144.0-1-x86_64.pkg.tar.zst"
+	fs := system.NewFakeFS(map[string][]byte{
+		cacheFile: {1},
+		// An older build, which must not be picked.
+		"/var/cache/pacman/pkg/firefox-143.0-1-x86_64.pkg.tar.zst": {1},
+	})
+	res := linkage.Result{Broken: []linkage.Broken{
+		{Path: "/usr/lib/firefox/firefox", Package: "firefox", Version: "144.0-1", Lib: "libgone.so.1"},
+		{Path: "/usr/bin/paru", Package: "paru", Version: "2.1.0-1", Lib: "libalpm.so.15"},
+	}}
+	fixSrc := FixSources{Runner: src.Runner, FS: fs, Priv: []string{"sudo"}, AURHelper: "paru"}
+	ctx := context.Background()
+
+	fixes, err := LinkageFixes(ctx, fixSrc, res, 0, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var kinds []linkage.FixKind
+	for _, f := range fixes {
+		kinds = append(kinds, f.Kind)
+	}
+	if want := []linkage.FixKind{linkage.FixUpgrade, linkage.FixReinstall, linkage.FixRebuild}; !slices.Equal(kinds, want) {
+		t.Fatalf("kinds = %v, want %v", kinds, want)
+	}
+	if want := []string{"sudo", "pacman", "-U", "--", cacheFile}; !slices.Equal(fixes[1].Argv, want) {
+		t.Errorf("reinstall argv = %v, want %v", fixes[1].Argv, want)
+	}
+	if want := []string{"paru", "-S", "--", "paru"}; !slices.Equal(fixes[2].Argv, want) {
+		t.Errorf("rebuild argv = %v, want %v", fixes[2].Argv, want)
+	}
+
+	// Pending repo updates, or unknown ones: no rebuild command at all.
+	for _, tc := range []struct {
+		pending int
+		known   bool
+	}{{3, true}, {0, false}} {
+		fixes, err = LinkageFixes(ctx, fixSrc, res, tc.pending, tc.known)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, f := range fixes {
+			if f.Kind == linkage.FixRebuild || (f.Kind == linkage.FixUpgradeFirst && f.Argv != nil) {
+				t.Errorf("pending %d known %v: offered a rebuild: %+v", tc.pending, tc.known, f)
+			}
+		}
+	}
+
+	if fixes, err := LinkageFixes(ctx, fixSrc, linkage.Result{}, 0, true); err != nil || fixes != nil {
+		t.Errorf("nothing broken: %v, %v", fixes, err)
+	}
+}
