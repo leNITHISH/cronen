@@ -253,3 +253,58 @@ func LinkageText(res linkage.Result) string {
 	}
 	return b.String()
 }
+
+// FixSources is the system access and settings LinkageFixes needs.
+type FixSources struct {
+	Runner system.Runner
+	FS     system.FS
+	// Priv is the privilege command for a reinstall (Config.PrivilegeArgv).
+	Priv []string
+	// AURHelper is the configured helper, "" for none.
+	AURHelper string
+	// ExtraCacheDirs and Home find cached package files.
+	ExtraCacheDirs []string
+	Home           string
+}
+
+// LinkageFixes turns a scan's result into suggested fixes. pendingKnown is
+// false when the pending repo updates couldn't be read: no rebuild is
+// offered then. Foreign packages are told from repo ones by `pacman -Qm`; a
+// reinstall is suggested only for a repo package whose file at the installed
+// version is in the package cache.
+func LinkageFixes(ctx context.Context, src FixSources, res linkage.Result, pendingRepo int, pendingKnown bool) ([]linkage.Fix, error) {
+	if len(res.Broken) == 0 {
+		return nil, nil
+	}
+	foreignPkgs, err := pacman.ForeignPackages(ctx, src.Runner)
+	if err != nil {
+		return nil, err
+	}
+	foreign := map[string]bool{}
+	for _, p := range foreignPkgs {
+		foreign[p.Name] = true
+	}
+	in := linkage.FixInput{
+		Broken: res.Broken, Foreign: foreign, PendingRepo: pendingRepo, PendingUnknown: !pendingKnown,
+		Priv: src.Priv, AURHelper: src.AURHelper,
+	}
+	// The cache is optional: without it the fix is the full upgrade alone.
+	if src.FS != nil {
+		in.CacheDirs = pacman.ResolveCacheDirs(src.FS, src.ExtraCacheDirs, src.Home)
+		if files, _ := pacman.ScanCache(src.FS, in.CacheDirs); len(files) > 0 {
+			in.Cached = map[string]string{}
+			for _, b := range res.Broken {
+				if foreign[b.Package] || in.Cached[b.Package] != "" {
+					continue
+				}
+				for _, c := range files {
+					if c.Name == b.Package && pacman.SameVersion(c.Version, b.Version) {
+						in.Cached[b.Package] = c.Path
+						break
+					}
+				}
+			}
+		}
+	}
+	return linkage.Suggest(in), nil
+}

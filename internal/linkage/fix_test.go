@@ -37,6 +37,15 @@ func TestSuggest(t *testing.T) {
 			t.Errorf("text = %q", got[1].Text)
 		}
 	})
+	t.Run("pending updates unknown: no rebuild is offered", func(t *testing.T) {
+		got := Suggest(FixInput{Broken: broken[1:], Foreign: foreign, PendingUnknown: true, AURHelper: "paru"})
+		if want := []FixKind{FixUpgradeFirst}; !slices.Equal(kinds(got), want) {
+			t.Fatalf("kinds = %v, want %v", kinds(got), want)
+		}
+		if got[0].Argv != nil {
+			t.Errorf("offered a command: %+v", got[0])
+		}
+	})
 	t.Run("nothing pending: rebuild with the helper", func(t *testing.T) {
 		got := Suggest(FixInput{Broken: broken, Foreign: foreign, AURHelper: "paru", Priv: []string{"sudo"}})
 		if want := []FixKind{FixUpgrade, FixRebuild}; !slices.Equal(kinds(got), want) {

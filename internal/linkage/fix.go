@@ -44,6 +44,10 @@ type FixInput struct {
 	// PendingRepo counts the pending repo updates. Any makes a rebuild
 	// pointless.
 	PendingRepo int
+	// PendingUnknown is set when the pending updates couldn't be read
+	// (checkupdates failed). A rebuild is not offered then either: the rule
+	// is "only when there are no pending repo updates", and nobody knows.
+	PendingUnknown bool
 	// Cached maps a repo package to its package file at the installed
 	// version, when the cache holds it.
 	Cached map[string]string
@@ -97,6 +101,12 @@ func Suggest(in FixInput) []Fix {
 	}
 	if len(foreign) > 0 {
 		switch {
+		case in.PendingUnknown:
+			fixes = append(fixes, Fix{
+				Kind: FixUpgradeFirst, Packages: foreign,
+				Text: fmt.Sprintf("upgrade first, then rebuild %s: the pending repo updates couldn't be read, so no rebuild is offered",
+					strings.Join(foreign, ", ")),
+			})
 		case in.PendingRepo > 0:
 			fixes = append(fixes, Fix{
 				Kind: FixUpgradeFirst, Packages: foreign,
