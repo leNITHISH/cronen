@@ -786,6 +786,8 @@ M7 goes first. M8–M11 then only touch their own packages plus a short UI wirin
 
 ## Later (not v2)
 
+> Superseded by the "After v2" section at the end of this file, which says what became a milestone and what was dropped, bullet by bullet. The list below is kept as it was written.
+
 - Show actual upstream release notes (GitHub Releases API) in the detail pane.
 - Desktop notifications via a systemd user timer and `cronen --notify` (notify only when the state changes, for example new critical news).
 - Custom rules in config (`[[rule]] match = "*-dkms" severity = "info" reason = "…"`).
@@ -797,3 +799,181 @@ M7 goes first. M8–M11 then only touch their own packages plus a short UI wirin
 - AUR packages that are now in the official repos, with a switch to the repo version.
 - Fixing install reasons (`pacman -D --asdeps` / `--asexplicit`) so orphan cleanup catches more.
 - Integrity: `pacman -Qkk`, and reinstalling from the cache at the installed version. Also unowned files, config drift, a package list kept in dotfiles, a maintenance checklist, and cache cleanup with `paccache`.
+
+---
+
+# After v2: v2.x stabilisation, then v3
+
+v2 (M7–M19) is merged. Running it on a real Arch machine showed that the weak spot is not the logic but what the logic was told about the outside world. Four v2 PRs turned out wrong only when their own "Needs checking" commands were run on a real system:
+
+- `pacman -Rnsp` is rejected (`--nosave` and `--print` cannot be combined).
+- Plain `pacman -Qi` prints no `Backup Files`; only `-Qii` does, as `path [modified|unmodified|unreadable]`.
+- The linkage scan reported 66 false positives on a healthy system, because optional-feature libraries are not installed.
+- Arch's GitLab uses numbered scoped labels (`severity::2-high`, `priority::1-urgent`), not the spellings the plan assumed.
+
+All four are handled in the code on `main` now. Each had passed `make test` and `make lint` first, because the fixtures had been written to match the code. `internal/fixtures/testdata/HAND_WRITTEN.txt` still lists dozens of files that are the author's idea of the output, not a capture.
+
+So the order is: first make the tests able to catch this class of bug (v2.x), then build new features (v3), each of which brings its own captured fixtures.
+
+## Ground rules for everything below
+
+1. **No new write actions in v3.** Nothing that installs, removes, restores or changes install reasons is added. Any future one must come with the v2 flow: pacman's own `--print` dry run as the user, then the confirm modal with the exact argv, then `tea.ExecProcess`, plus the argv guards and adversarial tests of `internal/ops`. Where a v3 feature could suggest a command, it shows the text and does nothing.
+2. **No new fixture without provenance.** From M21 on, a PR that adds a command or a file reader ships a real capture for it, taken with the M20 script. A hand-written fixture is allowed only with an entry in `HAND_WRITTEN.txt` that says why; M22's test fails CI if the entry is missing.
+3. **"Needs checking on Arch" stays mandatory,** and from M20 each PR also records the result in the ledger (see M20), so the plan always says which claims were seen on a real system, when, and on which pacman version.
+4. **False positives are bugs.** Any scan that flags something must have a fixture of a healthy system that flags nothing. The linkage scan is the model: report "can't tell" rather than guess.
+5. Everything in CLAUDE.md and the v1 and v2 rules stays, including `internal/system` as the only place for `os/exec`, files and network.
+
+## What happens to the "Later (not v2)" list
+
+| Item | Decision |
+|---|---|
+| Upstream release notes (GitHub Releases) | M28 |
+| systemd user timer and notifications | M27 |
+| Custom rules in config | M31 |
+| `--json --full`, shell completions | `--json --full`: M31. Completions: M26 |
+| Theming | An ASCII icon switch only (M31). **Dropped:** a configurable palette. It adds config surface that M25 would have to validate, for little gain; terminals already carry the user's palette. |
+| Downgrades from the Archive for versions not cached | **Dropped.** It installs arbitrary old packages from the network, which v2's non-goals exclude. The date-matched archive install is already experimental and still unverified on a real system. |
+| Services and processes needing a restart (`/proc/*/maps`) | **Dropped for now.** `/proc/<pid>/maps` of other users' processes is unreadable without root, so an unprivileged cronen would see only the user's own processes and miss the system services that matter. Running it as root is not allowed by invariant 1, and a half-view invites false confidence. `reboot_pending` (M9) stays. Revisit if a root-free source appears. |
+| Boot sanity | M30 (with a post-upgrade check) |
+| AUR packages now in the official repos | M29, as information only; the switch is not automated |
+| Fixing install reasons (`pacman -D`) | **Dropped.** `pacman -D` has no `--print`, so it cannot meet safety invariant 2. |
+| Integrity: `pacman -Qkk`, reinstall from cache, unowned files, config drift, dotfile package list, checklist, `paccache` | **Not scheduled.** `-Qkk` on a real system is noisy (modified backup files, root-only paths), so it is exactly the false-positive trap in rule 4. Reconsider after M23, with captures from several machines. The rest is a different tool. |
+| Per-package download size | **Already done** in M7 (detail pane, status bar) and M16 (sorting). |
+| Archive lookup ("released N days ago") | **Dropped.** M7 already shows the build date from `pacman -Si`: the same fact without another network source. |
+
+## Tracks and order
+
+```
+v2.x stabilisation (patch releases, no new features)
+  M20 verification sweep -> M21 real fixtures -> M22 golden tests + provenance ratchet   => maintainer tags v2.1
+  M23 container harness      (parallel with M20-M22, its own directory)
+  M24 --doctor               (after M21)
+  M25 config validation      (parallel, any time after M20)                             => maintainer tags v2.2
+
+v3 (after v2.1; each milestone ships on its own, the maintainer decides when v3.0 is tagged)
+  M26 packaging              (after M23)
+  M27 notifications          (after M25)
+  M28 release notes   \
+  M29 dependency hints  > parallel, own packages plus a short UI wiring step each
+  M30 boot sanity     /
+  M31 customisation and scripting output (after M25)
+```
+
+Tags are made by the maintainer, never by a session. As in v2, expect small conflicts in `internal/ui` and `internal/risk` between parallel milestones; rebase onto `main`, don't merge it in.
+
+## v2.x stabilisation milestones
+
+### M20: Verification sweep (run first, alone)
+- `tools/capture/capture.sh`, outside `internal/` and `cmd/` and never built into the binary. POSIX shell, read-only, no root. It runs every command cronen issues and writes each one's stdout, stderr and exit code to an output directory, plus `MANIFEST.txt` (command, pacman version, date, locale). The argv table in the script is cross-checked by a Go test against the argv builders, so the two cannot drift. Missing tools are listed as `SKIPPED`. It scrubs the host name, user name, home path and machine-id, and copies nothing outside its list.
+- Things that need root (the Timeshift root listing, `pacdiff` over other users' files) are not run: the script prints the command for the maintainer to run by hand and paste in.
+- The ledger: a table added to the v2 "Needs checking on Arch" list with one row per item: item, command, pacman version, date, result (`confirmed`, `differs: <fix PR>`, `unverified`).
+- Fixes for whatever the sweep shows. Known suspects:
+  - `severity::1-*`: match scoped labels by their number (`severity::N-...`) and not by the word, so an unseen spelling still maps.
+  - "Last used" (M16): desktop scanners pollute access times (on the maintainer's machine 60 of 69 `.desktop` files shared one timestamp). Detect clustering and show "unknown" instead of a date; prefer the executable's atime to the `.desktop` file's. If neither is trustworthy on the maintainer's machine, remove the column and its sort, and say so in the README.
+  - Chained `tea.ExecProcess` (snapshot, then upgrade; `cronen install`): a pty-based test that runs the real binary with fake `pacman`, `sudo` and `timeshift` scripts first on `PATH` (a test-only pty dependency). It checks the order, that the terminal is handed back between the commands, that the second never runs after a non-zero exit, and that the screen redraws. The maintainer also tries it once by hand.
+  - Timeshift and snapper (M19): neither is installed on the maintainer's machine, so capture from a disposable Arch VM with both. If that isn't possible, the README and the Snapshots section say "untested against a real tool" and `snapshot_before_upgrade = "ask"` doesn't tick the box by default. Never claim otherwise.
+  - Archive install option B (M17): stays `archive_install = false`. Run it once in a VM (root pacman writing the real local database through the symlink, the `fakeroot` sync, the day choice). The default flips to on only if that passes, and the plan says so.
+- **Done when:** the script has run on the maintainer's machine and its bundle is attached to the PR; every v2 "Needs checking" item has a ledger row; each `differs` row has a fix with a regression test; and nothing the maintainer could not check is described as verified in the plan, README or man page.
+- Needs a maintainer-run step: a cloud session cannot see a real Arch system. The session writes the script, the maintainer runs it, the session continues from the bundle.
+
+### M21: Real fixtures (after M20)
+- Replace every file listed in `HAND_WRITTEN.txt` with the captured one, keeping the package set where tests count on it, or updating the tests to the real numbers. The data made up in code (`fixtures.go`, `preflight.go`, `partial.go`, `remove.go`: statfs numbers, cache listing, `ld.so.conf`, the real-database `-Qu`) is captured too; the code keeps only what cannot be captured (a full `/boot`, a failed snapshot).
+- Use real `pacman -Qi` and `-Qii` dumps trimmed to a fixed package set by the script (not by hand), real `pacman.log` excerpts (including an interrupted transaction if the maintainer has one), real `-Rp` and `-Up` errors, and real small ELF files beside the in-memory ones.
+- Whatever can't be captured stays in `HAND_WRITTEN.txt` with one line saying what and why. The file keeps only those.
+- `--demo` data may stay synthetic, but is derived from captures, so a demo can't show a shape the real tool never prints.
+- **Done when:** `make test` passes on the captures; `HAND_WRITTEN.txt` lists only files that really can't be captured, each with a reason; and the fake runner's behaviour (for example refusing `-n` with `-p`) is checked against the real stderr in the capture, not against the author's memory.
+
+### M22: Golden tests and the provenance ratchet (after M21)
+- Golden tests: each captured raw output is parsed and compared with a checked-in `.golden` file (the parsed structure as indented JSON; `go test -update` rewrites it and the diff is reviewed). A parser change that alters what a real capture produces fails loudly.
+- An argv golden: one file listing every argv the app can emit (all of `internal/ops`, `pacman`, `snapshot`, `archive`). Adding a command means adding a line and a capture.
+- The ratchet: a test that every file in `testdata` is listed either in `MANIFEST.txt` (captured) or in `HAND_WRITTEN.txt` (with a reason), and that no hand-written file shadows a capture of the same command.
+- A healthy-system end-to-end test: the full app loaded from the captured set may produce no flags that the capture doesn't explain. This is what the 66 linkage false positives would have tripped.
+- **Done when:** deliberately breaking a parser (a renamed field, a dropped `[modified]` marker) fails a golden test; adding an unlisted fixture fails the ratchet; both are shown in the PR description.
+
+### M23: Container integration harness (parallel with M20–M22)
+- `integration/`, behind a build tag so `make test` never runs it: a Dockerfile on `archlinux:base` pinned by digest, with `pacman-contrib`, `fakeroot` and `binutils`. A script builds a tiny offline local repo by hand (`bsdtar` of a `.PKGINFO` and a file or two, then `repo-add`) with sonames, optdepends, backup files, orphans, a dependency chain and a replacement, and installs some of it.
+- Tests run the real binary against real `pacman -Qi`/`-Qii`/`-Qu`/`-Sup`/`-Rp`/`-Up`/`-Ql`/`-Qdtq`, `vercmp`, `checkupdates` (from a `file://` repo), the ELF linkage scan on real binaries (including a library whose optional dependency is not installed: the false-positive case) and the removal dry runs, all with `--network none`, and assert on cronen's parsed result.
+- `make integration` runs it locally (Docker or Podman). CI gets a separate job; the image pull is the only network use, and only in CI. A scheduled weekly workflow runs it against `archlinux:latest`, so a pacman release that changes output is noticed before users notice.
+- It does **not** replace the maintainer's checks: a container has no systemd, no real mirrors, no real boot setup and only synthetic packages. It does catch the `-Rnsp`, `-Qi`/`-Qii` and linkage classes of bug on any pacman version.
+- **Done when:** `make integration` passes with no network, and fails if the `-n` with `-p` argv bug or the `-Qi` Backup Files assumption is re-introduced (each re-introduced once and noted in the PR); the CI job is green.
+
+### M24: `cronen --doctor` (after M21)
+- A table in `internal/doctor`: each "Needs checking" item as an id, the argv (built by the same functions the app uses, not a copy) and an expectation over the output (parses with cronen's parser, the expected fields are present, the exit code is in the expected set). One line per check: `ok`, `differs: <what>`, `skipped: <tool missing>` or `error`, with the pacman version at the top. `--doctor --json` for scripts. `--doctor --bundle <dir>` writes the sanitised raw outputs so a user on a derivative can attach them to an issue.
+- Read-only and unprivileged: checks go through the runner, so `internal/system` stays the only place that executes. A test fails if any argv in the table is a write (`-R`, `-S` or `-U` without `-p`, `-D`, `sudo`, `systemctl restart` and so on). Checks that need root print the command instead of running it.
+- Config problems from M25 appear as a section of the same report.
+- Worth building because it turns the maintainer's manual sweep into something every user, and every new pacman release, can run against their own pacman instead of the author's.
+- **Done when:** on the fixtures the report is all `ok`; with one capture swapped for a wrong shape, the matching line says `differs`; the no-write-argv test exists and passes; `--doctor` exits `0`, or `1` if any line is `differs` or `error`.
+
+### M25: Configuration validation (parallel, after M20)
+- Today unknown keys are reported and ignored. Add type and range errors (negative days, `mirror_lag_hours = 0`, `aur_review` not `lazy` or `eager`, a `privilege_command` that is not one of the known three or an absolute path), contradictions (`snapshot_before_upgrade = "always"` with no tool found; `archive_install = true` without `fakeroot`), a "did you mean" for near-miss keys, and the line number when the TOML library provides one.
+- A bad value falls back to that key's default only; the UI shows one warning line and `--doctor` the full list. `cronen --check-config` prints the same and exits `0` or `1`.
+- Values in `protected`, `extra_cache_dirs` and `pacdiff_command` go through the same validation as `internal/ops` (no shell, names pass the name regex), so a config can't loosen a safety guard. A test pins that.
+- **Done when:** table tests cover each error, near-miss and contradiction; a config with every key wrong still starts on defaults and never panics; nothing in the config can disable an argv guard.
+
+## v3 milestones
+
+Start after v2.1 is tagged. None of these adds a write action.
+
+### M26: Packaging and release (after M23)
+- Already in place from M6: `PKGBUILD`, `.goreleaser.yaml`, `doc/cronen.1`. This milestone completes them.
+- Shell completions for bash, zsh and fish, hand-written under `contrib/completions/` (the flags and the `install` subcommand are few). A test checks that every flag in `--help` appears in each file. The PKGBUILD installs them and the release archive includes them.
+- Bring the man page up to v2 (every flag, subcommand, config key, the exit codes, the state version), with a test that fails if a flag or config key exists in the code and not in the page.
+- Two AUR PKGBUILDs in the repo: `cronen` (tagged release, with checksums) and `cronen-git`. Both pass `namcap` and a `makepkg` build inside the M23 image in CI.
+- A release workflow: on a `v*` tag, `goreleaser release` publishes the archive and `checksums.txt`; the version string comes from the tag.
+- Creating the tag and publishing to the AUR are the maintainer's actions.
+- **Done when:** CI builds both PKGBUILDs in the container and `namcap` is clean; `make release-check` passes; completions are covered by the flag test; the maintainer installs the built package and checks `man cronen` and tab completion on a real system.
+
+### M27: Notifications (after M25)
+- `cronen --notify` runs the same pipeline as `--check` (honouring the cache TTLs, and skipping the network on a metered connection) and compares the result with a digest in state (`notified`: critical items, news GUIDs, security fixes, preflight problems). It sends a desktop notification **only when something new appears** at or above `notify_min_severity`. Silent otherwise.
+- Sending goes through `notify-send` via the runner (argv, no shell). The text comes from package names and news, so control characters are stripped and the length is capped. `libnotify` is an optdepend; no D-Bus library.
+- `contrib/systemd/cronen-notify.service` and `.timer`, user units (`OnCalendar` a few times a day, `RandomizedDelaySec`, `Persistent=true`). cronen never enables them; the README shows `systemctl --user enable --now`. It never starts an upgrade and the notification has no action.
+- Config: `notify = true`, `notify_min_severity = "warn"`.
+- **Done when:** with the fake runner the first run notifies, a second run with the same state is silent, a new critical item notifies once, and a metered link makes no network requests; the notification text is sanitised (adversarial test); the unit files pass `systemd-analyze verify` in the M23 image.
+
+### M28: Upstream release notes (parallel after v2.1)
+- `internal/releasenotes`: for packages whose upstream URL is a GitHub repository, fetch the releases between the installed and the new version from the GitHub Releases API, shown in the detail pane on `R`. Lazy: never fetched for the whole list.
+- Tag-to-version matching is the hard part (`v1.2.3`, `1.2.3`, `release-1.2.3`, pkgrel and epoch, git snapshots). Match only when the tag reduces cleanly to the package's upstream version; otherwise show nothing rather than the wrong release.
+- Unauthenticated GitHub calls are limited to 60 an hour, so: cache for 6 hours, one package per request, and a plain "rate limited, try later" message. An optional token is read from the environment variable named in `github_token_env`, and is never stored in config or state.
+- The body is untrusted markdown: strip control characters and cap the size before Glamour renders it.
+- Config switch `release_notes`, off by default until the matching has been checked on real packages.
+- **Done when:** captured fixtures (rule 2) show a clean match, a `v` prefix, a non-match, a rate-limit response and a 404; turning it off makes no request; the adversarial body test passes.
+
+### M29: Dependency and repo-move hints (parallel after v2.1)
+- Rule 16, a new dependency that pulls in something large: a package in the NEW group (M7's `-Sup`) whose download or installed size is at least `big_new_mib` (default 100), shown with the pending package that asks for it (from `Depends On` in the `-Si` blocks). Info severity, acknowledgeable like the other flags.
+- Rule 17, an installed foreign package that now exists in the official repos (from the archweb lookup that already exists). Info. The detail pane says so and names `cronen install <name>`; cronen does not run it or offer to. The rule stays quiet for `-bin` and VCS packages and when `pkgbase` differs, since the same name does not always mean the same thing.
+- **Done when:** table tests cover a big new dependency, a small one, a dependency that is already installed, an AUR package that moved, a `-bin` and a VCS package that must not be flagged, and the same name in a different repo; acknowledgement works.
+
+### M30: Boot sanity and post-upgrade verification (parallel after v2.1)
+- New checks in `internal/preflight` for what stops a machine booting: for each installed kernel package, `vmlinuz` and the initramfs in `/boot` (or the UKI in the ESP) exist and are non-empty; a bootloader entry points at an existing kernel; the microcode package for the CPU vendor in `/proc/cpuinfo` is installed (whether it is loaded depends on the bootloader, so that part is information only).
+- Bootloaders: systemd-boot (BLS entries) and GRUB (`grub.cfg`) only. Any other, or a layout the check doesn't recognise (dracut, a UKI in a custom path), reports "can't tell" at info severity, never a warning. This is the linkage lesson: unknown is not broken.
+- After a successful upgrade hand-off, run these checks again, together with the existing `.pacnew` count, reboot note and failed units, and show a one-screen "after the upgrade" summary. A missing initramfs after the upgrade is critical.
+- **Done when:** fixtures from captured `/boot` layouts (systemd-boot and GRUB; the maintainer's machine plus a VM for the one it doesn't run) give no warnings; a deleted initramfs and an entry pointing at a missing kernel each give one; an unrecognised layout gives "can't tell".
+
+### M31: Customisation and scripting output (after M25)
+- Custom rules: `[[rule]] match = "*-dkms" severity = "info" reason = "..."`. Name globs only; severity `info` or `warn` only, so a user rule can never produce `critical`, create exit code 30 or bypass an acknowledgement; the reason is sanitised and capped. Validated by M25.
+- `--json --full`: per-package detail (versions, flags with reasons, sizes, repo, rebuild and security data). Plain `--json` keeps its fields; both gain `"schema": 1`. The output is covered by a golden file (M22), and the man page says what may change without a schema bump.
+- `icons = "unicode" | "ascii"` for the severity marks and the box drawing, with `ascii` chosen automatically when `TERM` is `linux` or `dumb`. No palette option.
+- **Done when:** table tests cover a user rule (matching, not matching, asking for `critical`); the golden JSON is stable; snapshot tests of the main screens exist for `ascii`.
+
+## v3 non-goals
+
+- Installing, removing, restoring or re-labelling beyond what v2 offers. Downloading packages that are not already on disk, apart from v2's date-matched archive install.
+- A daemon. The timer in M27 runs `cronen --notify` and exits.
+- A configurable palette, a plugin system, or a scripting language in config. Custom rules are a glob and a severity.
+- Mirror management, or support for non-pacman installs.
+- Self-update, telemetry or bug-report uploads (`--doctor --bundle` writes files that the user chooses to share), and non-Linux ports.
+
+## Needs checking on Arch (v2.x and v3)
+
+Each PR records its result in the M20 ledger.
+
+- Every open v2 item (M20). In particular: Timeshift and snapper `--list` output and CLI flags, `timeshift.json` fields and snapper permissions (a VM with both installed); the archive-install flow (`fakeroot -- pacman -Sy --dbpath ... --config ...`, the real database written through the symlink, the day choice); the `severity::1-*` label spelling, and whether the GitLab project-path mangling holds for every pending package; chained `tea.ExecProcess` on a real terminal, in at least one terminal emulator and over SSH; the "last used" heuristic and the 69-file `.desktop` case.
+- M20 and M21: the capture script under a non-English locale (everything must still run with `LC_ALL=C`), and on pacman 7.x and 6.x if both are available.
+- M23: that the container's `pacman -Qii`, `-Sup` and `-Up` output has the same shape as the maintainer's captures. The container is a guide, not the truth.
+- M24: that `--doctor` on a derivative (EndeavourOS, CachyOS) says `ok` or a specific `differs`, and doesn't crash.
+- M26: `makepkg -si` on a clean Arch install; completions in bash, zsh and fish; `man cronen`.
+- M27: `notify-send` from a user timer (does the unit see `DBUS_SESSION_BUS_ADDRESS`?); behaviour after suspend and resume with `Persistent=true`; display under mako, dunst and a desktop environment's own notifier.
+- M28: the GitHub Releases API fields and rate-limit headers; tag naming across the ten or twenty most-installed GitHub-hosted packages.
+- M29: `Depends On` on real `-Si` output for a package with a new dependency; whether the archweb package JSON answers for every foreign package.
+- M30: `/boot` layouts for systemd-boot, GRUB, a UKI and a dracut setup (`ls -lR /boot`, `bootctl status`, the vendor line of `/proc/cpuinfo`, the microcode package names), and a deliberately broken initramfs in a throwaway VM.
+- M31: that `TERM=linux` renders the default icons badly enough to justify the automatic choice (look at it on a real console).
