@@ -266,3 +266,20 @@ func (p Prepared) InstallArgv(priv []string) ([]string, error) {
 
 // Guard is the guard for this prepared directory's commands.
 func (p Prepared) Guard() ops.Guard { return ops.Guard{RealDB: p.realDB, ArchiveBase: p.archiveBase} }
+
+// ErrOff reports that archive_install is not set to true.
+var ErrOff = errors.New("off: set archive_install = true in config.toml to enable this experimental option")
+
+// Check reports why option B isn't available, or nil when it is: the config
+// switch is off, the last full upgrade is unknown, or fakeroot is missing.
+// The checks run in that order and the later ones are not made when an
+// earlier one fails.
+func Check(ctx context.Context, r system.Runner, enabled bool, lastUpgrade time.Time) error {
+	switch {
+	case !enabled:
+		return ErrOff
+	case lastUpgrade.IsZero():
+		return ErrNoLastUpgrade
+	}
+	return Available(ctx, r)
+}
