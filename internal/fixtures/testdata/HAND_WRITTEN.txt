@@ -122,3 +122,15 @@ system, see the M15 pull request for the read-only commands):
                               File names assume the epoch-less spelling is not needed:
                               none of these packages has an epoch
   vercmp.txt                  gained the comparisons of those versions
+
+M16, bandwidth helper (hand-written, pending capture; see the M16 pull request for
+the read-only commands to capture them):
+
+  proc_net_route.txt            /proc/net/route, one default route over wlan0
+  nmcli_metered_*.txt           nmcli -t -g GENERAL.METERED device show wlan0
+                                (no, yes, "yes (guessed)", unknown)
+  pacman_Ql-repo.txt            pacman -Ql -- firefox vim ripgrep (repo packages' files)
+
+The access times of the files in pacman_Ql-repo.txt (fixtures.FS()) and the
+timing samples of --demo (fixtures.DemoUpgradeSamples/DemoPrefetchSamples) are made up
+in code.

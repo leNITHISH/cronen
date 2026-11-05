@@ -1,5 +1,6 @@
  cronen                                             1 vulnerable, no fix · last upgrade: 2 days ago 
   1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ 2 days behind · 18 packages · 886 MiB · no estimate yet                                            
  ⚠ 1 news item requires manual intervention — press n to read                                       
 ────────────────────────────────────────────────────────────────────────────────────────────────────
  Downgrade firefox from the package cache?                                                          
@@ -21,7 +22,6 @@
     won't do that                                                                                   
                                                                                                     
  Press y to downgrade, esc to cancel.                                                               
-                                                                                                    
                                                                                                     
                                                                                                     
                                                                                                     

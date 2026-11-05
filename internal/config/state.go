@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/leNITHISH/cronen/internal/bandwidth"
 	"github.com/leNITHISH/cronen/internal/system"
 )
 
@@ -43,6 +44,12 @@ type State struct {
 	readNews    map[string]bool
 	maintainers map[string]Maintainer
 	acks        map[string]Acknowledgement
+
+	// The bandwidth helper's records: the last 10 timed upgrades and
+	// prefetches, and the pending download size once per day for the last
+	// 90 days.
+	upgrades, prefetches []bandwidth.Sample
+	sizes                []bandwidth.Size
 }
 
 type stateFile struct {
@@ -53,6 +60,10 @@ type stateFile struct {
 	Maintainers []Maintainer `json:"aur_maintainers,omitempty"`
 	// Acknowledgements was added in version 2.
 	Acknowledgements []Acknowledgement `json:"acknowledgements,omitempty"`
+	// The bandwidth helper's records were added in version 2.
+	UpgradeSamples  []bandwidth.Sample `json:"upgrade_samples,omitempty"`
+	PrefetchSamples []bandwidth.Sample `json:"prefetch_samples,omitempty"`
+	PendingSizes    []bandwidth.Size   `json:"pending_sizes,omitempty"`
 }
 
 // IsRead reports whether the news item with this GUID was marked read.
@@ -83,7 +94,69 @@ func (s State) Clone() State {
 	for _, a := range s.Acknowledgements() {
 		c.Acknowledge(a.Name, a.Version, a.Rules...)
 	}
+	c.upgrades = slices.Clone(s.upgrades)
+	c.prefetches = slices.Clone(s.prefetches)
+	c.sizes = slices.Clone(s.sizes)
 	return c
+}
+
+// UpgradeSamples returns the timed upgrade hand-offs, oldest first.
+func (s State) UpgradeSamples() []bandwidth.Sample { return slices.Clone(s.upgrades) }
+
+// PrefetchSamples returns the timed prefetches, oldest first.
+func (s State) PrefetchSamples() []bandwidth.Sample { return slices.Clone(s.prefetches) }
+
+// PendingSizes returns the daily samples of the pending download, oldest
+// first.
+func (s State) PendingSizes() []bandwidth.Size { return slices.Clone(s.sizes) }
+
+// AddUpgradeSample records a timed upgrade, keeping the last
+// bandwidth.KeepSamples. Samples that can't tell anything are ignored.
+func (s *State) AddUpgradeSample(x bandwidth.Sample) {
+	if validSample(x) {
+		s.upgrades = keepLast(append(s.upgrades, x), bandwidth.KeepSamples)
+	}
+}
+
+// AddPrefetchSample records a timed prefetch, like AddUpgradeSample.
+func (s *State) AddPrefetchSample(x bandwidth.Sample) {
+	if validSample(x) {
+		s.prefetches = keepLast(append(s.prefetches, x), bandwidth.KeepSamples)
+	}
+}
+
+func validSample(x bandwidth.Sample) bool {
+	return x.Bytes >= 0 && x.Packages >= 0 && x.Seconds > 0
+}
+
+// RecordPending records the size of the pending download for a day (the
+// "2006-01-02" form), replacing an earlier sample of the same day and
+// keeping the last bandwidth.KeepSizes days. It reports whether s changed.
+func (s *State) RecordPending(day string, bytes int64) bool {
+	if _, err := time.Parse(bandwidth.DayFormat, day); err != nil || bytes < 0 {
+		return false
+	}
+	if n := len(s.sizes); n > 0 && s.sizes[n-1].Day == day {
+		if s.sizes[n-1].Bytes == bytes {
+			return false
+		}
+		s.sizes = slices.Clone(s.sizes)
+		s.sizes[n-1].Bytes = bytes
+		return true
+	}
+	if n := len(s.sizes); n > 0 && s.sizes[n-1].Day > day {
+		// A clock that went backwards: don't disturb the order.
+		return false
+	}
+	s.sizes = keepLast(append(slices.Clone(s.sizes), bandwidth.Size{Day: day, Bytes: bytes}), bandwidth.KeepSizes)
+	return true
+}
+
+func keepLast[T any](v []T, n int) []T {
+	if len(v) > n {
+		return slices.Clone(v[len(v)-n:])
+	}
+	return v
 }
 
 // ReadNews returns the GUIDs marked read, sorted.
@@ -171,7 +244,10 @@ func (s State) Acknowledgements() []Acknowledgement {
 
 // MarshalJSON implements json.Marshaler.
 func (s State) MarshalJSON() ([]byte, error) {
-	f := stateFile{Version: stateVersion, ReadNews: s.ReadNews(), Maintainers: s.Maintainers(), Acknowledgements: s.Acknowledgements()}
+	f := stateFile{
+		Version: stateVersion, ReadNews: s.ReadNews(), Maintainers: s.Maintainers(), Acknowledgements: s.Acknowledgements(),
+		UpgradeSamples: s.upgrades, PrefetchSamples: s.prefetches, PendingSizes: s.sizes,
+	}
 	if !s.LastUpgrade.IsZero() {
 		t := s.LastUpgrade
 		f.LastUpgrade = &t
@@ -198,6 +274,15 @@ func (s *State) UnmarshalJSON(data []byte) error {
 	}
 	for _, a := range f.Acknowledgements {
 		s.Acknowledge(a.Name, a.Version, a.Rules...)
+	}
+	for _, x := range f.UpgradeSamples {
+		s.AddUpgradeSample(x)
+	}
+	for _, x := range f.PrefetchSamples {
+		s.AddPrefetchSample(x)
+	}
+	for _, x := range f.PendingSizes {
+		s.RecordPending(x.Day, x.Bytes)
 	}
 	return nil
 }

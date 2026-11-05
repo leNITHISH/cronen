@@ -155,6 +155,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, teaOpts .
 
 	if o.check || o.json {
 		s := summary.Gather(ctx, e.sources())
+		e.recordPending(s, stderr)
 		switch {
 		case o.check:
 			_, _ = io.WriteString(stdout, s.Text())
@@ -203,7 +204,15 @@ type env struct {
 // demoEnv serves fixture data only: no config, state or cache is read or
 // written, and upgrading runs nothing.
 func demoEnv() env {
+	var st config.State
+	for _, x := range fixtures.DemoUpgradeSamples() {
+		st.AddUpgradeSample(x)
+	}
+	for _, x := range fixtures.DemoPrefetchSamples() {
+		st.AddPrefetchSample(x)
+	}
 	return env{
+		state:   st,
 		demo:    true,
 		runner:  fixtures.Runner(),
 		fetcher: fixtures.Fetcher(),
@@ -253,6 +262,37 @@ func realEnv(stderr io.Writer) env {
 	e.fetcher = system.NewHTTPClient(paths.CacheDir)
 	e.cacheDir = paths.CacheDir
 	return e
+}
+
+// recordPending keeps the day's pending download size in the state, for the
+// growth trend, when a --check or --json run (a status bar poll, say) is the
+// first to see the day's preview. The state file is only written when the
+// sample changed, so polling doesn't rewrite it every time. Demo mode
+// writes nothing.
+func (e env) recordPending(s summary.Summary, stderr io.Writer) {
+	if e.demo || e.statePath == "" || !s.Previewed {
+		return
+	}
+	loc := e.loc
+	if loc == nil {
+		loc = time.Local
+	}
+	now := time.Now()
+	if e.now != nil {
+		now = e.now()
+	}
+	// Read the file again: a TUI may have saved since this run started, and
+	// its changes must not be lost. An unreadable file is left alone.
+	st, err := config.LoadState(e.fs, e.statePath)
+	if err != nil {
+		return
+	}
+	if !summary.RecordPending(&st, s.Transaction, now, loc) {
+		return
+	}
+	if err := config.SaveState(e.fs, e.statePath, st); err != nil {
+		_, _ = fmt.Fprintln(stderr, "cronen:", err)
+	}
 }
 
 func (e env) uiOptions(ctx context.Context) ui.Options {

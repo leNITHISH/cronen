@@ -26,3 +26,30 @@ func TestCacheDirs(t *testing.T) {
 		})
 	}
 }
+
+func TestParallelDownloads(t *testing.T) {
+	tests := []struct {
+		name    string
+		conf    string
+		want    int
+		wantSet bool
+	}{
+		{"missing", "[options]\nCacheDir = /x\n", 1, false},
+		{"commented out", "[options]\n#ParallelDownloads = 5\n", 1, false},
+		{"set", "[options]\nParallelDownloads = 5\n", 5, true},
+		{"trailing comment", "[options]\nParallelDownloads=8 # fast\n", 8, true},
+		{"one is set but sequential", "[options]\nParallelDownloads = 1\n", 1, true},
+		{"zero is not a positive number", "[options]\nParallelDownloads = 0\n", 1, false},
+		{"junk", "[options]\nParallelDownloads = many\n", 1, false},
+		{"other section is ignored", "[options]\n[core]\nParallelDownloads = 9\n", 1, false},
+		{"empty file", "", 1, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, set := ParallelDownloads([]byte(tt.conf))
+			if got != tt.want || set != tt.wantSet {
+				t.Errorf("ParallelDownloads = %d, %v; want %d, %v", got, set, tt.want, tt.wantSet)
+			}
+		})
+	}
+}

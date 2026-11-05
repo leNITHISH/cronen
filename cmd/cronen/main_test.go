@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"strings"
 	"testing"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/leNITHISH/cronen/internal/config"
+	"github.com/leNITHISH/cronen/internal/fixtures"
 	"github.com/leNITHISH/cronen/internal/summary"
 )
 
@@ -110,7 +113,7 @@ func TestDemoJSON(t *testing.T) {
 	if code := run(context.Background(), []string{"--demo", "--json"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit code %d; stderr: %s", code, stderr.String())
 	}
-	const want = `{"updates":18,"aur":2,"flagged":12,"acknowledged":0,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1,"rebuilds":3,"security_fixes":2,"vulnerable":1,"preflight":[{"severity":"critical","message":"/boot is in fstab but not mounted while linux updates: mount it before upgrading. The kernel would land on the root filesystem, where the bootloader won't find it."}],"reboot_pending":false}` + "\n"
+	const want = `{"updates":18,"aur":2,"flagged":12,"acknowledged":0,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1,"rebuilds":3,"security_fixes":2,"vulnerable":1,"preflight":[{"severity":"critical","message":"/boot is in fstab but not mounted while linux updates: mount it before upgrading. The kernel would land on the root filesystem, where the bootloader won't find it."}],"reboot_pending":false,"days_behind":2,"eta_seconds":679,"prefetched_bytes":0,"metered":false}` + "\n"
 	if got := stdout.String(); got != want {
 		t.Errorf("got %s, want %s", got, want)
 	}
@@ -145,5 +148,36 @@ func TestDemoUpgradeRunsNothing(t *testing.T) {
 	)
 	if code != 0 || ctx.Err() != nil {
 		t.Fatalf("exit code %d, ctx %v, stderr: %s", code, ctx.Err(), stderr.String())
+	}
+}
+
+func TestRecordPending(t *testing.T) {
+	e := demoEnv()
+	e.demo = false // as a real --check run, on fixture data
+	e.fs = fixtures.FS()
+	e.statePath = "/state/cronen/state.json"
+	// The state file already holds news the TUI marked read after this run began.
+	var onDisk config.State
+	onDisk.MarkRead("guid-1")
+	if err := config.SaveState(e.fs, e.statePath, onDisk); err != nil {
+		t.Fatal(err)
+	}
+
+	s := summary.Gather(context.Background(), e.sources())
+	e.recordPending(s, io.Discard)
+	got, err := config.LoadState(e.fs, e.statePath)
+	if err != nil || len(got.PendingSizes()) != 1 || !got.IsRead("guid-1") {
+		t.Fatalf("state = %+v, %v; want one pending size and the read news kept", got, err)
+	}
+	if got.PendingSizes()[0].Bytes != s.Transaction.TotalBytes() || got.PendingSizes()[0].Day != "2026-10-23" {
+		t.Errorf("sample = %+v", got.PendingSizes()[0])
+	}
+
+	// Demo mode writes nothing.
+	d := demoEnv()
+	d.fs, d.statePath = fixtures.FS(), "/state/cronen/state.json"
+	d.recordPending(s, io.Discard)
+	if _, err := d.fs.ReadFile(d.statePath); err == nil {
+		t.Error("demo mode wrote the state file")
 	}
 }

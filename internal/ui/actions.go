@@ -258,6 +258,7 @@ func (m *Model) startUpgrade() tea.Cmd {
 		return nil
 	}
 	m.upgrade = upgradeOutcome{reboot: m.result.RebootRequired}
+	m.timing = handoffTiming{started: m.now(), tx: m.tx, previewed: m.previewed}
 	return m.opts.Exec(argv, func(err error) tea.Msg { return upgradedMsg{err: err} })
 }
 
@@ -272,6 +273,12 @@ func (m *Model) handleUpgraded(msg upgradedMsg) tea.Cmd {
 	now := m.now()
 	m.opts.State = m.opts.State.Clone()
 	m.opts.State.LastUpgrade = now
+	if m.timing.previewed && !m.timing.started.IsZero() {
+		// Time the hand-off for the estimate. Only a successful upgrade
+		// counts: a failed one says nothing about how long a good one takes.
+		summary.RecordUpgrade(&m.opts.State, m.timing.tx, m.timing.started, now)
+	}
+	m.timing = handoffTiming{}
 	// The maintainers the user just upgraded to are the accepted ones now.
 	summary.RecordMaintainers(&m.opts.State, m.aurPkgs, true)
 	m.opts.State.MarkRead(publishedBy(m.newsItems, now)...)

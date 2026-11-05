@@ -79,6 +79,8 @@ type updatesPane struct {
 	// moved reports whether the user has moved the selection. Until then
 	// it stays on the first, most severe entry as data arrives.
 	moved bool
+	// bySize orders each group by download size, biggest first.
+	bySize bool
 }
 
 func (p *updatesPane) selected() (entry, bool) {
@@ -153,6 +155,10 @@ func (m *Model) rebuildUpdates() {
 	slices.SortStableFunc(flagged, func(a, b entry) int {
 		return cmp.Compare(b.pkg.Severity(), a.pkg.Severity())
 	})
+	if p.bySize {
+		m.sortBySize(flagged)
+		m.sortBySize(repo)
+	}
 	// Installed AUR packages with problems are worth showing even without
 	// a pending update, and so are VCS packages, whose updates only the AUR
 	// helper can tell. Debug splits are hidden unless asked for.
@@ -233,6 +239,9 @@ func (m *Model) rebuildUpdates() {
 			heldEntries = append(heldEntries, entry{key: "held:" + h.Name, kind: entryHeld, pkg: h})
 		}
 		newEntries, removedEntries, heldEntries = keep(newEntries), keep(removedEntries), keep(heldEntries)
+		if p.bySize {
+			m.sortBySize(newEntries)
+		}
 	}
 
 	p.entries = p.entries[:0:0]
@@ -403,6 +412,10 @@ func (m Model) entryLine(e entry, selected bool, w int) string {
 	if selected {
 		cursor = "▸ "
 	}
+	if m.pkgs.marked[e.pkg.Name] && (e.kind == entryUpdate || e.kind == entryHeld) {
+		// Marked for removal: a tick where the cursor's space is.
+		cursor = strings.TrimSuffix(cursor, " ") + "✓"
+	}
 	// newPart is never truncated; the old version and the name give way.
 	var oldPart, newPart string
 	switch {
@@ -414,6 +427,13 @@ func (m Model) entryLine(e entry, selected bool, w int) string {
 			o = ""
 		}
 		oldPart, newPart = o, "→"+n
+		if m.updates.bySize && m.previewed && e.kind == entryUpdate && e.aur == nil {
+			// Sorted by size: show the size where the old version would be.
+			oldPart = pacman.FormatSize(m.entryDownload(e)) + " "
+			if m.entryDownload(e) == 0 {
+				oldPart = "cached "
+			}
+		}
 	case e.aur != nil:
 		newPart = aurTag(*e.aur)
 	}
@@ -530,6 +550,9 @@ func (m *Model) refreshDetail() tea.Cmd {
 				m.archweb[e.pkg.Name] = archwebResult{}
 				cmd = lookupArchweb(m.ctx(), m.opts.Fetcher, e.pkg.Name, false)
 			}
+		}
+		if c := m.lastUsedCmd(e); c != nil {
+			cmd = tea.Batch(cmd, c)
 		}
 		content = m.detailContent(e, m.detail.Width())
 	case m.filterQuery() != "":
@@ -694,6 +717,14 @@ func (m Model) detailContent(e entry, w int) string {
 			continue
 		}
 		bullet(l)
+	}
+
+	if l := m.usageLines(e); len(l) > 0 {
+		line("")
+		line(" Usage:")
+		for _, t := range l {
+			bullet(t)
+		}
 	}
 
 	if e.aur != nil {

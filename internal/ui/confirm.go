@@ -46,6 +46,8 @@ func (m Model) confirmView(w int) string {
 	}
 	add(" " + strings.Join(counts, " · "))
 	add("")
+	m.addBandwidth(add)
+	add("")
 	add(" This runs: " + s.Bold.Render(strings.Join(m.cfg.UpgradeArgv(), " ")))
 	if m.opts.Demo {
 		add(" " + s.Subtle.Render("demo: nothing is run"))
@@ -65,6 +67,9 @@ func (m Model) actionView(w int) string {
 	s, a := m.styles, m.act
 	if a.kind == ops.KindDowngrade {
 		return m.downgradeView(w)
+	}
+	if a.kind == ops.KindPrefetch {
+		return m.prefetchView(w)
 	}
 	var lines []string
 	add := func(text string) {

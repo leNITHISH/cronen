@@ -193,6 +193,7 @@ known_issues = false
 				tt.want.ProtectedMode = WatchlistExtend
 				tt.want.Housekeeping = true
 				tt.want.History = true
+				tt.want.MeteredWarnMiB = 100
 			}
 			switch {
 			case tt.wantErr == "" && err != nil:

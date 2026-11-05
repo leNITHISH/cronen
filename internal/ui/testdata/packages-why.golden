@@ -1,5 +1,6 @@
  cronen (demo)                                      1 vulnerable, no fix · last upgrade: 2 days ago 
   1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ 2 days behind · 18 packages · 886 MiB · no estimate yet                                            
  ⚠ 1 news item requires manual intervention — press n to read                                       
 ────────────────────────────────────────────────────────────┬───────────────────────────────────────
     name                 version      size    installed  EFO│ libx11 1.8.12-1                       
@@ -19,7 +20,6 @@
                                                             │   gtk3  libxt  mesa                   
                                                             │                                       
                                                             │ https://example.org/libx11            
-                                                            │                                       
                                                             │                                       
                                                             │                                       
                                                             │                                       

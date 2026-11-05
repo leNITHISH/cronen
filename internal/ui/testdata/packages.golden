@@ -1,5 +1,6 @@
  cronen (demo)                                      1 vulnerable, no fix · last upgrade: 2 days ago 
   1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ 2 days behind · 18 packages · 886 MiB · no estimate yet                                            
  ⚠ 1 news item requires manual intervention — press n to read                                       
 ────────────────────────────────────────────────────────────┬───────────────────────────────────────
     name                 version      size    installed  EFO│ alsa-lib 1.2.14-1                     
@@ -25,6 +26,5 @@
     linux-api-headers    6.16-1       5.1 MiB 2025-10-15 D  │                                       
     linux-firmware       20251011-1   420 MiB 2025-10-15 E  │                                       
     linux-headers        6.17.4.arch… 140 MiB 2025-10-15 E  │                                       
-    mesa                 1:25.2.4-1   180 MiB 2025-10-15 D  │                                       
 ────────────────────────────────────────────────────────────┴───────────────────────────────────────
  47 packages · show: all · sort: name          esc back  f show  s sort  space mark  ? help  q quit 

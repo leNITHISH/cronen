@@ -1,0 +1,30 @@
+ cronen                                             1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ 2 days behind · 18 packages · 886 MiB · no estimate yet                                            
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+ ‼ 2 preflight problems (U lists them): /boot is in fstab but not mounted while linux updates: moun…
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Download the pending updates now?                                                                  
+                                                                                                    
+ This runs: sudo checkupdates -d                                                                    
+                                                                                                    
+ It downloads 886 MiB (18 packages) into the package cache and installs nothing.                    
+ It uses checkupdates' own temporary database, never the real one, so it can't cause a partial      
+    upgrade.                                                                                        
+ Download time: no estimate yet                                                                     
+                                                                                                    
+ ⚠ The connection (wlan0) is metered and the upgrade downloads 886 MiB (limit 100 MiB): prefetch    
+    on another network, or drop big packages first.                                                 
+ ℹ pacman downloads one package at a time: set `ParallelDownloads = 5` in /etc/pacman.conf to       
+    speed it up (cronen doesn't edit the file).                                                     
+                                                                                                    
+ Press y to run it, esc to cancel.                                                                  
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Download the pending updates now?                                                       esc cancel 

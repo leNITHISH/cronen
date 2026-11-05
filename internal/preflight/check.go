@@ -28,11 +28,12 @@ const (
 	CheckSpace         ID = "space"
 	CheckLock          ID = "db-lock"
 	CheckMirror        ID = "mirror-lag"
+	CheckMetered       ID = "metered"
 	CheckReboot        ID = "reboot-pending"
 	CheckKeyring       ID = "keyring"
 )
 
-var checkOrder = []ID{CheckBootUnmounted, CheckSpace, CheckLock, CheckMirror, CheckReboot, CheckKeyring}
+var checkOrder = []ID{CheckBootUnmounted, CheckSpace, CheckLock, CheckMirror, CheckMetered, CheckReboot, CheckKeyring}
 
 // Problem is one thing wrong with the system, shown as a global banner.
 type Problem struct {
@@ -92,6 +93,14 @@ type Facts struct {
 	MirrorRoot  string
 	MirrorLag   time.Duration
 	MirrorLimit time.Duration
+
+	// Metered reports that NetworkManager calls the connection carrying the
+	// default route metered (or guesses it is), on MeteredDevice. The
+	// problem is raised when Download is bigger than MeteredLimit bytes; a
+	// zero limit turns the check off.
+	Metered       bool
+	MeteredDevice string
+	MeteredLimit  int64
 }
 
 // Kernels returns the pending updates that are kernels.
@@ -140,6 +149,15 @@ func Check(f Facts) []Problem {
 		ps = append(ps, Problem{risk.Warn, CheckMirror, fmt.Sprintf(
 			"%s is %s behind the reference mirror: checkupdates may be missing updates.",
 			where, hours(f.MirrorLag))})
+	}
+	if f.Metered && f.MeteredLimit > 0 && f.Download > f.MeteredLimit {
+		on := "The connection"
+		if f.MeteredDevice != "" {
+			on += " (" + f.MeteredDevice + ")"
+		}
+		ps = append(ps, Problem{risk.Warn, CheckMetered, fmt.Sprintf(
+			"%s is metered and the upgrade downloads %s (limit %s): prefetch on another network, or drop big packages first.",
+			on, pacman.FormatSize(f.Download), pacman.FormatSize(f.MeteredLimit))})
 	}
 	if f.RebootPending {
 		msg := "A reboot is pending: an earlier upgrade replaced the running kernel"

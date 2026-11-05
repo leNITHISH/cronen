@@ -1,0 +1,30 @@
+ cronen (demo)                                      1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ 2 days behind · 18 packages · 886 MiB · no estimate yet                                            
+ ⚠ 1 news item requires manual intervention — press n to read                                       
+────────────────────────────────────────┬───────────────────────────────────────────────────────────
+ NEEDS ATTENTION (12)                   │ linux-firmware                                            
+▸ linux-firmware    420 MiB →20251021 ‼ │ 20251011-1 → 20251021-1                                   
+  nvidia-utils        160 MiB →590.44 ⚠ │                                                           
+  linux                 140 MiB →6.18 ⚠ │ Why flagged:                                              
+  mesa                 38 MiB →25.2.5 ℹ │  • Manual intervention in news: 'linux-firmware >=        
+  linux-headers          16 MiB →6.18 ℹ │    20251021-1 upgrade requires manual intervention'       
+  python                 14 MiB →3.14 ⚠ │    (yesterday)                                            
+  glibc              11 MiB →2.42+r33 ℹ │  • On your watchlist (linux*)                             
+  systemd              4.8 MiB →258.2 ℹ │                                                           
+  ripgrep               2.1 MiB →15.0 ⚠ │ Transaction:                                              
+  linux-api-headers   1.3 MiB →6.16.1 ℹ │  • download: 420 MiB                                      
+  vulkan-icd-loader  614 KiB →1.4.330 ℹ │  • installed size: 580 MiB → 584 MiB (+3.8 MiB)           
+  zstd                cached →1.5.7-3 ⚠ │  • built 26 hours ago (2026-10-22 10:00)                  
+ REPO (4)                               │                                                           
+  firefox            72 MiB →144.0.1 🛡  │ Links:                                                    
+  gnupg            1.9 MiB →1:2.4.8-2   │  • not found on archlinux.org                             
+  vim               1.6 MiB →9.1.1850   │                                                           
+  openssh            1.5 MiB →10.2p1 🛡  │                                                           
+ AUR (5 + 1 VCS)                        │                                                           
+  paru                2.1.0-1→2.1.0-2   │                                                           
+  visual-studio-code… 1.105.0→1.105.1   │                                                           
+  gnome-shell-extension-l… not in AUR ? │                                                           
+  neovim-git                      VCS   │                                                           
+────────────────────────────────────────┴───────────────────────────────────────────────────────────
+ sorted by download size                                                                     ? help 

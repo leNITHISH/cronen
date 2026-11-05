@@ -105,6 +105,15 @@ type Config struct {
 	// versions can still be installed. Downgrades need the cache listing,
 	// so with it off the D key is unavailable.
 	History bool `toml:"history"`
+
+	// MeteredWarnMiB raises a preflight warning when the connection is
+	// metered and the download is bigger than this. 0 turns the metered
+	// check off, and with it the nmcli call.
+	MeteredWarnMiB int `toml:"metered_warn_mib"`
+	// PrefetchCommand, if set, replaces "checkupdates -d" for the F key.
+	// It is split on whitespace; quoting is not supported, and it is run
+	// exactly as written (add sudo yourself if it needs it).
+	PrefetchCommand string `toml:"prefetch_command"`
 }
 
 // Privilege commands cronen knows how to prefix a write action with.
@@ -142,6 +151,7 @@ func Default() Config {
 		ProtectedMode:    WatchlistExtend,
 		Housekeeping:     true,
 		History:          true,
+		MeteredWarnMiB:   100,
 	}
 }
 
@@ -224,6 +234,11 @@ func Parse(data []byte) (Config, error) {
 	if cfg.MirrorLagHours <= 0 {
 		errs = append(errs, fmt.Errorf("mirror_lag_hours %d: must be positive", cfg.MirrorLagHours))
 		cfg.MirrorLagHours = def.MirrorLagHours
+	}
+
+	if cfg.MeteredWarnMiB < 0 {
+		errs = append(errs, fmt.Errorf("metered_warn_mib %d: must not be negative", cfg.MeteredWarnMiB))
+		cfg.MeteredWarnMiB = def.MeteredWarnMiB
 	}
 
 	var err1, err2, err3, err4 error

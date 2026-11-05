@@ -166,6 +166,7 @@ func TestJSON(t *testing.T) {
 		"unread_news": 2.0, "pacnew": 1.0, "reboot": true,
 		"download_bytes": 929069795.0, "size_delta_bytes": 27053259.0, "new": 2.0, "replaced": 1.0, "held": 1.0, "rebuilds": 3.0, "security_fixes": 2.0, "vulnerable": 1.0,
 		"preflight": []any{}, "reboot_pending": false,
+		"days_behind": 2.0, "prefetched_bytes": 0.0, "metered": false,
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, want %v", got, want)

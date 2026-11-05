@@ -121,6 +121,22 @@ clears it.
 Switch screen: Updates, News, Packages, History, Housekeeping. The last two are
 not built yet.
 .TP
+.B s
+On the updates screen: sort by download size.
+.TP
+.B space
+On the updates screen: mark the selected installed package for removal.
+.TP
+.B X
+On the updates screen: remove the marked packages (dry run and confirmation first).
+.TP
+.B F
+On the updates screen: prefetch, run
+.B checkupdates \-d
+(or
+.BR prefetch_command )
+to download the pending packages now (confirmation first).
+.TP
 .B n
 News screen.
 .TP
@@ -323,6 +339,17 @@ fetches it for every pending AUR update, which also makes
 and
 .B \-\-json
 evaluate the suspicious\-change rule.
+.TP
+.BR metered_warn_mib " (default " 100 )
+Raise a preflight warning when NetworkManager calls the connection metered and the
+download is bigger than this many MiB. 0 turns the check off.
+.TP
+.BR prefetch_command " (default empty)"
+Replaces
+.B checkupdates \-d
+for the prefetch key. Split on whitespace and run as written: add
+.B sudo
+yourself if it needs it.
 .PP
 Example:
 .PP

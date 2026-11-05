@@ -33,6 +33,8 @@ type KeyMap struct {
 	// Remove removes the marked packages; Pacdiff merges .pacnew files.
 	Remove  key.Binding
 	Pacdiff key.Binding
+	// Prefetch downloads the pending packages now, to install later.
+	Prefetch key.Binding
 	// Downgrade installs an older cached version of a package.
 	Downgrade key.Binding
 	Back      key.Binding
@@ -128,7 +130,7 @@ func DefaultKeyMap() KeyMap {
 		),
 		CycleSort: key.NewBinding(
 			key.WithKeys("s"),
-			key.WithHelp("s", "package sort"),
+			key.WithHelp("s", "package sort (updates: by download size)"),
 		),
 		Remove: key.NewBinding(
 			key.WithKeys("X"),
@@ -137,6 +139,10 @@ func DefaultKeyMap() KeyMap {
 		Pacdiff: key.NewBinding(
 			key.WithKeys("P"),
 			key.WithHelp("P", "merge .pacnew (housekeeping)"),
+		),
+		Prefetch: key.NewBinding(
+			key.WithKeys("F"),
+			key.WithHelp("F", "prefetch: download updates now"),
 		),
 		Downgrade: key.NewBinding(
 			key.WithKeys("D"),
@@ -185,6 +191,6 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.HalfDown, k.HalfUp, k.Focus, k.Filter, k.Screens, k.Mark, k.CycleFilter, k.CycleSort, k.Remove, k.Pacdiff, k.Downgrade},
 		{k.News, k.MarkRead, k.Upstream, k.Changelog, k.Diff},
 		{k.Acknowledge, k.ShowAcked},
-		{k.Upgrade, k.Refresh, k.Back, k.Help, k.Quit},
+		{k.Upgrade, k.Prefetch, k.Refresh, k.Back, k.Help, k.Quit},
 	}
 }

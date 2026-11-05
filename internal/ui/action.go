@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/leNITHISH/cronen/internal/ops"
 	"github.com/leNITHISH/cronen/internal/pacman"
+	"github.com/leNITHISH/cronen/internal/summary"
 	"github.com/leNITHISH/cronen/internal/system"
 )
 
@@ -53,9 +55,13 @@ type dryRunMsg struct {
 
 // actionDoneMsg reports that the handed-off command exited.
 type actionDoneMsg struct {
-	kind  ops.Kind
-	names []string
-	freed int64
+	// started and tx time a prefetch: when the hand-off began, and the
+	// preview it began with.
+	started time.Time
+	tx      pacman.Transaction
+	kind    ops.Kind
+	names   []string
+	freed   int64
 	// version is what a downgrade installed.
 	version string
 	err     error
@@ -188,7 +194,7 @@ func (m Model) handleActionKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if a.kind == ops.KindDowngrade {
 		return m.handleDowngradeKey(msg)
 	}
-	if a.kind == ops.KindPacdiff {
+	if a.kind == ops.KindPacdiff || a.kind == ops.KindPrefetch {
 		if s == "y" {
 			return m, m.runAction()
 		}
@@ -249,6 +255,9 @@ func (m *Model) runAction() tea.Cmd {
 		return nil
 	}
 	done := actionDoneMsg{kind: plan.Kind, names: plan.Selected, freed: plan.Freed}
+	if a.kind == ops.KindPrefetch {
+		done.started, done.tx = m.now(), m.tx
+	}
 	if a.kind == ops.KindDowngrade {
 		if err := m.recheckDowngrade(); err != nil {
 			m.flash(err.Error(), true)
@@ -272,6 +281,12 @@ func (m *Model) handleActionDone(msg actionDoneMsg) tea.Cmd {
 		m.actionNotice = "✗ " + actionVerb(msg.kind) + " failed (" + msg.err.Error() + ")"
 	case msg.kind == ops.KindPacdiff:
 		m.actionNotice = "✓ pacdiff finished"
+	case msg.kind == ops.KindPrefetch:
+		m.actionNotice = "✓ prefetched " + pacman.FormatSize(msg.tx.DownloadBytes) + " into the package cache · the upgrade installs it without downloading"
+		st := m.opts.State.Clone()
+		summary.RecordPrefetch(&st, msg.tx, msg.started, m.now())
+		m.opts.State = st
+		return tea.Batch(m.saveState(), m.refresh())
 	case msg.kind == ops.KindDowngrade:
 		m.actionNotice = "✓ downgraded " + strings.Join(msg.names, ", ") + " to " + msg.version +
 			" · the next -Syu upgrades it again unless it's in IgnorePkg"
@@ -284,6 +299,10 @@ func (m *Model) handleActionDone(msg actionDoneMsg) tea.Cmd {
 			delete(m.pkgs.marked, n)
 			delete(m.hk.unmarked, n)
 		}
+		if m.previewed {
+			// The preview reruns below; it says what the removal saved.
+			m.dlBefore, m.dlBeforeSet = m.tx.DownloadBytes, true
+		}
 	}
 	return m.refresh()
 }
@@ -294,6 +313,8 @@ func actionVerb(k ops.Kind) string {
 		return "pacdiff"
 	case ops.KindDowngrade:
 		return "downgrade"
+	case ops.KindPrefetch:
+		return "prefetch"
 	}
 	return "removal"
 }
@@ -307,6 +328,8 @@ func actionTitle(a *pendingAction) string {
 		return "Merge .pacnew and .pacsave files with pacdiff?"
 	case ops.KindDowngrade:
 		return "Downgrade " + strings.Join(a.names, ", ") + " from the package cache?"
+	case ops.KindPrefetch:
+		return "Download the pending updates now?"
 	}
 	return "Remove " + plural(len(a.names), "package", "packages") + "?"
 }

@@ -1,0 +1,14 @@
+firefox /usr/
+firefox /usr/bin/
+firefox /usr/bin/firefox
+firefox /usr/lib/firefox/
+firefox /usr/lib/firefox/firefox-bin
+firefox /usr/share/applications/
+firefox /usr/share/applications/firefox.desktop
+vim /usr/
+vim /usr/bin/
+vim /usr/bin/vim
+vim /usr/share/applications/vim.desktop
+ripgrep /usr/
+ripgrep /usr/bin/
+ripgrep /usr/bin/rg

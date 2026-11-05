@@ -1,5 +1,6 @@
  cronen                                             1 vulnerable, no fix · last upgrade: 2 days ago 
   1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ 2 days behind · 18 packages · 886 MiB · no estimate yet                                            
  ⚠ 1 news item requires manual intervention — press n to read                                       
 ────────────────────────────────────────────────────────────────────────────────────────────────────
  Remove 1 package?                                                                                  
@@ -14,7 +15,6 @@
    ⚠ removing libx11 breaks libx11, required by mesa                                                
                                                                                                     
  esc cancels; a toggle above reruns the dry run                                                     
-                                                                                                    
                                                                                                     
                                                                                                     
                                                                                                     
