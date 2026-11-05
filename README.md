@@ -70,9 +70,10 @@ documents everything, including the config keys.
 | `/` | filter the package list (`enter` keeps the filter, `esc` clears it) |
 | `1`–`5` | switch screen: Updates, News, Packages, History, Housekeeping |
 | `n` | news screen |
-| `f` / `s` | Packages: cycle what is listed (all, explicit, dependencies, foreign, orphans) / the sort (name, size, install date) |
-| `space` | Packages, Housekeeping: mark / unmark the selected package or orphan |
-| `X` | Packages, Housekeeping: remove the marked packages or orphans (dry run and confirmation first) |
+| `f` / `s` | Packages: cycle what is listed (all, explicit, dependencies, foreign, orphans) / the sort (name, size, install date). Updates: `s` sorts by download size |
+| `space` | Updates, Packages, Housekeeping: mark / unmark the selected package or orphan |
+| `X` | Updates, Packages, Housekeeping: remove the marked packages or orphans (dry run and confirmation first) |
+| `F` | Updates: prefetch, download the pending packages now and install them later (confirmation first) |
 | `D` | Packages, History: downgrade the selected package to an older version from the package cache (dry run and confirmation first) |
 | `P` | Housekeeping: merge `.pacnew` files with `pacdiff` (confirmation first) |
 | `m` | mark the selected news item read (on the updates screen: the news behind the selected package's flags) |
@@ -128,7 +129,7 @@ reboot after upgrading: the kernel is updated
 
 ```console
 $ cronen --json
-{"updates":18,"aur":2,"flagged":11,"acknowledged":0,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1,"security_fixes":2,"vulnerable":1,"preflight":[{"severity":"critical","message":"/boot is in fstab but not mounted while linux updates: …"}],"reboot_pending":false}
+{"updates":18,"aur":2,"flagged":11,"acknowledged":0,"critical":1,"unread_news":2,"pacnew":1,"reboot":true,"download_bytes":929069795,"size_delta_bytes":27053259,"new":2,"replaced":1,"held":1,"security_fixes":2,"vulnerable":1,"preflight":[{"severity":"critical","message":"/boot is in fstab but not mounted while linux updates: …"}],"reboot_pending":false,"days_behind":2,"eta_seconds":679,"prefetched_bytes":0,"metered":false}
 ```
 
 `updates` counts repo and AUR updates together and `aur` the AUR ones.
@@ -148,6 +149,10 @@ running kernel and the system hasn't rebooted since.
 
 `security_fixes` counts the advisory groups (AVG-…) the pending updates fix and
 `vulnerable` the installed packages affected by a group no version fixes yet.
+
+The bandwidth helper adds `days_behind` (days since the last full upgrade, 0 when
+unknown), `eta_seconds` (the time estimate; absent until cronen has timing samples),
+`prefetched_bytes` (what is already in the package cache) and `metered`.
 
 ### Preflight
 
@@ -266,6 +271,8 @@ extra_cache_dirs = []      # globs of more package cache directories, e.g. ["~/.
 pacdiff_command = ""       # replaces "<privilege_command> pacdiff"
 housekeeping = true        # the Housekeeping screen's .pacnew diffs, cache size and failed units
 history = true             # the History screen (pacman.log) and the cache lookup behind D
+metered_warn_mib = 100     # warn on a metered connection above this download; 0 turns the check off
+prefetch_command = ""      # replaces "checkupdates -d" for F; run as written, add sudo yourself
 ```
 
 Rebuild detection (needs `preview` and `aur`) flags the update behind each
@@ -330,6 +337,41 @@ edits `pacman.conf`). Protected packages need their name typed. `y` hands the
 terminal to `<privilege_command> pacman -U -- <file>`. Only regular files directly
 inside a configured cache directory are accepted. `history = false` turns the
 History screen and `D` off.
+
+### Bandwidth helper
+
+Under the tab bar, the updates line says what the upgrade costs: `47 days behind ·
+312 packages · 1.8 GiB · +~250 MiB/week · ~14 min (from your last 6 upgrades)`.
+
+- **Growth.** cronen keeps the size of the pending download once a day (90 days,
+  in the state file; `--check`/`--json` runs also add the day's sample). Once the latest
+  growing stretch spans a week, the weekly growth shows. An upgrade resets it.
+- **Time estimate.** Every successful upgrade hand-off is timed (bytes to download,
+  packages, duration; the last 10 are kept), and so is every prefetch. The estimate is
+  the median download speed of the prefetches plus the median install time per package
+  from the upgrades; with no prefetch it uses the median speed of whole upgrades. With no
+  samples it says "no estimate yet". The time you spend at pacman's `[Y/n]` prompt is in
+  the upgrade's duration, so keep answering quickly or prefetch first.
+- **Big downloads.** `s` on the updates screen sorts by download size and shows the
+  size in the list. The detail pane shows "last used ~4 months ago": the newest access time
+  among the package's files in `bin` directories and its `.desktop` files. It is only
+  shown when the filesystem holding them is not mounted `noatime`; under `relatime` it is
+  accurate to about a day. `space` marks an installed package and `X` removes the marked ones; the
+  preview reruns afterwards and the notice says how much the download shrank.
+- **Prefetch (`F`).** Runs `checkupdates -d`, which downloads the pending packages into the
+  package cache from checkupdates' own temporary database and installs nothing, so it
+  can't cause a partial upgrade. It needs the transaction preview (its dry run) and
+  something left to download. The privilege command is added only when you can't write to
+  any package cache directory; `prefetch_command` replaces the command and is run as
+  written. Afterwards the header says "1.7 of 1.8 GiB already downloaded".
+- **Metered connection.** The default route comes from `/proc/net/route`, and
+  `nmcli -t -g GENERAL.METERED device show <dev>` says whether NetworkManager calls it
+  metered (`yes` or `yes (guessed)`). Above `metered_warn_mib` this is a `warn`
+  preflight problem, repeated in the upgrade and prefetch modals. Without `nmcli`,
+  NetworkManager or a default route, the check is skipped silently.
+- **ParallelDownloads.** When `ParallelDownloads` isn't set (or is 1) in
+  `/etc/pacman.conf`, pacman downloads one file at a time; the Housekeeping screen and
+  the upgrade modal suggest `ParallelDownloads = 5`. cronen doesn't edit the file.
 
 ### AUR review
 
