@@ -41,8 +41,8 @@ func TestServerURL(t *testing.T) {
 }
 
 func TestGenerateConfDropsCustomReposAndIncludes(t *testing.T) {
-	real := fixtures.Bytes(fixtures.PacmanConfArchive)
-	conf, rep, err := GenerateConf(real, lastUpgrade)
+	realConf := fixtures.Bytes(fixtures.PacmanConfArchive)
+	conf, rep, err := GenerateConf(realConf, lastUpgrade)
 	if err != nil {
 		t.Fatal(err)
 	}

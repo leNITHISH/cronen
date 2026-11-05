@@ -134,7 +134,7 @@ func TestBuildersNeverMakePartialUpgrade(t *testing.T) {
 			}
 			continue
 		}
-		if strings.Contains(l, " -Sy ") && !(argv[0] == "fakeroot" && strings.HasPrefix(dbpath, testBase+"/")) {
+		if strings.Contains(l, " -Sy ") && (argv[0] != "fakeroot" || !strings.HasPrefix(dbpath, testBase+"/")) {
 			t.Errorf("-Sy without -u outside an archive directory under fakeroot: %s", l)
 		}
 		if strings.Contains(l, " -S ") && !strings.HasPrefix(dbpath, testBase+"/") {

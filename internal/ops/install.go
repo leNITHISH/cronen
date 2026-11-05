@@ -335,7 +335,7 @@ func (g Guard) verifyPacman(argv, rest []string, priv, fakeroot bool) error {
 		return refuse("unexpected --print-format")
 	}
 
-	real := path.Clean(g.RealDB)
+	realDB := path.Clean(g.RealDB)
 	isolated := false
 	if haveDB && haveConf {
 		if err := checkPath(dbpath); err != nil {
@@ -343,7 +343,7 @@ func (g Guard) verifyPacman(argv, rest []string, priv, fakeroot bool) error {
 		}
 		base := path.Clean(g.ArchiveBase)
 		switch {
-		case path.Clean(dbpath) == real:
+		case path.Clean(dbpath) == realDB:
 			return refuse("the archive database must not be the real one")
 		case g.ArchiveBase == "" || !strings.HasPrefix(path.Clean(dbpath), base+"/"):
 			return refuse("the temporary database must be inside " + g.ArchiveBase)
@@ -376,7 +376,7 @@ func (g Guard) verifyPacman(argv, rest []string, priv, fakeroot bool) error {
 		if u {
 			// Option A: -Sup against the checkupdates database. Not
 			// the real one, and no config of its own.
-			if !haveDB || haveConf || path.Clean(dbpath) == real {
+			if !haveDB || haveConf || path.Clean(dbpath) == realDB {
 				return refuse("-Sup is only allowed against the checkupdates database")
 			}
 			return nil

@@ -50,12 +50,12 @@ type Report struct {
 // only the archive Server, and drops every other repository and every
 // Include line. Comments are not copied. It is an error if no official
 // repository is enabled.
-func GenerateConf(real []byte, day time.Time) ([]byte, Report, error) {
+func GenerateConf(realConf []byte, day time.Time) ([]byte, Report, error) {
 	var rep Report
 	var options []string
 	enabled := map[string]bool{}
 	section := ""
-	sc := bufio.NewScanner(bytes.NewReader(real))
+	sc := bufio.NewScanner(bytes.NewReader(realConf))
 	for sc.Scan() {
 		line := strings.TrimSpace(sc.Text())
 		if i := strings.IndexByte(line, '#'); i >= 0 {

@@ -268,7 +268,7 @@ func (p Prepared) InstallArgv(priv []string) ([]string, error) {
 func (p Prepared) Guard() ops.Guard { return ops.Guard{RealDB: p.realDB, ArchiveBase: p.archiveBase} }
 
 // ErrOff reports that archive_install is not set to true.
-var ErrOff = errors.New("off: set archive_install = true in config.toml to enable this experimental option")
+var ErrOff = errors.New("archive_install is not set: add archive_install = true to config.toml to enable this experimental option")
 
 // Check reports why option B isn't available, or nil when it is: the config
 // switch is off, the last full upgrade is unknown, or fakeroot is missing.
