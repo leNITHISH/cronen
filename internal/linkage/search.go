@@ -30,6 +30,66 @@ type Searcher struct {
 	// Exists reports whether a path exists as a file, following symbolic
 	// links: a dangling link doesn't exist.
 	Exists func(path string) bool
+	// List returns the file names in a directory; nil means unknown. It is
+	// how Classify finds another version of a missing library.
+	List func(dir string) []string
+	// Extra are directories searched after Dirs: the RUNPATH directories of
+	// the other ELF files of the same package. A private library that one
+	// executable's RUNPATH exposes is found this way when the library
+	// needing it has no RUNPATH of its own.
+	Extra []string
+}
+
+// Status is how a DT_NEEDED entry fares.
+type Status int
+
+const (
+	// Found: the library exists.
+	Found Status = iota
+	// Mismatch: the soname is not installed but another version of the same
+	// library (same base name up to ".so") is. This is what a partial
+	// upgrade or a soname bump looks like.
+	Mismatch
+	// Missing: no version of the library is installed. That is usually an
+	// optional feature whose dependency was never installed, and is no sign
+	// of damage.
+	Missing
+)
+
+// soBase returns the part of a library name up to and including ".so", or
+// "" if there is none: libfoo.so.1 gives libfoo.so.
+func soBase(lib string) string {
+	for i := 0; ; {
+		j := strings.Index(lib[i:], ".so")
+		if j < 0 {
+			return ""
+		}
+		end := i + j + 3
+		if end == len(lib) || lib[end] == '.' {
+			return lib[:end]
+		}
+		i = end
+	}
+}
+
+// Classify says whether lib, a DT_NEEDED entry of f, is found, found only
+// in another version, or not installed at all.
+func (s Searcher) Classify(f File, lib string) Status {
+	if s.Resolve(f, lib) {
+		return Found
+	}
+	base := soBase(lib)
+	if base == "" || strings.Contains(lib, "/") || s.List == nil {
+		return Missing
+	}
+	for _, d := range append(s.Dirs(f), s.Extra...) {
+		for _, n := range s.List(d) {
+			if n != lib && (n == base || strings.HasPrefix(n, base+".")) {
+				return Mismatch
+			}
+		}
+	}
+	return Missing
 }
 
 // Dirs returns the directories the loader searches for f's libraries, in
@@ -90,7 +150,7 @@ func hasUnknownRunPath(f File) bool {
 //
 // An entry with a slash is a path and is checked as it is (a relative one
 // can't be judged, and counts as found). Otherwise each directory of Dirs
-// is tried. A file whose RUNPATH holds a variable cronen can't expand is
+// is tried, then the file's own directory and Extra. A file whose RUNPATH holds a variable cronen can't expand is
 // given the benefit of the doubt: the library counts as found.
 func (s Searcher) Resolve(f File, lib string) bool {
 	if strings.Contains(lib, "/") {
@@ -99,10 +159,41 @@ func (s Searcher) Resolve(f File, lib string) bool {
 		}
 		return s.Exists(path.Clean(lib))
 	}
+	// The directory of the file itself: a private library next to its user
+	// is found through the RUNPATH of whatever loads them.
+	if s.Exists(path.Join(path.Dir(f.Path), lib)) {
+		return true
+	}
 	for _, d := range s.Dirs(f) {
 		if s.Exists(path.Join(d, lib)) {
 			return true
 		}
 	}
+	for _, d := range s.Extra {
+		if s.Exists(path.Join(d, lib)) {
+			return true
+		}
+	}
 	return hasUnknownRunPath(f)
+}
+
+// ExpandedRunPaths returns the absolute RUNPATH directories of files, with
+// $ORIGIN expanded and entries holding other variables left out.
+func ExpandedRunPaths(files []File) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, f := range files {
+		origin := path.Dir(f.Path)
+		for _, d := range f.RunPath {
+			d = strings.ReplaceAll(strings.ReplaceAll(d, "${ORIGIN}", origin), "$ORIGIN", origin)
+			if strings.Contains(d, "$") || !strings.HasPrefix(d, "/") {
+				continue
+			}
+			if d = path.Clean(d); !seen[d] {
+				seen[d] = true
+				out = append(out, d)
+			}
+		}
+	}
+	return out
 }

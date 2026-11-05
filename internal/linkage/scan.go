@@ -24,6 +24,9 @@ const maxIncludeDepth = 8
 type Package struct {
 	Name, Version string
 	Files         []string
+	// OptDeps are the names of the package's optional dependencies, if
+	// known. They only colour the report on unresolved libraries.
+	OptDeps []string
 }
 
 // Broken is one library an ELF file needs and nothing provides.
@@ -35,12 +38,23 @@ type Broken struct {
 	Version string `json:"version"`
 	// Lib is the missing DT_NEEDED entry.
 	Lib string `json:"lib"`
+	// OptDeps are the owning package's optional dependencies, set on
+	// Result.Optional entries when known.
+	OptDeps []string `json:"optdeps,omitempty"`
 }
 
-// Result is what a scan found. Broken is sorted by package, path and
-// library.
+// Result is what a scan found. Broken and Optional are sorted by package,
+// path and library.
 type Result struct {
+	// Broken are libraries whose soname is not installed while another
+	// version of the same library is: the mark of a partial upgrade or a
+	// soname bump. Only these count.
 	Broken []Broken
+	// Optional are the other unresolved libraries: no version of them is
+	// installed, which is normal for an optional feature (a plugin whose
+	// dependency was never installed). They are information only and never
+	// count as damage.
+	Optional []Broken
 	// Packages and Files count what was looked at: packages, and ELF files
 	// with libraries.
 	Packages, Files int
@@ -212,7 +226,20 @@ func readPackage(ctx context.Context, op system.Opener, p Package) []File {
 func resolveAll(opt Options, pkgs []Package, files [][]File) Result {
 	ldDirs := LoadLdConf(opt.FS)
 	exists := map[string]bool{}
-	s := Searcher{ConfDirs: ldDirs, Exists: func(p string) bool {
+	listed := map[string][]string{}
+	s := Searcher{ConfDirs: ldDirs, List: func(dir string) []string {
+		if v, ok := listed[dir]; ok {
+			return v
+		}
+		var names []string
+		if infos, err := opt.FS.ReadDir(dir); err == nil {
+			for _, fi := range infos {
+				names = append(names, fi.Name())
+			}
+		}
+		listed[dir] = names
+		return names
+	}, Exists: func(p string) bool {
 		if v, ok := exists[p]; ok {
 			return v
 		}
@@ -226,6 +253,8 @@ func resolveAll(opt Options, pkgs []Package, files [][]File) Result {
 
 	res := Result{Packages: len(pkgs)}
 	for i, p := range pkgs {
+		s := s
+		s.Extra = ExpandedRunPaths(files[i])
 		for _, f := range files[i] {
 			if Skipped(f.Path, opt.Skip) {
 				res.Skipped++
@@ -233,14 +262,19 @@ func resolveAll(opt Options, pkgs []Package, files [][]File) Result {
 			}
 			res.Files++
 			for _, lib := range f.Needed {
-				if !s.Resolve(f, lib) {
+				switch s.Classify(f, lib) {
+				case Mismatch:
 					res.Broken = append(res.Broken, Broken{Path: f.Path, Package: p.Name, Version: p.Version, Lib: lib})
+				case Missing:
+					res.Optional = append(res.Optional, Broken{Path: f.Path, Package: p.Name, Version: p.Version, Lib: lib, OptDeps: p.OptDeps})
 				}
 			}
 		}
 	}
-	slices.SortFunc(res.Broken, func(a, b Broken) int {
-		return strings.Compare(a.Package+"\x00"+a.Path+"\x00"+a.Lib, b.Package+"\x00"+b.Path+"\x00"+b.Lib)
-	})
+	for _, list := range [][]Broken{res.Broken, res.Optional} {
+		slices.SortFunc(list, func(a, b Broken) int {
+			return strings.Compare(a.Package+"\x00"+a.Path+"\x00"+a.Lib, b.Package+"\x00"+b.Path+"\x00"+b.Lib)
+		})
+	}
 	return res
 }

@@ -112,16 +112,23 @@ func testSystem() (Options, []Package) {
 		"/usr/bin/static":             fixtures.ELF(true),
 		"/usr/bin/truncated":          fixtures.ELF(true, "libc.so.6")[:40],
 		"/usr/bin/conf":               fixtures.ELF(true, "libconf.so.2"),
+		// An optional feature: its library is installed in no version.
+		"/usr/lib/opt/plugin.so": fixtures.ELF(true, "libnowhere.so.5"),
+		// A private library found through the executable's RUNPATH.
+		"/usr/lib/priv/libcore-1.so":   fixtures.ELF(true, "libshared-1.so"),
+		"/usr/lib/priv/libshared-1.so": fixtures.ELF(true),
 	}
 	opener := system.NewFakeOpener(files)
 	fsys := system.NewFakeFS(map[string][]byte{
-		"/etc/ld.so.conf":            []byte("include /etc/ld.so.conf.d/*.conf\n"),
-		"/etc/ld.so.conf.d/x.conf":   []byte("/opt/conf/lib\n"),
-		"/usr/lib/libc.so.6":         {1},
-		"/usr/lib/libalpm.so.16":     {1},
-		"/usr/lib32/libc.so.6":       {1},
-		"/opt/app/lib/libpriv.so.1":  {1},
-		"/opt/conf/lib/libconf.so.2": {1},
+		"/etc/ld.so.conf":              []byte("include /etc/ld.so.conf.d/*.conf\n"),
+		"/etc/ld.so.conf.d/x.conf":     []byte("/opt/conf/lib\n"),
+		"/usr/lib/libc.so.6":           {1},
+		"/usr/lib/libalpm.so.16":       {1},
+		"/usr/lib/libgone.so.2":        {1}, // foo needs .so.3: a soname bump
+		"/usr/lib32/libc.so.6":         {1},
+		"/opt/app/lib/libpriv.so.1":    {1},
+		"/opt/conf/lib/libconf.so.2":   {1},
+		"/usr/lib/priv/libshared-1.so": {1},
 	})
 	pkgs := []Package{
 		{Name: "pacman", Version: "7.0-1", Files: []string{"/usr/bin/good", "/usr/bin/script", "/usr/bin/static", "/usr/bin/truncated", "/usr/bin/dangling", "/usr/share/doc/x.txt"}},
@@ -129,6 +136,8 @@ func testSystem() (Options, []Package) {
 		{Name: "app", Version: "1-1", Files: []string{"/opt/app/bin/app", "/opt/app/lib/libpriv.so.1"}},
 		{Name: "lib32-tool", Version: "1-1", Files: []string{"/usr/lib32/lib32tool"}},
 		{Name: "confuser", Version: "1-1", Files: []string{"/usr/bin/conf"}},
+		{Name: "optional", Version: "1-1", Files: []string{"/usr/lib/opt/plugin.so"}, OptDeps: []string{"libnowhere"}},
+		{Name: "private", Version: "1-1", Files: []string{"/usr/lib/priv/libcore-1.so", "/usr/lib/priv/libshared-1.so"}},
 	}
 	return Options{Opener: opener, FS: fsys, Skip: SkipPatterns(nil), Workers: 3}, pkgs
 }
@@ -149,6 +158,10 @@ func TestScanFindsExactlyTheBrokenFile(t *testing.T) {
 	if got := b.String(); got != "/usr/bin/broken (foo 1.2-1) needs libgone.so.3, which no installed package provides" {
 		t.Errorf("String = %q", got)
 	}
+	// An unresolved library with no other version installed is not damage.
+	if len(res.Optional) != 1 || res.Optional[0].Lib != "libnowhere.so.5" || !slices.Equal(res.Optional[0].OptDeps, []string{"libnowhere"}) {
+		t.Errorf("Optional = %+v, want the plugin's libnowhere.so.5", res.Optional)
+	}
 	if res.Skipped != 1 {
 		t.Errorf("Skipped = %d, want the gstreamer plugin", res.Skipped)
 	}
@@ -157,21 +170,69 @@ func TestScanFindsExactlyTheBrokenFile(t *testing.T) {
 	}
 }
 
-func TestScanBreaksWhenALibraryDisappears(t *testing.T) {
+func TestScanUnresolvedWithoutSiblingIsOptional(t *testing.T) {
 	opt, pkgs := testSystem()
+	// Only libc is left: nothing has another version of its library, so
+	// nothing is a soname mismatch.
 	opt.FS = system.NewFakeFS(map[string][]byte{"/usr/lib/libc.so.6": {1}})
 	res, err := Scan(context.Background(), opt, pkgs)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(res.Broken) != 0 {
+		t.Errorf("Broken = %+v, want none", res.Broken)
+	}
 	var libs []string
-	for _, b := range res.Broken {
+	for _, b := range res.Optional {
 		libs = append(libs, b.Package+":"+b.Lib)
 	}
 	for _, want := range []string{"pacman:libalpm.so.16", "foo:libgone.so.3", "app:libpriv.so.1", "lib32-tool:libc.so.6", "confuser:libconf.so.2"} {
 		if !slices.Contains(libs, want) {
 			t.Errorf("missing %s in %v", want, libs)
 		}
+	}
+}
+
+func TestScanPrivateLibraryInOwnDirectory(t *testing.T) {
+	opt, pkgs := testSystem()
+	res, err := Scan(context.Background(), opt, pkgs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, b := range append(slices.Clone(res.Broken), res.Optional...) {
+		if b.Package == "private" {
+			t.Errorf("%+v reported, but the library is in the same directory", b)
+		}
+	}
+}
+
+func TestClassify(t *testing.T) {
+	dir := map[string][]string{"/usr/lib": {"libfoo.so.2", "libbar.so", "libbaz-1.0.so.4"}}
+	s := Searcher{
+		Exists: exists("/usr/lib/libfoo.so.2", "/usr/lib/libbar.so", "/usr/lib/libbaz-1.0.so.4"),
+		List:   func(d string) []string { return dir[d] },
+	}
+	f := File{Path: "/usr/bin/x"}
+	for lib, want := range map[string]Status{
+		"libfoo.so.2":     Found,
+		"libfoo.so.3":     Mismatch,
+		"libfoo.so":       Mismatch,
+		"libbar.so.1":     Mismatch,
+		"libbaz-1.0.so.3": Mismatch,
+		"libbaz-2.0.so.4": Missing, // a different library, not a sibling
+		"libqux.so.1":     Missing,
+		"libfoobar.so.1":  Missing, // libfoo.so is not a prefix of it
+		"/opt/gone.so":    Missing,
+	} {
+		if got := s.Classify(f, lib); got != want {
+			t.Errorf("Classify(%q) = %v, want %v", lib, got, want)
+		}
+	}
+	// A library of the same package found through another file's RUNPATH.
+	s.Extra = []string{"/opt/p/lib"}
+	s.Exists = exists("/opt/p/lib/libpriv.so.1")
+	if got := s.Classify(f, "libpriv.so.1"); got != Found {
+		t.Errorf("Classify via Extra = %v, want Found", got)
 	}
 }
 
@@ -196,7 +257,7 @@ func TestScanCache(t *testing.T) {
 	if got := len(fo.Opened()); got != first {
 		t.Errorf("cached scan opened %d more files", got-first)
 	}
-	if len(res.Broken) != 1 {
+	if len(res.Broken) != 1 || len(res.Optional) != 1 {
 		t.Errorf("cached scan Broken = %+v", res.Broken)
 	}
 
