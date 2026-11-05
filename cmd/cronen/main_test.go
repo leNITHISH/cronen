@@ -14,6 +14,7 @@ import (
 	"github.com/leNITHISH/cronen/internal/config"
 	"github.com/leNITHISH/cronen/internal/fixtures"
 	"github.com/leNITHISH/cronen/internal/summary"
+	"github.com/leNITHISH/cronen/internal/system"
 )
 
 func TestDemoQuitsOnQ(t *testing.T) {
@@ -54,6 +55,9 @@ func TestFlags(t *testing.T) {
 		{[]string{"install", "htop", "htop"}, 2},
 		{[]string{"--check", "install", "htop"}, 2},
 		{[]string{"--json", "install", "htop"}, 2},
+		{[]string{"--scan-linkage", "--check"}, 2},
+		{[]string{"--scan-linkage", "--json"}, 2},
+		{[]string{"--scan-linkage", "install", "htop"}, 2},
 	}
 	for _, tt := range tests {
 		t.Run(strings.Join(tt.args, " "), func(t *testing.T) {
@@ -215,5 +219,48 @@ func TestInstallIsInTheUsage(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), "cronen [--demo] install <package>...") || !strings.Contains(stdout.String(), "never runs pacman -Sy <package>") {
 		t.Errorf("usage: %s", stdout.String())
+	}
+}
+
+func TestScanLinkageExitCodes(t *testing.T) {
+	ctx := context.Background()
+
+	// The demo system has one broken file: exit 20 and a report on stdout.
+	var stdout, stderr bytes.Buffer
+	if code := run(ctx, []string{"--demo", "--scan-linkage"}, &stdout, &stderr); code != 20 {
+		t.Fatalf("exit code %d, want 20; stderr: %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "/usr/bin/paru (paru 2.1.0-1) needs libalpm.so.15, which no installed package provides") {
+		t.Errorf("stdout = %q", stdout.String())
+	}
+
+	// With the library back, nothing is broken: exit 0.
+	e := demoEnv()
+	fsys := fixtures.FS()
+	_ = fsys.WriteFile("/usr/lib/libalpm.so.15", []byte{1}, 0o644)
+	e.fs = fsys
+	stdout.Reset()
+	stderr.Reset()
+	if code := e.scanLinkage(ctx, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit code %d, want 0; stdout: %s stderr: %s", code, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "no broken linkage found") {
+		t.Errorf("stdout = %q", stdout.String())
+	}
+
+	// A failing pacman is an error (1), not "nothing broken".
+	e = demoEnv()
+	e.runner = system.NewFakeRunner()
+	stdout.Reset()
+	stderr.Reset()
+	if code := e.scanLinkage(ctx, &stdout, &stderr); code != 1 {
+		t.Errorf("exit code %d, want 1", code)
+	}
+
+	// A cancelled scan is an error too.
+	cctx, cancel := context.WithCancel(ctx)
+	cancel()
+	if code := demoEnv().scanLinkage(cctx, &stdout, &stderr); code != 1 {
+		t.Errorf("cancelled: exit code %d, want 1", code)
 	}
 }

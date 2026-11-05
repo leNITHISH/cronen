@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/leNITHISH/cronen/internal/config"
 	"github.com/leNITHISH/cronen/internal/fixtures"
+	"github.com/leNITHISH/cronen/internal/linkage"
 	"github.com/leNITHISH/cronen/internal/ops"
 	"github.com/leNITHISH/cronen/internal/pacman"
 	"github.com/leNITHISH/cronen/internal/summary"
@@ -36,6 +38,8 @@ type options struct {
 	waybar  bool
 	demo    bool
 	version bool
+	// scanLinkage runs the broken-linkage scan and exits.
+	scanLinkage bool
 	// install holds the package names of `cronen install <pkg>...`.
 	install []string
 }
@@ -55,6 +59,7 @@ func versionString() string {
 }
 
 const usageHeader = `Usage: cronen [--demo] [--check | --json [--waybar]]
+       cronen [--demo] --scan-linkage
        cronen [--demo] install <package>...
 
 Shows pending repo and AUR updates, unread Arch news and anything that needs
@@ -73,8 +78,16 @@ Exit codes of --check:
   30  critical: an unread news item requires manual intervention, or a
       preflight check found a critical problem (such as a full /boot)
   1   error: a source (checkupdates, the AUR, the news feed, the preview) failed
+A database synced without upgrading (pacman -Sy without -u) counts as 20, or
+as 30 once the last --scan-linkage found damage.
 --json always exits 0 once it has printed; failures are in its "errors".
 Bad flags exit 2.
+
+--scan-linkage reads the ELF files of every installed package and lists the
+libraries nothing provides, which is what a partial upgrade leaves behind. It
+exits 20 if anything is broken, 0 if not, 1 on error. Ctrl-C cancels it. The
+result is cached per package version; the TUI's B key (housekeeping) runs the
+same scan.
 
 cronen install opens the TUI in the install helper ("I need X now"): it offers
 the full upgrade plus the package, or (experimental, archive_install = true)
@@ -105,6 +118,7 @@ func parseFlags(args []string, stdout io.Writer) (options, error) {
 	fs.BoolVar(&o.json, "json", false, "print a machine-readable JSON summary and exit")
 	fs.BoolVar(&o.waybar, "waybar", false, "with --json, print text, tooltip and class for a waybar custom module")
 	fs.BoolVar(&o.demo, "demo", false, "use bundled sample data and touch nothing on the system;\nalso works with --check and --json")
+	fs.BoolVar(&o.scanLinkage, "scan-linkage", false, "list libraries that installed programs need and nothing provides;\nexits 20 if any is broken, 0 if none")
 	fs.BoolVar(&o.version, "version", false, "print the version and exit")
 	fs.Usage = func() {}
 	if err := fs.Parse(args); err != nil {
@@ -124,9 +138,12 @@ func parseFlags(args []string, stdout io.Writer) (options, error) {
 		if err := ops.CheckInstallNames(o.install); err != nil {
 			return o, fmt.Errorf("install: %w", err)
 		}
-		if o.check || o.json || o.waybar {
-			return o, errors.New("install can't be combined with --check, --json or --waybar")
+		if o.check || o.json || o.waybar || o.scanLinkage {
+			return o, errors.New("install can't be combined with --check, --json, --waybar or --scan-linkage")
 		}
+	}
+	if o.scanLinkage && (o.check || o.json || o.waybar) {
+		return o, errors.New("--scan-linkage can't be combined with --check, --json or --waybar")
 	}
 	if o.waybar && !o.json {
 		return o, errors.New("--waybar requires --json")
@@ -175,6 +192,10 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, teaOpts .
 		e = demoEnv()
 	} else {
 		e = realEnv(stderr)
+	}
+
+	if o.scanLinkage {
+		return e.scanLinkage(ctx, stdout, stderr)
 	}
 
 	if o.check || o.json {
@@ -294,6 +315,47 @@ func realEnv(stderr io.Writer) env {
 	e.archiveBase = filepath.Join(paths.CacheDir, "archive")
 	e.nonce = randomNonce
 	return e
+}
+
+// scanLinkage is `cronen --scan-linkage`: it prints the broken files and
+// exits 20 if there are any, 0 if not, 1 if the scan failed or was
+// cancelled with Ctrl-C.
+func (e env) scanLinkage(ctx context.Context, stdout, stderr io.Writer) int {
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
+	defer stop()
+	src := summary.LinkageSources{
+		Runner: e.runner, Opener: e.opener, FS: e.fs, CacheDir: e.cacheDir,
+		Skip: e.cfg.LinkageSkip, Now: e.now,
+	}
+	// Progress goes to a terminal only; a pipe gets the result alone.
+	if f, ok := stderr.(*os.File); ok {
+		if fi, err := f.Stat(); err == nil && fi.Mode()&os.ModeCharDevice != 0 {
+			last := -1
+			src.OnProgress = func(p linkage.Progress) {
+				if p.Total == 0 {
+					_, _ = fmt.Fprint(stderr, "\rlisting package files…")
+				} else if pct := p.Done * 100 / p.Total; pct != last {
+					last = pct
+					_, _ = fmt.Fprintf(stderr, "\rscanning packages: %d/%d", p.Done, p.Total)
+				}
+			}
+			defer func() { _, _ = fmt.Fprint(stderr, "\r\x1b[K") }()
+		}
+	}
+	res, err := summary.ScanLinkage(ctx, src)
+	if errors.Is(err, context.Canceled) {
+		_, _ = fmt.Fprintln(stderr, "cronen: scan cancelled")
+		return 1
+	}
+	if err != nil {
+		_, _ = fmt.Fprintln(stderr, "cronen:", err)
+		return 1
+	}
+	_, _ = io.WriteString(stdout, summary.LinkageText(res))
+	if len(res.Broken) > 0 {
+		return summary.ExitAttention
+	}
+	return 0
 }
 
 // recordPending keeps the day's pending download size in the state, for the
