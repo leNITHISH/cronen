@@ -909,3 +909,71 @@ Tags are made by the maintainer, never by a session. As in v2, expect small conf
 - A bad value falls back to that key's default only; the UI shows one warning line and `--doctor` the full list. `cronen --check-config` prints the same and exits `0` or `1`.
 - Values in `protected`, `extra_cache_dirs` and `pacdiff_command` go through the same validation as `internal/ops` (no shell, names pass the name regex), so a config can't loosen a safety guard. A test pins that.
 - **Done when:** table tests cover each error, near-miss and contradiction; a config with every key wrong still starts on defaults and never panics; nothing in the config can disable an argv guard.
+
+## v3 milestones
+
+Start after v2.1 is tagged. None of these adds a write action.
+
+### M26: Packaging and release (after M23)
+- Already in place from M6: `PKGBUILD`, `.goreleaser.yaml`, `doc/cronen.1`. This milestone completes them.
+- Shell completions for bash, zsh and fish, hand-written under `contrib/completions/` (the flags and the `install` subcommand are few). A test checks that every flag in `--help` appears in each file. The PKGBUILD installs them and the release archive includes them.
+- Bring the man page up to v2 (every flag, subcommand, config key, the exit codes, the state version), with a test that fails if a flag or config key exists in the code and not in the page.
+- Two AUR PKGBUILDs in the repo: `cronen` (tagged release, with checksums) and `cronen-git`. Both pass `namcap` and a `makepkg` build inside the M23 image in CI.
+- A release workflow: on a `v*` tag, `goreleaser release` publishes the archive and `checksums.txt`; the version string comes from the tag.
+- Creating the tag and publishing to the AUR are the maintainer's actions.
+- **Done when:** CI builds both PKGBUILDs in the container and `namcap` is clean; `make release-check` passes; completions are covered by the flag test; the maintainer installs the built package and checks `man cronen` and tab completion on a real system.
+
+### M27: Notifications (after M25)
+- `cronen --notify` runs the same pipeline as `--check` (honouring the cache TTLs, and skipping the network on a metered connection) and compares the result with a digest in state (`notified`: critical items, news GUIDs, security fixes, preflight problems). It sends a desktop notification **only when something new appears** at or above `notify_min_severity`. Silent otherwise.
+- Sending goes through `notify-send` via the runner (argv, no shell). The text comes from package names and news, so control characters are stripped and the length is capped. `libnotify` is an optdepend; no D-Bus library.
+- `contrib/systemd/cronen-notify.service` and `.timer`, user units (`OnCalendar` a few times a day, `RandomizedDelaySec`, `Persistent=true`). cronen never enables them; the README shows `systemctl --user enable --now`. It never starts an upgrade and the notification has no action.
+- Config: `notify = true`, `notify_min_severity = "warn"`.
+- **Done when:** with the fake runner the first run notifies, a second run with the same state is silent, a new critical item notifies once, and a metered link makes no network requests; the notification text is sanitised (adversarial test); the unit files pass `systemd-analyze verify` in the M23 image.
+
+### M28: Upstream release notes (parallel after v2.1)
+- `internal/releasenotes`: for packages whose upstream URL is a GitHub repository, fetch the releases between the installed and the new version from the GitHub Releases API, shown in the detail pane on `R`. Lazy: never fetched for the whole list.
+- Tag-to-version matching is the hard part (`v1.2.3`, `1.2.3`, `release-1.2.3`, pkgrel and epoch, git snapshots). Match only when the tag reduces cleanly to the package's upstream version; otherwise show nothing rather than the wrong release.
+- Unauthenticated GitHub calls are limited to 60 an hour, so: cache for 6 hours, one package per request, and a plain "rate limited, try later" message. An optional token is read from the environment variable named in `github_token_env`, and is never stored in config or state.
+- The body is untrusted markdown: strip control characters and cap the size before Glamour renders it.
+- Config switch `release_notes`, off by default until the matching has been checked on real packages.
+- **Done when:** captured fixtures (rule 2) show a clean match, a `v` prefix, a non-match, a rate-limit response and a 404; turning it off makes no request; the adversarial body test passes.
+
+### M29: Dependency and repo-move hints (parallel after v2.1)
+- Rule 16, a new dependency that pulls in something large: a package in the NEW group (M7's `-Sup`) whose download or installed size is at least `big_new_mib` (default 100), shown with the pending package that asks for it (from `Depends On` in the `-Si` blocks). Info severity, acknowledgeable like the other flags.
+- Rule 17, an installed foreign package that now exists in the official repos (from the archweb lookup that already exists). Info. The detail pane says so and names `cronen install <name>`; cronen does not run it or offer to. The rule stays quiet for `-bin` and VCS packages and when `pkgbase` differs, since the same name does not always mean the same thing.
+- **Done when:** table tests cover a big new dependency, a small one, a dependency that is already installed, an AUR package that moved, a `-bin` and a VCS package that must not be flagged, and the same name in a different repo; acknowledgement works.
+
+### M30: Boot sanity and post-upgrade verification (parallel after v2.1)
+- New checks in `internal/preflight` for what stops a machine booting: for each installed kernel package, `vmlinuz` and the initramfs in `/boot` (or the UKI in the ESP) exist and are non-empty; a bootloader entry points at an existing kernel; the microcode package for the CPU vendor in `/proc/cpuinfo` is installed (whether it is loaded depends on the bootloader, so that part is information only).
+- Bootloaders: systemd-boot (BLS entries) and GRUB (`grub.cfg`) only. Any other, or a layout the check doesn't recognise (dracut, a UKI in a custom path), reports "can't tell" at info severity, never a warning. This is the linkage lesson: unknown is not broken.
+- After a successful upgrade hand-off, run these checks again, together with the existing `.pacnew` count, reboot note and failed units, and show a one-screen "after the upgrade" summary. A missing initramfs after the upgrade is critical.
+- **Done when:** fixtures from captured `/boot` layouts (systemd-boot and GRUB; the maintainer's machine plus a VM for the one it doesn't run) give no warnings; a deleted initramfs and an entry pointing at a missing kernel each give one; an unrecognised layout gives "can't tell".
+
+### M31: Customisation and scripting output (after M25)
+- Custom rules: `[[rule]] match = "*-dkms" severity = "info" reason = "..."`. Name globs only; severity `info` or `warn` only, so a user rule can never produce `critical`, create exit code 30 or bypass an acknowledgement; the reason is sanitised and capped. Validated by M25.
+- `--json --full`: per-package detail (versions, flags with reasons, sizes, repo, rebuild and security data). Plain `--json` keeps its fields; both gain `"schema": 1`. The output is covered by a golden file (M22), and the man page says what may change without a schema bump.
+- `icons = "unicode" | "ascii"` for the severity marks and the box drawing, with `ascii` chosen automatically when `TERM` is `linux` or `dumb`. No palette option.
+- **Done when:** table tests cover a user rule (matching, not matching, asking for `critical`); the golden JSON is stable; snapshot tests of the main screens exist for `ascii`.
+
+## v3 non-goals
+
+- Installing, removing, restoring or re-labelling beyond what v2 offers. Downloading packages that are not already on disk, apart from v2's date-matched archive install.
+- A daemon. The timer in M27 runs `cronen --notify` and exits.
+- A configurable palette, a plugin system, or a scripting language in config. Custom rules are a glob and a severity.
+- Mirror management, or support for non-pacman installs.
+- Self-update, telemetry or bug-report uploads (`--doctor --bundle` writes files that the user chooses to share), and non-Linux ports.
+
+## Needs checking on Arch (v2.x and v3)
+
+Each PR records its result in the M20 ledger.
+
+- Every open v2 item (M20). In particular: Timeshift and snapper `--list` output and CLI flags, `timeshift.json` fields and snapper permissions (a VM with both installed); the archive-install flow (`fakeroot -- pacman -Sy --dbpath ... --config ...`, the real database written through the symlink, the day choice); the `severity::1-*` label spelling, and whether the GitLab project-path mangling holds for every pending package; chained `tea.ExecProcess` on a real terminal, in at least one terminal emulator and over SSH; the "last used" heuristic and the 69-file `.desktop` case.
+- M20 and M21: the capture script under a non-English locale (everything must still run with `LC_ALL=C`), and on pacman 7.x and 6.x if both are available.
+- M23: that the container's `pacman -Qii`, `-Sup` and `-Up` output has the same shape as the maintainer's captures. The container is a guide, not the truth.
+- M24: that `--doctor` on a derivative (EndeavourOS, CachyOS) says `ok` or a specific `differs`, and doesn't crash.
+- M26: `makepkg -si` on a clean Arch install; completions in bash, zsh and fish; `man cronen`.
+- M27: `notify-send` from a user timer (does the unit see `DBUS_SESSION_BUS_ADDRESS`?); behaviour after suspend and resume with `Persistent=true`; display under mako, dunst and a desktop environment's own notifier.
+- M28: the GitHub Releases API fields and rate-limit headers; tag naming across the ten or twenty most-installed GitHub-hosted packages.
+- M29: `Depends On` on real `-Si` output for a package with a new dependency; whether the archweb package JSON answers for every foreign package.
+- M30: `/boot` layouts for systemd-boot, GRUB, a UKI and a dracut setup (`ls -lR /boot`, `bootctl status`, the vendor line of `/proc/cpuinfo`, the microcode package names), and a deliberately broken initramfs in a throwaway VM.
+- M31: that `TERM=linux` renders the default icons badly enough to justify the automatic choice (look at it on a real console).
