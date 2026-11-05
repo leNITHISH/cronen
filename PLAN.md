@@ -786,6 +786,8 @@ M7 goes first. M8–M11 then only touch their own packages plus a short UI wirin
 
 ## Later (not v2)
 
+> Superseded by the "After v2" section at the end of this file, which says what became a milestone and what was dropped, bullet by bullet. The list below is kept as it was written.
+
 - Show actual upstream release notes (GitHub Releases API) in the detail pane.
 - Desktop notifications via a systemd user timer and `cronen --notify` (notify only when the state changes, for example new critical news).
 - Custom rules in config (`[[rule]] match = "*-dkms" severity = "info" reason = "…"`).
