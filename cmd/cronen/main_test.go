@@ -241,7 +241,7 @@ func TestScanLinkageExitCodes(t *testing.T) {
 	e.fs = fsys
 	stdout.Reset()
 	stderr.Reset()
-	if code := e.scanLinkage(ctx, &stdout, &stderr); code != 0 {
+	if code := e.scanLinkage(ctx, &stdout, &stderr, false); code != 0 {
 		t.Fatalf("exit code %d, want 0; stdout: %s stderr: %s", code, stdout.String(), stderr.String())
 	}
 	if !strings.Contains(stdout.String(), "no broken linkage found") {
@@ -253,14 +253,14 @@ func TestScanLinkageExitCodes(t *testing.T) {
 	e.runner = system.NewFakeRunner()
 	stdout.Reset()
 	stderr.Reset()
-	if code := e.scanLinkage(ctx, &stdout, &stderr); code != 1 {
+	if code := e.scanLinkage(ctx, &stdout, &stderr, false); code != 1 {
 		t.Errorf("exit code %d, want 1", code)
 	}
 
 	// A cancelled scan is an error too.
 	cctx, cancel := context.WithCancel(ctx)
 	cancel()
-	if code := demoEnv().scanLinkage(cctx, &stdout, &stderr); code != 1 {
+	if code := demoEnv().scanLinkage(cctx, &stdout, &stderr, false); code != 1 {
 		t.Errorf("cancelled: exit code %d, want 1", code)
 	}
 }

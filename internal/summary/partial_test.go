@@ -215,7 +215,7 @@ func TestScanLinkageDriver(t *testing.T) {
 	if last.Total == 0 || last.Done != last.Total {
 		t.Errorf("progress ended at %+v", last)
 	}
-	if got := LinkageText(res); !strings.Contains(got, "/usr/bin/paru (paru 2.1.0-1) needs libalpm.so.15, which no installed package provides") {
+	if got := LinkageText(res, false); !strings.Contains(got, "/usr/bin/paru (paru 2.1.0-1) needs libalpm.so.15, which no installed package provides") {
 		t.Errorf("text:\n%s", got)
 	}
 
@@ -244,7 +244,7 @@ func TestScanLinkageDriver(t *testing.T) {
 	if _, err := ScanLinkage(context.Background(), ls); err == nil {
 		t.Error("scan without an opener succeeded")
 	}
-	if got := LinkageText(linkage.Result{Packages: 2, Files: 5}); !strings.Contains(got, "no broken linkage found in 5 ELF files of 2 packages") {
+	if got := LinkageText(linkage.Result{Packages: 2, Files: 5}, false); !strings.Contains(got, "no broken linkage found in 5 ELF files of 2 packages") {
 		t.Errorf("clean text = %q", got)
 	}
 }
@@ -300,5 +300,24 @@ func TestLinkageFixes(t *testing.T) {
 
 	if fixes, err := LinkageFixes(ctx, fixSrc, linkage.Result{}, 0, true); err != nil || fixes != nil {
 		t.Errorf("nothing broken: %v, %v", fixes, err)
+	}
+}
+
+func TestLinkageTextOptional(t *testing.T) {
+	res := linkage.Result{Packages: 3, Files: 9, Optional: []linkage.Broken{
+		{Path: "/usr/lib/python3/_tkinter.so", Package: "python", Version: "3.14-1", Lib: "libtk8.6.so", OptDeps: []string{"tk"}},
+		{Path: "/usr/lib/x.so", Package: "x", Version: "1-1", Lib: "libnope.so.1"},
+	}}
+	// Unresolved-only is healthy: the line says "no broken" and counts them.
+	got := LinkageText(res, false)
+	if !strings.Contains(got, "no broken linkage found") || !strings.Contains(got, "unresolved, probably an optional feature: 2") || strings.Contains(got, "libtk8.6.so") {
+		t.Errorf("text:\n%s", got)
+	}
+	got = LinkageText(res, true)
+	if !strings.Contains(got, "libtk8.6.so") || !strings.Contains(got, "python lists optional dependencies: tk") {
+		t.Errorf("verbose text:\n%s", got)
+	}
+	if strings.Contains(strings.SplitN(got, "libnope.so.1", 2)[1], "optional dependencies") {
+		t.Errorf("a package without optional dependencies got a note:\n%s", got)
 	}
 }

@@ -40,6 +40,8 @@ type options struct {
 	version bool
 	// scanLinkage runs the broken-linkage scan and exits.
 	scanLinkage bool
+	// verbose lists the unresolved optional libraries of --scan-linkage.
+	verbose bool
 	// install holds the package names of `cronen install <pkg>...`.
 	install []string
 }
@@ -84,7 +86,10 @@ as 30 once the last --scan-linkage found damage.
 Bad flags exit 2.
 
 --scan-linkage reads the ELF files of every installed package and lists the
-libraries nothing provides, which is what a partial upgrade leaves behind. It
+libraries that are installed in another version than the one a program needs,
+which is what a partial upgrade leaves behind. Libraries installed in no
+version are most likely optional features: they are counted ("unresolved,
+probably an optional feature") and listed with --verbose, never broken. It
 exits 20 if anything is broken, 0 if not, 1 on error. Ctrl-C cancels it. The
 result is cached per package version; the TUI's B key (housekeeping) runs the
 same scan.
@@ -119,6 +124,7 @@ func parseFlags(args []string, stdout io.Writer) (options, error) {
 	fs.BoolVar(&o.waybar, "waybar", false, "with --json, print text, tooltip and class for a waybar custom module")
 	fs.BoolVar(&o.demo, "demo", false, "use bundled sample data and touch nothing on the system;\nalso works with --check and --json")
 	fs.BoolVar(&o.scanLinkage, "scan-linkage", false, "list libraries that installed programs need and nothing provides;\nexits 20 if any is broken, 0 if none")
+	fs.BoolVar(&o.verbose, "verbose", false, "with --scan-linkage, also list the unresolved libraries that are probably\noptional features (they never change the exit code)")
 	fs.BoolVar(&o.version, "version", false, "print the version and exit")
 	fs.Usage = func() {}
 	if err := fs.Parse(args); err != nil {
@@ -144,6 +150,9 @@ func parseFlags(args []string, stdout io.Writer) (options, error) {
 	}
 	if o.scanLinkage && (o.check || o.json || o.waybar) {
 		return o, errors.New("--scan-linkage can't be combined with --check, --json or --waybar")
+	}
+	if o.verbose && !o.scanLinkage {
+		return o, errors.New("--verbose requires --scan-linkage")
 	}
 	if o.waybar && !o.json {
 		return o, errors.New("--waybar requires --json")
@@ -195,7 +204,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, teaOpts .
 	}
 
 	if o.scanLinkage {
-		return e.scanLinkage(ctx, stdout, stderr)
+		return e.scanLinkage(ctx, stdout, stderr, o.verbose)
 	}
 
 	if o.check || o.json {
@@ -320,7 +329,7 @@ func realEnv(stderr io.Writer) env {
 // scanLinkage is `cronen --scan-linkage`: it prints the broken files and
 // exits 20 if there are any, 0 if not, 1 if the scan failed or was
 // cancelled with Ctrl-C.
-func (e env) scanLinkage(ctx context.Context, stdout, stderr io.Writer) int {
+func (e env) scanLinkage(ctx context.Context, stdout, stderr io.Writer, verbose bool) int {
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
 	defer stop()
 	src := summary.LinkageSources{
@@ -351,7 +360,7 @@ func (e env) scanLinkage(ctx context.Context, stdout, stderr io.Writer) int {
 		_, _ = fmt.Fprintln(stderr, "cronen:", err)
 		return 1
 	}
-	_, _ = io.WriteString(stdout, summary.LinkageText(res))
+	_, _ = io.WriteString(stdout, summary.LinkageText(res, verbose))
 	if len(res.Broken) > 0 {
 		return summary.ExitAttention
 	}

@@ -11,7 +11,9 @@ import (
 	"time"
 )
 
-const cacheVersion = 1
+// cacheVersion 2: the verdict now holds only soname mismatches; a version 1
+// cache may hold false positives and is dropped.
+const cacheVersion = 2
 
 // CacheFile is the name, inside the cache directory, of the scan cache.
 const CacheFile = "linkage.json"

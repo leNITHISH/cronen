@@ -297,9 +297,16 @@ cronen looks for three things, all read-only:
   next full upgrade.
 - **Broken linkage.** `B` on the Housekeeping screen (Esc cancels), or
   `cronen --scan-linkage`, reads the ELF files of every installed package and
-  reports each library nothing provides ("/usr/bin/foo (foo 1.2-1) needs libbar.so.3,
-  which no installed package provides"). `--scan-linkage` exits `20` if anything
-  is broken, `0` if not, `1` on an error. Libraries are looked up the way the
+  reports each library that is installed in a different version than the one a
+  program needs, which is what a partial upgrade or a soname bump leaves
+  ("/usr/bin/foo (foo 1.2-1) needs libbar.so.3, which no installed package
+  provides" while libbar.so.2 is there). Only these count as broken.
+  A library installed in no version is most likely an optional feature (a
+  plugin whose optional dependency was never installed): it is counted as
+  "unresolved, probably an optional feature", listed with `--verbose`, and never
+  changes the exit code or the severity. A library next to the file that needs
+  it, or in a RUNPATH directory of another file of the same package, is found.
+  `--scan-linkage` exits `20` if anything is broken, `0` if not, `1` on an error. Libraries are looked up the way the
   loader does: RUNPATH/RPATH (`$ORIGIN` expanded), `/etc/ld.so.conf` and
   `/etc/ld.so.conf.d/*`, then `/usr/lib` (`/usr/lib32` for 32-bit files). ELF
   data is cached per package version in `$XDG_CACHE_HOME/cronen/linkage.json`;

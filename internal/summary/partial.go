@@ -225,6 +225,7 @@ func ScanLinkage(ctx context.Context, src LinkageSources) (linkage.Result, error
 		Skip: linkage.SkipPatterns(src.Skip), OnProgress: src.OnProgress,
 	}, pkgs)
 	if err == nil {
+		addOptDeps(ctx, src.Runner, &res)
 		now := time.Now
 		if src.Now != nil {
 			now = src.Now
@@ -238,9 +239,36 @@ func ScanLinkage(ctx context.Context, src LinkageSources) (linkage.Result, error
 	return res, err
 }
 
+// addOptDeps fills in the optional dependencies of the packages owning
+// unresolved libraries, from the local database. Failing to read it only
+// leaves the report less informative.
+func addOptDeps(ctx context.Context, r system.Runner, res *linkage.Result) {
+	if len(res.Optional) == 0 || r == nil {
+		return
+	}
+	db, err := pacman.LoadLocalDB(ctx, r, time.UTC)
+	if err != nil || db == nil {
+		return
+	}
+	// A package's optional dependencies are the packages that list it as
+	// "Optional For" the other way round: Q is optional for P.
+	opt := map[string][]string{}
+	for _, q := range db.Packages {
+		for _, p := range q.OptionalFor {
+			opt[p] = append(opt[p], q.Name)
+		}
+	}
+	for i := range res.Optional {
+		res.Optional[i].OptDeps = opt[res.Optional[i].Package]
+	}
+}
+
 // LinkageText is the report `cronen --scan-linkage` prints: each broken file
-// on its own line, then a summary.
-func LinkageText(res linkage.Result) string {
+// on its own line (a library needed in one version while another is
+// installed), then a summary. Libraries that no version of is installed are
+// probably optional features: they are counted on one line and, if verbose,
+// listed, but never make the result broken.
+func LinkageText(res linkage.Result, verbose bool) string {
 	var b strings.Builder
 	for _, br := range res.Broken {
 		b.WriteString(oneLine(br.String()) + "\n")
@@ -250,6 +278,18 @@ func LinkageText(res linkage.Result) string {
 	} else {
 		b.WriteString(plural(len(res.Broken), "broken library", "broken libraries") + " in " +
 			plural(len(res.BrokenPackages()), "package", "packages") + "\n")
+	}
+	if n := len(res.Optional); n > 0 {
+		b.WriteString("unresolved, probably an optional feature: " + strconv.Itoa(n) + "\n")
+		if verbose {
+			for _, o := range res.Optional {
+				line := "  " + oneLine(o.Path) + " (" + oneLine(o.Package+" "+o.Version) + ") needs " + oneLine(o.Lib) + ", which is installed in no version"
+				if len(o.OptDeps) > 0 {
+					line += "; " + oneLine(o.Package) + " lists optional dependencies: " + oneLine(strings.Join(o.OptDeps, ", "))
+				}
+				b.WriteString(line + "\n")
+			}
+		}
 	}
 	return b.String()
 }

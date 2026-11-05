@@ -565,7 +565,9 @@ The urgent case is the one that tempts people into `pacman -Sy X`: syncing the d
     1. `RUNPATH`/`RPATH` (with `$ORIGIN` expanded),
     2. the directories from `/etc/ld.so.conf` and `/etc/ld.so.conf.d/*`,
     3. `/usr/lib`, and `/usr/lib32` for 32-bit ELF.
-  - Anything still unresolved is broken: "/usr/bin/foo (foo 1.2-1) needs libbar.so.3, which no installed package provides".
+  - Also found: a library in the requesting file's own directory, or in a RUNPATH directory of another ELF file of the same package.
+  - Unresolved and a different version of the same library (same base name up to `.so`) is installed: broken, "/usr/bin/foo (foo 1.2-1) needs libbar.so.3, which no installed package provides". Only this counts for exit code 20, the critical escalation, fixes and the problem count.
+  - Unresolved with no version installed: probably an optional feature. Counted separately ("unresolved, probably an optional feature: N"), listed with `--verbose`, never counted as damage.
   - Cache the results per package version.
   - Skip what's known to be dlopen-only (plugin directories); keep that list data-driven.
 - **Fixes it suggests:**
