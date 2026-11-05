@@ -156,6 +156,7 @@ func Runner() *system.FakeRunner {
 		system.FakeResult{Stdout: Bytes(PacmanSup)})
 	r.Set("pacman -Qu --dbpath "+SyncDBPath+" --logfile /dev/null", system.FakeResult{Stdout: Bytes(PacmanQu)})
 	r.Set(NmcliMeteredCommand, nmcliResult(NmcliMeteredNo))
+	setPartial(r)
 	r.Handler = infoHandler
 
 	entries, err := files.ReadDir("testdata")
@@ -204,10 +205,7 @@ func infoHandler(line string) (system.FakeResult, bool) {
 		names = strings.Fields(strings.TrimPrefix(line, "pacman -Qi -- "))
 	case strings.HasPrefix(line, "pacman -Ql -- "):
 		names := strings.Fields(strings.TrimPrefix(line, "pacman -Ql -- "))
-		if res, ok := qlRepo(names); ok {
-			return res, true
-		}
-		return qlHandler(names)
+		return qlAny(names)
 	default:
 		return system.FakeResult{}, false
 	}
@@ -256,25 +254,6 @@ func infoBlocks(file string) map[string]string {
 		}
 	}
 	return blocks
-}
-
-// qlHandler answers pacman -Ql -- names with the lines of the fixture for
-// the packages named, in the order asked.
-func qlHandler(names []string) (system.FakeResult, bool) {
-	var out strings.Builder
-	for _, n := range names {
-		found := false
-		for l := range strings.Lines(string(Bytes(PacmanQlForeign))) {
-			if strings.HasPrefix(l, n+" ") {
-				out.WriteString(l)
-				found = true
-			}
-		}
-		if !found {
-			return system.FakeResult{Stderr: []byte("error: package '" + n + "' was not found\n"), Code: 1}, true
-		}
-	}
-	return system.FakeResult{Stdout: []byte(out.String())}, true
 }
 
 // Fetcher returns a FakeFetcher serving the news feed, the AUR RPC v5 info
@@ -393,6 +372,9 @@ func mustMarshal(v any) []byte {
 func FS() *system.FakeFS {
 	files := preflightFiles()
 	for p, b := range bandwidthFiles() {
+		files[p] = b
+	}
+	for p, b := range partialFiles() {
 		files[p] = b
 	}
 	files[PacmanLogPath] = Bytes(PacmanLog)

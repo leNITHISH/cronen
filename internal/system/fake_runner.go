@@ -46,6 +46,13 @@ func (f *FakeRunner) Set(commandLine string, r FakeResult) {
 	f.results[commandLine] = r
 }
 
+// MustStdout returns the stdout registered for a command line, or nil.
+func (f *FakeRunner) MustStdout(commandLine string) []byte {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]byte(nil), f.results[commandLine].Stdout...)
+}
+
 // Calls returns the command lines run so far, in order.
 func (f *FakeRunner) Calls() []string {
 	f.mu.Lock()
