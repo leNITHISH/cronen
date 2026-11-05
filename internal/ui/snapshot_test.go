@@ -195,7 +195,7 @@ func TestFailedSnapshotStopsTheUpgrade(t *testing.T) {
 	if m.screen != screenConfirm || m.snap.failure == nil || m.snap.take {
 		t.Fatalf("screen %v failure %v take %v", m.screen, m.snap.failure, m.snap.take)
 	}
-	if m.upgrade.done || !m.opts.State.LastUpgrade.Equal(m.opts.State.LastUpgrade) {
+	if m.upgrade.done {
 		t.Errorf("upgrade %+v", m.upgrade)
 	}
 	if len(m.opts.State.Snapshots()) != 0 {
@@ -275,7 +275,7 @@ func TestHookSkipsTheExtraSnapshot(t *testing.T) {
 	if !strings.Contains(strings.Join(strings.Fields(plain(m)), " "), "there will be two") {
 		t.Errorf("no warning about two snapshots:\n%s", plain(m))
 	}
-	m = send(t, m, press("y"))
+	send(t, m, press("y"))
 	if got := ex.lines(); len(got) != 2 || got[0] != chainSnapshot {
 		t.Errorf("ran %q", got)
 	}

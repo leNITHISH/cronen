@@ -173,8 +173,7 @@ func (m *Model) handleSnapshotStep(msg snapshotStepMsg) tea.Cmd {
 	m.opts.State = m.opts.State.Clone()
 	m.opts.State.AddSnapshot(summary.SnapshotRecord(msg.tool, msg.comment, m.now()))
 	save := m.saveState()
-	switch msg.flow {
-	case flowInstall:
+	if msg.flow == flowInstall {
 		f := m.inst
 		if f == nil || f.a.Blocked() || len(f.a.Command) == 0 {
 			return save

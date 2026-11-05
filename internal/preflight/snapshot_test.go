@@ -11,7 +11,7 @@ import (
 func TestSnapshotProblem(t *testing.T) {
 	now := time.Date(2026, 11, 5, 12, 0, 0, 0, time.UTC)
 	day := 24 * time.Hour
-	max := 7 * day
+	limit := 7 * day
 	cases := []struct {
 		name string
 		f    SnapshotFacts
@@ -19,13 +19,13 @@ func TestSnapshotProblem(t *testing.T) {
 		sev  risk.Severity
 		want []string
 	}{
-		{"recent", SnapshotFacts{Tool: "Timeshift", Now: now, Last: now.Add(-2 * day), MaxAge: max}, false, 0, nil},
-		{"exactly at the limit", SnapshotFacts{Tool: "Timeshift", Now: now, Last: now.Add(-max), MaxAge: max}, false, 0, nil},
-		{"just over", SnapshotFacts{Tool: "Timeshift", Now: now, Last: now.Add(-max - time.Hour), MaxAge: max}, true, risk.Warn, []string{"7 days old", "limit 7 days"}},
-		{"old", SnapshotFacts{Tool: "snapper", Now: now, Last: now.Add(-31 * day), MaxAge: max}, true, risk.Warn, []string{"snapper snapshot is 31 days old"}},
-		{"none known", SnapshotFacts{Tool: "Timeshift", Now: now, MaxAge: max}, true, risk.Info, []string{"No Timeshift snapshot is known", "press S"}},
-		{"only records", SnapshotFacts{Tool: "Timeshift", Now: now, Last: now.Add(-9 * day), MaxAge: max, FromRecords: true}, true, risk.Warn, []string{"Only the snapshots cronen took are known"}},
-		{"with a hook", SnapshotFacts{Tool: "snapper", Now: now, Last: now.Add(-9 * day), MaxAge: max, Hook: "snap-pac"}, true, risk.Warn, []string{"snap-pac snapshots on every pacman transaction"}},
+		{"recent", SnapshotFacts{Tool: "Timeshift", Now: now, Last: now.Add(-2 * day), MaxAge: limit}, false, 0, nil},
+		{"exactly at the limit", SnapshotFacts{Tool: "Timeshift", Now: now, Last: now.Add(-limit), MaxAge: limit}, false, 0, nil},
+		{"just over", SnapshotFacts{Tool: "Timeshift", Now: now, Last: now.Add(-limit - time.Hour), MaxAge: limit}, true, risk.Warn, []string{"7 days old", "limit 7 days"}},
+		{"old", SnapshotFacts{Tool: "snapper", Now: now, Last: now.Add(-31 * day), MaxAge: limit}, true, risk.Warn, []string{"snapper snapshot is 31 days old"}},
+		{"none known", SnapshotFacts{Tool: "Timeshift", Now: now, MaxAge: limit}, true, risk.Info, []string{"No Timeshift snapshot is known", "press S"}},
+		{"only records", SnapshotFacts{Tool: "Timeshift", Now: now, Last: now.Add(-9 * day), MaxAge: limit, FromRecords: true}, true, risk.Warn, []string{"Only the snapshots cronen took are known"}},
+		{"with a hook", SnapshotFacts{Tool: "snapper", Now: now, Last: now.Add(-9 * day), MaxAge: limit, Hook: "snap-pac"}, true, risk.Warn, []string{"snap-pac snapshots on every pacman transaction"}},
 		{"no limit", SnapshotFacts{Tool: "snapper", Now: now, Last: now.Add(-900 * day)}, false, 0, nil},
 	}
 	for _, c := range cases {

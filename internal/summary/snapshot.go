@@ -144,7 +144,7 @@ func LoadSnapshots(ctx context.Context, src SnapshotSources) (SnapshotInfo, erro
 	if cfg.SnapshotTool != string(snapshot.Snapper) {
 		hasTS = toolInstalled(ctx, src.Runner, "timeshift")
 	}
-	if cfg.SnapshotTool != string(snapshot.Timeshift) && !(cfg.SnapshotTool == "" && hasTS) {
+	if cfg.SnapshotTool != string(snapshot.Timeshift) && (cfg.SnapshotTool != "" || !hasTS) {
 		hasSn = toolInstalled(ctx, src.Runner, "snapper")
 	}
 	info := SnapshotInfo{Detect: snapshot.Choose(cfg.SnapshotTool, hasTS, hasSn), SnapperConfig: cfg.SnapperConfig, ListSudo: cfg.SnapshotListSudo}
