@@ -64,13 +64,19 @@ func (f *FakeRunner) Calls() []string {
 func (f *FakeRunner) Run(ctx context.Context, name string, args ...string) ([]byte, int, error) {
 	line := commandLine(name, args)
 
-	if name == "pacman" || name == "fakeroot" {
-		if msg := invalidPacmanCall(name, args); msg != "" {
-			f.mu.Lock()
-			f.calls = append(f.calls, line)
-			f.mu.Unlock()
-			return nil, 1, &ExitError{Command: line, Code: 1, Stderr: []byte("error: " + msg + "\n")}
-		}
+	// The Runner is for reading. A privilege command is only ever run through
+	// the hand-off, except for the one opt-in read `sudo -n timeshift --list`.
+	if (name == "sudo" || name == "doas" || name == "run0") && line != "sudo -n timeshift --list" {
+		f.mu.Lock()
+		f.calls = append(f.calls, line)
+		f.mu.Unlock()
+		return nil, -1, fmt.Errorf("fake runner: %q is a privileged command and the read-only Runner never runs one", line)
+	}
+	if msg := InvalidCall(name, args); msg != "" {
+		f.mu.Lock()
+		f.calls = append(f.calls, line)
+		f.mu.Unlock()
+		return nil, 1, &ExitError{Command: line, Code: 1, Stderr: []byte("error: " + msg + "\n")}
 	}
 
 	f.mu.Lock()

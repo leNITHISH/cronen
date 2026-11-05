@@ -36,7 +36,7 @@ const (
 	CheckPartial ID = "partial-upgrade"
 )
 
-var checkOrder = []ID{CheckPartial, CheckBootUnmounted, CheckSpace, CheckLock, CheckMirror, CheckMetered, CheckReboot, CheckKeyring}
+var checkOrder = []ID{CheckPartial, CheckBootUnmounted, CheckSpace, CheckLock, CheckMirror, CheckMetered, CheckReboot, CheckKeyring, CheckSnapshot}
 
 // Problem is one thing wrong with the system, shown as a global banner.
 type Problem struct {

@@ -77,6 +77,8 @@ documents everything, including the config keys.
 | `I` | Updates: install helper, "I need X now" (also `cronen install <package>...`) |
 | `D` | Packages, History: downgrade the selected package to an older version from the package cache (dry run and confirmation first) |
 | `P` | Housekeeping: merge `.pacnew` files with `pacdiff` (confirmation first) |
+| `t` | upgrade modal, install helper option A: tick or untick "take a snapshot first" (only with Timeshift or snapper installed) |
+| `S` / `R` | Housekeeping, with Timeshift or snapper installed: take a snapshot now / restore the snapshot under the cursor (confirmation first; `space` marks and `X` deletes snapshots when the cursor is on the Snapshots list) |
 | `m` | mark the selected news item read (on the updates screen: the news behind the selected package's flags) |
 | `o` | open the upstream URL (on the news screen: the post) with `xdg-open` |
 | `c` | open the packaging changelog with `xdg-open` |
@@ -150,6 +152,9 @@ running kernel and the system hasn't rebooted since.
 
 `security_fixes` counts the advisory groups (AVG-…) the pending updates fix and
 `vulnerable` the installed packages affected by a group no version fixes yet.
+
+`last_snapshot` (RFC 3339) is the time of the newest known snapshot; it is absent when
+no snapshot tool is installed or none is known.
 
 The bandwidth helper adds `days_behind` (days since the last full upgrade, 0 when
 unknown), `eta_seconds` (the time estimate; absent until cronen has timing samples),
@@ -277,6 +282,12 @@ prefetch_command = ""      # replaces "checkupdates -d" for F; run as written, a
 archive_install = false    # install helper option B (experimental); see "Install helper"
 partial_check = true       # pacman -Qu on the real database, History marks and the ~ badge
 linkage_skip = []          # more directory globs the broken-linkage scan leaves out
+snapshots = true           # the snapshot helper: look for Timeshift or snapper, show the Snapshots section
+snapshot_tool = ""         # "", "timeshift" or "snapper"; "" uses whichever is installed, Timeshift first
+snapshot_before_upgrade = "ask"  # "ask": tick the box when a tool is found and no pacman hook snapshots; "always"; "never"
+snapshot_max_age_days = 7  # preflight warns when the newest known snapshot is older than this
+snapshot_list_sudo = false # allow `sudo -n timeshift --list` (it only reads); otherwise only snapshots cronen took are listed
+snapper_config = "root"    # the snapper config cronen takes snapshots of
 ```
 
 ### Partial-upgrade detector
@@ -449,6 +460,52 @@ succeeded and you press `y`:
 
 State records "X installed from the archive (day)"; `pacman.log` (History) shows the
 transaction.
+
+### Snapshot helper
+
+With Timeshift or snapper installed (`snapshot_tool = ""` uses whichever is found,
+Timeshift first), the upgrade modal and the install helper's option A get a line
+`☑ take a snapshot first (Timeshift)` that `t` toggles. With
+`snapshot_before_upgrade = "ask"` (the default) it starts ticked when a tool is found and no
+pacman hook already snapshots; `"always"` ticks it whenever a tool is found, `"never"`
+hides it. Ticked, cronen chains two hand-offs:
+
+1. `<privilege_command> timeshift --create --comments "cronen: before -Syu (312 packages)"`
+   (snapper: `<privilege_command> snapper -c <snapper_config> create --description "…" --cleanup-algorithm number`)
+2. then, **only if that exited 0**, the upgrade.
+
+If the snapshot fails the upgrade does not start. The modal comes back with the error and
+a separate choice, "upgrade without a snapshot", which needs `y` again (`t` ticks the
+snapshot to retry). cronen records each snapshot it took in the state file (time, tool,
+comment).
+
+If `timeshift-autosnap` or `snap-pac` is installed, pacman already snapshots on every
+transaction: the modal says so and, under `"ask"`, adds none.
+
+The Housekeeping screen has a Snapshots section: `S` takes one now, `space` marks
+snapshots and `X` deletes the marked ones (`timeshift --delete --snapshot <name>`,
+`snapper -c <config> delete <number>`, one command each, stopping at the first
+failure), and `R` restores the one under the cursor. A Timeshift restore
+(`timeshift --restore --snapshot <name>`; Timeshift then asks its own questions) is the
+heaviest confirmation in cronen: it says the system needs a reboot and everything
+changed since the snapshot is lost, and you must type `restore`. A snapper rollback
+depends on how the system boots, so it is only shown as a command to copy and is never
+run. Snapshot names are validated (Timeshift `YYYY-MM-DD_HH-MM-SS`, snapper a number) and
+passed as separate arguments; every command is checked against the exact allowed forms
+right before it runs.
+
+Listing: `snapper -c <config> list` runs as you and works when the config's `ALLOW_USERS`
+or `ALLOW_GROUPS` allows it; permission-denied output is shown as such, never as an
+empty list. Timeshift can only be listed as root: with `snapshot_list_sudo = true` cronen
+runs `sudo -n timeshift --list` (the only command it runs with a privilege command that is
+not a hand-off; it only reads, and `-n` never asks for a password), otherwise only the
+snapshots cronen took are shown. A list cronen cannot make sense of is reported as "could
+not read the snapshot list", never guessed. Timeshift's mode (rsync or btrfs) and, for
+rsync with the backup device mounted, its free space come from
+`/etc/timeshift/timeshift.json`.
+
+Preflight warns when the newest known snapshot is older than `snapshot_max_age_days`, and
+notes when none is known. With neither tool installed, none of this shows anywhere.
 
 ### AUR review
 

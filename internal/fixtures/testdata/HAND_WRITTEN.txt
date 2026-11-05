@@ -167,3 +167,20 @@ real system):
 Whether `pacman -Qu` works against the real database as a normal user, what the ld.so.conf
 files of a real system hold, and which plugin directories really are dlopen-only (the
 skip table in internal/linkage/skip.go) were NOT checked: see the M18 pull request.
+
+M19, the snapshot helper. Written from the tools' documentation and from memory
+of their output; Timeshift and snapper are not installed on the maintainer's
+machine, so none of this was ever seen. See "Needs checking on Arch" in the
+M19 pull request for the read-only commands that capture the real thing.
+
+  timeshift_list.txt             timeshift --list (rsync mode, three snapshots)
+  timeshift_list_empty.txt       timeshift --list with no snapshots
+  timeshift.json                 /etc/timeshift/timeshift.json (string booleans)
+  snapper_list.txt               snapper -c root list (single, pre and post rows,
+                                 the "current" row 0, a "*" marker, a Userdata column)
+  snapper_list_denied.stderr     snapper -c root list as a user ALLOW_USERS lacks
+  sudo_timeshift_list_denied.stderr  sudo -n timeshift --list without a sudo rule
+
+Which tools are installed (timeshift --version, snapper --version) and whether
+timeshift-autosnap or snap-pac is installed (pacman -Qq -- <name>) are answered
+in code (see fixtures.SnapshotRunner), not by files.

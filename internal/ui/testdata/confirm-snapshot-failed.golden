@@ -1,0 +1,40 @@
+ cronen                                                       1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                                
+ 2 days behind · 18 packages · 886 MiB · no estimate yet                                                      
+ ⚠ 1 news item requires manual intervention — press n to read                                                 
+ ℹ No Timeshift snapshot is known: press S in housekeeping to take one before upgrading.                      
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Upgrade the system?                                                                                          
+                                                                                                              
+ ‼ Read first: 1 unread news item requires manual intervention                                                
+   2026-10-22  linux-firmware >= 20251021-1 upgrade requires manual intervention                              
+   press esc, then n to read it                                                                               
+                                                                                                              
+ 1 preflight problem                                                                                          
+   ℹ No Timeshift snapshot is known: press S in housekeeping to take one before upgrading.                    
+                                                                                                              
+ 18 updates · 12 flagged · kernel update: reboot afterwards                                                   
+                                                                                                              
+ Download: 886 MiB · estimated time: no estimate yet                                                          
+ ℹ pacman downloads one package at a time: set `ParallelDownloads = 5` in /etc/pacman.conf to speed it up     
+    (cronen doesn't edit the file).                                                                           
+                                                                                                              
+ ☐ take a snapshot first (Timeshift)   t toggles                                                              
+ ✗ the snapshot failed, so the upgrade did not start: exit status 1                                           
+ This runs: sudo pacman -Syu                                                                                  
+                                                                                                              
+ Press y to upgrade without a snapshot, t to try the snapshot again, esc to cancel.                           
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Upgrade?                                                                 y upgrade  n/esc cancel  t snapshot 

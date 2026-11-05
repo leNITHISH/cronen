@@ -1,0 +1,60 @@
+ cronen                                                       1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                                
+ 2 days behind · 18 packages · 886 MiB · no estimate yet                                                      
+ ⚠ 1 news item requires manual intervention — press n to read                                                 
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Restore Timeshift snapshot 2026-10-20_19-02-30?                                                              
+                                                                                                              
+ Taken: 2026-10-20 19:02 cronen: before -Syu (41 packages)                                                    
+ ⚠ The system will need a reboot afterwards.                                                                  
+ ⚠ Everything changed since this snapshot is lost: installed and upgraded packages, files, settings.          
+                                                                                                              
+ This runs: sudo timeshift --restore --snapshot 2026-10-20_19-02-30                                           
+ Timeshift asks its own questions after that.                                                                 
+                                                                                                              
+ Type restore and press enter to restore.                                                                     
+   > ▏                                                                                                        
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Restore a snapshot?                                                                               esc cancel 

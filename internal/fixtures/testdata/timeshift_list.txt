@@ -1,0 +1,14 @@
+Mounted '/dev/nvme0n1p2' at '/run/timeshift/4711/backup'
+Device : /dev/nvme0n1p2
+UUID   : 5c7d1c3e-1111-4a5b-9d2e-0123456789ab
+Path   : /run/timeshift/4711/backup
+Mode   : RSYNC
+Device is OK
+3 snapshots, 212.4 GB free
+
+Num     Name                 Tags  Description
+------------------------------------------------------------------------------
+0    >  2026-09-18_19-02-11  O     before the September upgrade
+1    >  2026-10-20_19-02-30  O     cronen: before -Syu (41 packages)
+2    >  2026-10-22_08-00-00  D     
+

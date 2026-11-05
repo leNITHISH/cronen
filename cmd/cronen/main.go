@@ -269,12 +269,19 @@ func demoEnv() env {
 	for _, x := range fixtures.DemoPrefetchSamples() {
 		st.AddPrefetchSample(x)
 	}
+	// The demo has Timeshift installed (no snapshot hook), with a snapshot
+	// cronen took two days ago, so the snapshot UI has something to show.
+	// Listing it would need root, so only the recorded one is listed.
+	st.AddSnapshot(config.SnapshotRecord{
+		At: fixtures.Now.Add(-48 * time.Hour), Tool: "timeshift",
+		Comment: "cronen: before -Syu (41 packages)",
+	})
 	return env{
 		state:       st,
 		demo:        true,
-		runner:      fixtures.Runner(),
+		runner:      fixtures.WithSnapshots(fixtures.Runner(), fixtures.SnapshotKit{Timeshift: true}),
 		fetcher:     fixtures.Fetcher(),
-		fs:          fixtures.FS(),
+		fs:          fixtures.WithTimeshiftConfig(fixtures.FS()),
 		disk:        fixtures.Disk(),
 		syncDB:      fixtures.SyncDBPath,
 		opener:      fixtures.Opener(),

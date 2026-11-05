@@ -10,6 +10,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
+	"github.com/leNITHISH/cronen/internal/snapshot"
 	"github.com/leNITHISH/cronen/internal/system"
 )
 
@@ -128,7 +129,35 @@ type Config struct {
 	// out, on top of the built-in list of dlopen-only plugin directories
 	// (see internal/linkage).
 	LinkageSkip []string `toml:"linkage_skip"`
+
+	// Snapshots is the snapshot helper's switch: with it off cronen looks
+	// for no snapshot tool, shows no snapshot UI and reports no snapshot
+	// age.
+	Snapshots bool `toml:"snapshots"`
+	// SnapshotTool is "", "timeshift" or "snapper"; "" uses whichever is
+	// installed, Timeshift first.
+	SnapshotTool string `toml:"snapshot_tool"`
+	// SnapshotBeforeUpgrade is "ask" (the box starts ticked when a tool is
+	// found and no pacman hook already takes snapshots), "always" or
+	// "never".
+	SnapshotBeforeUpgrade string `toml:"snapshot_before_upgrade"`
+	// SnapshotMaxAgeDays is how old the newest known snapshot may be
+	// before preflight warns.
+	SnapshotMaxAgeDays int `toml:"snapshot_max_age_days"`
+	// SnapshotListSudo allows `sudo -n timeshift --list`, the one
+	// read-only command cronen runs with a privilege command. Without it
+	// only the snapshots cronen itself recorded are listed for Timeshift.
+	SnapshotListSudo bool `toml:"snapshot_list_sudo"`
+	// SnapperConfig is the snapper config cronen takes snapshots of.
+	SnapperConfig string `toml:"snapper_config"`
 }
+
+// Values of Config.SnapshotBeforeUpgrade.
+const (
+	SnapshotAsk    = "ask"
+	SnapshotAlways = "always"
+	SnapshotNever  = "never"
+)
 
 // Privilege commands cronen knows how to prefix a write action with.
 var privilegeCommands = []string{"sudo", "doas", "run0"}
@@ -167,6 +196,11 @@ func Default() Config {
 		History:          true,
 		MeteredWarnMiB:   100,
 		PartialCheck:     true,
+
+		Snapshots:             true,
+		SnapshotBeforeUpgrade: SnapshotAsk,
+		SnapshotMaxAgeDays:    7,
+		SnapperConfig:         "root",
 	}
 }
 
@@ -249,6 +283,27 @@ func Parse(data []byte) (Config, error) {
 	if cfg.MirrorLagHours <= 0 {
 		errs = append(errs, fmt.Errorf("mirror_lag_hours %d: must be positive", cfg.MirrorLagHours))
 		cfg.MirrorLagHours = def.MirrorLagHours
+	}
+
+	switch cfg.SnapshotTool {
+	case "", string(snapshot.Timeshift), string(snapshot.Snapper):
+	default:
+		errs = append(errs, fmt.Errorf("snapshot_tool %q: want \"\", \"timeshift\" or \"snapper\"", cfg.SnapshotTool))
+		cfg.SnapshotTool = def.SnapshotTool
+	}
+	switch cfg.SnapshotBeforeUpgrade {
+	case SnapshotAsk, SnapshotAlways, SnapshotNever:
+	default:
+		errs = append(errs, fmt.Errorf("snapshot_before_upgrade %q: want %q, %q or %q", cfg.SnapshotBeforeUpgrade, SnapshotAsk, SnapshotAlways, SnapshotNever))
+		cfg.SnapshotBeforeUpgrade = def.SnapshotBeforeUpgrade
+	}
+	if cfg.SnapshotMaxAgeDays <= 0 {
+		errs = append(errs, fmt.Errorf("snapshot_max_age_days %d: must be positive", cfg.SnapshotMaxAgeDays))
+		cfg.SnapshotMaxAgeDays = def.SnapshotMaxAgeDays
+	}
+	if !snapshot.ValidConfig(cfg.SnapperConfig) {
+		errs = append(errs, fmt.Errorf("snapper_config %q: not a usable snapper config name", cfg.SnapperConfig))
+		cfg.SnapperConfig = def.SnapperConfig
 	}
 
 	if cfg.MeteredWarnMiB < 0 {

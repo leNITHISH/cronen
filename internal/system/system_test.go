@@ -468,3 +468,64 @@ func TestFakeRunnerRejectsInvalidSyncCombinations(t *testing.T) {
 		}
 	}
 }
+
+func TestInvalidCallSnapshotTools(t *testing.T) {
+	ts := "2026-10-20_19-02-30"
+	cm := "cronen: before -Syu"
+	valid := [][]string{
+		{"timeshift", "--version"},
+		{"sudo", "-n", "timeshift", "--list"},
+		{"sudo", "timeshift", "--create", "--comments", cm},
+		{"sudo", "timeshift", "--delete", "--snapshot", ts},
+		{"sudo", "timeshift", "--restore", "--snapshot", ts},
+		{"snapper", "-c", "root", "list"},
+		{"sudo", "snapper", "-c", "root", "create", "--description", cm, "--cleanup-algorithm", "number"},
+		{"sudo", "snapper", "-c", "root", "delete", "3"},
+		{"sudo", "snapper", "-c", "root", "rollback", "3"},
+	}
+	for _, a := range valid {
+		if msg := InvalidCall(a[0], a[1:]); msg != "" {
+			t.Errorf("%q refused: %s", a, msg)
+		}
+	}
+	invalid := [][]string{
+		{"timeshift", "--list"}, // needs root
+		{"timeshift", "--create", "--comments", cm},
+		{"sudo", "timeshift", "--list", "--comments", cm},
+		{"sudo", "timeshift", "--create", "--snapshot", ts},
+		{"sudo", "timeshift", "--delete"},
+		{"sudo", "timeshift", "--create", "--delete", "--snapshot", ts},
+		{"sudo", "timeshift", "--create", "--comments"},
+		{"sudo", "timeshift", "--bogus"},
+		{"sudo", "timeshift"},
+		{"snapper", "-c"},
+		{"snapper", "-c", "root", "list", "--description", cm},
+		{"sudo", "snapper", "-c", "root", "create", "--description", cm, "--cleanup-algorithm", "bogus"},
+		{"sudo", "snapper", "-c", "root", "create", "--bogus"},
+		{"sudo", "snapper", "-c", "root", "delete"},
+		{"sudo", "snapper", "-c", "root", "frobnicate"},
+		{"sudo", "snapper", "--bogus", "list"},
+		{"sudo"},
+	}
+	for _, a := range invalid {
+		if InvalidCall(a[0], a[1:]) == "" {
+			t.Errorf("%q accepted", a)
+		}
+	}
+}
+
+func TestFakeRunnerNeverRunsPrivilegedCommands(t *testing.T) {
+	r := NewFakeRunner()
+	r.Set("sudo -n timeshift --list", FakeResult{Stdout: []byte("ok")})
+	r.Set("sudo pacman -Syu", FakeResult{})
+	r.Set("doas timeshift --list", FakeResult{})
+	ctx := context.Background()
+	if _, _, err := r.Run(ctx, "sudo", "-n", "timeshift", "--list"); err != nil {
+		t.Errorf("the one allowed read failed: %v", err)
+	}
+	for _, c := range [][]string{{"sudo", "pacman", "-Syu"}, {"doas", "timeshift", "--list"}, {"sudo", "timeshift", "--list"}} {
+		if _, _, err := r.Run(ctx, c[0], c[1:]...); err == nil {
+			t.Errorf("%q ran", c)
+		}
+	}
+}

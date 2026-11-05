@@ -43,10 +43,16 @@ type KeyMap struct {
 	// rebuild of broken foreign packages (both on the housekeeping screen).
 	Scan    key.Binding
 	Rebuild key.Binding
-	Back    key.Binding
-	Refresh key.Binding
-	Help    key.Binding
-	Quit    key.Binding
+	// Snapshot takes a snapshot now and Restore restores the one under the
+	// cursor (both housekeeping); Tick ticks "take a snapshot first" in
+	// the upgrade modal and the install helper's option A.
+	Snapshot key.Binding
+	Restore  key.Binding
+	Tick     key.Binding
+	Back     key.Binding
+	Refresh  key.Binding
+	Help     key.Binding
+	Quit     key.Binding
 
 	// Accept ends filter input, keeping the filter.
 	Accept key.Binding
@@ -166,6 +172,18 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("b"),
 			key.WithHelp("b", "rebuild broken AUR packages (housekeeping)"),
 		),
+		Snapshot: key.NewBinding(
+			key.WithKeys("S"),
+			key.WithHelp("S", "snapshot now"),
+		),
+		Restore: key.NewBinding(
+			key.WithKeys("R"),
+			key.WithHelp("R", "restore snapshot"),
+		),
+		Tick: key.NewBinding(
+			key.WithKeys("t"),
+			key.WithHelp("t", "snapshot first"),
+		),
 		Back: key.NewBinding(
 			key.WithKeys("esc"),
 			key.WithHelp("esc", "back"),
@@ -208,7 +226,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.Up, k.Down, k.Top, k.Bottom},
 		{k.HalfDown, k.HalfUp, k.Focus, k.Filter, k.Screens, k.Mark, k.CycleFilter, k.CycleSort, k.Remove, k.Pacdiff, k.Downgrade, k.Scan, k.Rebuild},
 		{k.News, k.MarkRead, k.Upstream, k.Changelog, k.Diff},
-		{k.Acknowledge, k.ShowAcked},
-		{k.Upgrade, k.Prefetch, k.Install, k.Refresh, k.Back, k.Help, k.Quit},
+		{k.Acknowledge, k.ShowAcked, k.Snapshot, k.Restore},
+		{k.Upgrade, k.Tick, k.Prefetch, k.Install, k.Refresh, k.Back, k.Help, k.Quit},
 	}
 }

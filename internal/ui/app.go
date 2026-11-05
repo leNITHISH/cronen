@@ -189,6 +189,13 @@ type Model struct {
 	// part is the partial-upgrade detector; see partial.go.
 	part partialState
 
+	// snap is the snapshot helper; snapAct is the modal of a snapshot
+	// action started from housekeeping and snapSeq the hand-offs it runs;
+	// see snapshot.go.
+	snap    snapState
+	snapAct *snapAction
+	snapSeq *snapSeq
+
 	// histSec and hist are pacman.log read into transactions, and the
 	// History screen; see history.go.
 	histSec section
@@ -313,6 +320,7 @@ func (m *Model) markLoading() {
 	m.localSec = section{loading: m.cfg.PackageBrowser}
 	m.histSec = section{loading: m.cfg.History}
 	m.part.sec = section{loading: m.cfg.PartialCheck}
+	m.snap.sec = section{loading: m.cfg.Snapshots}
 	m.hk.diffSec = section{}
 	m.hk.cacheSec = section{loading: m.cfg.Housekeeping}
 	m.hk.unitsSec = section{loading: m.cfg.Housekeeping}
@@ -320,7 +328,7 @@ func (m *Model) markLoading() {
 }
 
 func (m Model) anyLoading() bool {
-	for _, s := range []section{m.repoSec, m.aurSec, m.newsSec, m.logSec, m.pacnewSec, m.previewSec, m.rebuildSec, m.localSec, m.histSec, m.part.sec, m.hk.diffSec, m.hk.cacheSec, m.hk.unitsSec} {
+	for _, s := range []section{m.repoSec, m.aurSec, m.newsSec, m.logSec, m.pacnewSec, m.previewSec, m.rebuildSec, m.localSec, m.histSec, m.part.sec, m.snap.sec, m.hk.diffSec, m.hk.cacheSec, m.hk.unitsSec} {
 		if s.loading {
 			return true
 		}
@@ -349,6 +357,7 @@ func (m Model) loadCmds(fresh bool) []tea.Cmd {
 	if m.cfg.PartialCheck {
 		cmds = append(cmds, loadPartial(ctx, m.opts.Runner, m.opts.FS, m.opts.CacheDir, m.location(), m.gen))
 	}
+	cmds = append(cmds, m.snapshotCmds()...)
 	cmds = append(cmds, loadNet(ctx, m.opts.Runner, m.opts.FS, summary.MeteredEnabled(m.cfg), m.gen))
 	cmds = append(cmds, m.mirrorCmds(fresh)...)
 	cmds = append(cmds, m.housekeepingCmds()...)
@@ -474,6 +483,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case partialMsg:
 		return m, m.handlePartial(msg)
 
+	case snapshotsMsg:
+		return m, m.handleSnapshots(msg)
+
+	case snapshotStepMsg:
+		return m, m.handleSnapshotStep(msg)
+
+	case snapSeqMsg:
+		return m, m.handleSnapSeq(msg)
+
 	case linkageMsg:
 		return m, m.handleLinkage(msg)
 
@@ -585,11 +603,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	k := m.keys
+	if m.screen == screenConfirm && m.snapAct != nil {
+		return m.handleSnapActionKey(msg)
+	}
 	if m.screen == screenConfirm && m.act != nil {
 		return m.handleActionKey(msg)
 	}
 	if m.screen == screenConfirm {
 		switch {
+		case key.Matches(msg, k.Tick):
+			m.toggleSnapshot()
 		case key.Matches(msg, k.Confirm):
 			return m, m.startUpgrade()
 		case key.Matches(msg, k.Cancel):
@@ -1028,11 +1051,17 @@ func (m Model) statusLine(w int) string {
 	if m.screen == screenInstall {
 		return spread(m.installTitle(), m.styles.Subtle.Render(m.installHints())+" ", w)
 	}
+	if m.screen == screenConfirm && m.snapAct != nil {
+		return spread(" "+snapActionTitle(m.snapAct), m.styles.Subtle.Render("esc cancel")+" ", w)
+	}
 	if m.screen == screenConfirm && m.act != nil {
 		return spread(" "+actionTitle(m.act), m.styles.Subtle.Render("esc cancel")+" ", w)
 	}
 	if m.screen == screenConfirm {
 		hints := helpHint(m.keys.Confirm) + "  " + helpHint(m.keys.Cancel)
+		if m.snapOffered() {
+			hints += "  t snapshot"
+		}
 		return spread(" Upgrade?", m.styles.Subtle.Render(hints)+" ", w)
 	}
 	if m.flashMsg != "" {
@@ -1114,6 +1143,9 @@ func (m Model) statusLine(w int) string {
 	}
 	if m.screen == screenHousekeeping {
 		hints = append(hints, "space mark", "X remove", "P pacdiff")
+		if m.snap.loaded && m.snap.info.Found() {
+			hints = append(hints, "S snapshot")
+		}
 	}
 	hints = append(hints, helpHint(m.keys.Help), helpHint(m.keys.Quit))
 	return spread(left, m.styles.Subtle.Render(strings.Join(hints, "  "))+" ", w)
