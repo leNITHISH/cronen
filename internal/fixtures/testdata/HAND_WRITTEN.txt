@@ -134,3 +134,20 @@ the read-only commands to capture them):
 The access times of the files in pacman_Ql-repo.txt (fixtures.FS()) and the
 timing samples of --demo (fixtures.DemoUpgradeSamples/DemoPrefetchSamples) are made up
 in code.
+
+M17, install helper (hand-written, NOT captured; pending capture from a real system):
+
+  pacman_conf_archive.txt    /etc/pacman.conf with custom repos (chaotic-aur, myrepo), Include
+                             lines (also one inside [options]), a commented-out multilib, an
+                             XferCommand and a DBPath, the shapes GenerateConf must cope with
+  pacman_Qu_archive_a.txt    pacman -Qu --dbpath <archive dir, day 1> --config <its pacman.conf>
+                             (3 packages differ, one [ignored] line)
+  pacman_Qu_archive_b.txt    the same for the next day (1 package differs)
+  pacman_Sp_archive.txt      pacman -Sp --dbpath <archive dir> --config ... --print-format
+                             '%n %v %r %s' -- htop (a new dependency, libnl)
+  pacman_Sup_install.txt     pacman -Sup --dbpath <checkupdates db> ... -- htop: the whole
+                             transaction plus htop and its new dependency
+
+Which archive day is the best match, whether `fakeroot -- pacman -Sy --dbpath ... --config ...`
+works as a normal user, and whether `pacman -S --dbpath --config` updates the real local
+database through the symlink were NOT checked: see the M17 pull request.

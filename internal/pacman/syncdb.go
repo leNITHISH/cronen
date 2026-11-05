@@ -374,3 +374,37 @@ func HeldPackages(ctx context.Context, r system.Runner, db string) ([]Held, erro
 	}
 	return nil, fmt.Errorf("listing held packages: %w", err)
 }
+
+// Differing is one line of `pacman -Qu`: an installed package whose version
+// differs from the one in the database queried.
+type Differing struct {
+	Name       string
+	OldVersion string
+	NewVersion string
+}
+
+// ParseQu parses `pacman -Qu --dbpath <db>` output, skipping the lines
+// marked "[ignored]" (IgnorePkg and IgnoreGroup hold those back whatever
+// the snapshot says).
+func ParseQu(data []byte) ([]Differing, error) {
+	var out []Differing
+	sc := bufio.NewScanner(bytes.NewReader(data))
+	for n := 1; sc.Scan(); n++ {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" {
+			continue
+		}
+		f := strings.Fields(line)
+		if len(f) < 4 || f[2] != "->" || len(f) > 5 {
+			return nil, fmt.Errorf("pacman -Qu: line %d: unexpected format %q", n, line)
+		}
+		if len(f) == 5 {
+			if f[4] == "[ignored]" {
+				continue
+			}
+			return nil, fmt.Errorf("pacman -Qu: line %d: unexpected format %q", n, line)
+		}
+		out = append(out, Differing{Name: f[0], OldVersion: f[1], NewVersion: f[3]})
+	}
+	return out, sc.Err()
+}

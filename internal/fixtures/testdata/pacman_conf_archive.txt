@@ -1,0 +1,36 @@
+#
+# /etc/pacman.conf
+#
+[options]
+HoldPkg     = pacman glibc
+Architecture = auto
+DBPath      = /var/lib/pacman/
+CacheDir    = /var/cache/pacman/pkg/
+LogFile     = /var/log/pacman.log
+XferCommand = /usr/bin/aria2c --allow-overwrite=true %u -d / -o %o
+IgnorePkg   = bash
+Color
+ParallelDownloads = 5
+SigLevel    = Required DatabaseOptional
+LocalFileSigLevel = Optional
+Include = /etc/pacman.d/options.conf
+
+#[testing]
+#Include = /etc/pacman.d/mirrorlist
+
+[core]
+Include = /etc/pacman.d/mirrorlist
+
+[extra]
+SigLevel = Required
+Include = /etc/pacman.d/mirrorlist
+
+#[multilib]
+#Include = /etc/pacman.d/mirrorlist
+
+[chaotic-aur]
+Include = /etc/pacman.d/chaotic-mirrorlist
+
+[myrepo]
+SigLevel = Optional TrustAll
+Server = file:///srv/myrepo

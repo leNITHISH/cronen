@@ -35,6 +35,20 @@ type Acknowledgement struct {
 	Rules []string `json:"rules"`
 }
 
+// ArchiveInstall records a package installed from the Arch Linux Archive by
+// the install helper's option B.
+type ArchiveInstall struct {
+	Packages []string `json:"packages"`
+	// Day is the archive snapshot used, YYYY-MM-DD.
+	Day string `json:"day"`
+	// Differ is how many installed packages differed from that snapshot.
+	Differ int       `json:"differ"`
+	At     time.Time `json:"at"`
+}
+
+// maxArchiveInstalls is how many archive installs state keeps.
+const maxArchiveInstalls = 20
+
 // State is what cronen remembers between runs. The zero value is an empty
 // state and is ready to use.
 type State struct {
@@ -50,6 +64,26 @@ type State struct {
 	// 90 days.
 	upgrades, prefetches []bandwidth.Sample
 	sizes                []bandwidth.Size
+	archive              []ArchiveInstall
+}
+
+// ArchiveInstalls returns the recorded archive installs, oldest first.
+func (s State) ArchiveInstalls() []ArchiveInstall {
+	out := slices.Clone(s.archive)
+	for i := range out {
+		out[i].Packages = slices.Clone(out[i].Packages)
+	}
+	return out
+}
+
+// AddArchiveInstall records an archive install, keeping the last 20.
+// Records without packages or a day are ignored.
+func (s *State) AddArchiveInstall(a ArchiveInstall) {
+	if len(a.Packages) == 0 || a.Day == "" {
+		return
+	}
+	a.Packages = slices.Clone(a.Packages)
+	s.archive = keepLast(append(slices.Clone(s.archive), a), maxArchiveInstalls)
 }
 
 type stateFile struct {
@@ -64,6 +98,8 @@ type stateFile struct {
 	UpgradeSamples  []bandwidth.Sample `json:"upgrade_samples,omitempty"`
 	PrefetchSamples []bandwidth.Sample `json:"prefetch_samples,omitempty"`
 	PendingSizes    []bandwidth.Size   `json:"pending_sizes,omitempty"`
+	// ArchiveInstalls was added in version 2 (M17).
+	ArchiveInstalls []ArchiveInstall `json:"archive_installs,omitempty"`
 }
 
 // IsRead reports whether the news item with this GUID was marked read.
@@ -97,6 +133,7 @@ func (s State) Clone() State {
 	c.upgrades = slices.Clone(s.upgrades)
 	c.prefetches = slices.Clone(s.prefetches)
 	c.sizes = slices.Clone(s.sizes)
+	c.archive = s.ArchiveInstalls()
 	return c
 }
 
@@ -247,6 +284,7 @@ func (s State) MarshalJSON() ([]byte, error) {
 	f := stateFile{
 		Version: stateVersion, ReadNews: s.ReadNews(), Maintainers: s.Maintainers(), Acknowledgements: s.Acknowledgements(),
 		UpgradeSamples: s.upgrades, PrefetchSamples: s.prefetches, PendingSizes: s.sizes,
+		ArchiveInstalls: s.archive,
 	}
 	if !s.LastUpgrade.IsZero() {
 		t := s.LastUpgrade
@@ -283,6 +321,9 @@ func (s *State) UnmarshalJSON(data []byte) error {
 	}
 	for _, x := range f.PendingSizes {
 		s.RecordPending(x.Day, x.Bytes)
+	}
+	for _, x := range f.ArchiveInstalls {
+		s.AddArchiveInstall(x)
 	}
 	return nil
 }

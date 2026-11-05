@@ -181,6 +181,9 @@ func Runner() *system.FakeRunner {
 // and the batched `pacman -Qi -- names...` with the blocks of the fixtures
 // for the packages named, like pacman does.
 func infoHandler(line string) (system.FakeResult, bool) {
+	if r, ok := installHandler(line); ok {
+		return r, true
+	}
 	if r, ok := removeHandler(line); ok {
 		return r, true
 	}
@@ -394,7 +397,7 @@ func FS() *system.FakeFS {
 	}
 	files[PacmanLogPath] = Bytes(PacmanLog)
 	files[SyncDBPath+"/sync/core.db"] = nil
-	files[PacmanConfPath] = []byte("[options]\nCacheDir = " + CacheDir + "\n")
+	files[PacmanConfPath] = []byte("[options]\nCacheDir = " + CacheDir + "\n\n[core]\nInclude = /etc/pacman.d/mirrorlist\n\n[extra]\nInclude = /etc/pacman.d/mirrorlist\n")
 	for name := range cacheFiles {
 		files[CacheDir+name] = nil
 	}

@@ -114,6 +114,10 @@ type Config struct {
 	// It is split on whitespace; quoting is not supported, and it is run
 	// exactly as written (add sudo yourself if it needs it).
 	PrefetchCommand string `toml:"prefetch_command"`
+	// ArchiveInstall turns on the install helper's option B (experimental):
+	// installing a package from the Arch Linux Archive snapshot of the day of
+	// the last full upgrade. It is off unless set to true.
+	ArchiveInstall bool `toml:"archive_install"`
 }
 
 // Privilege commands cronen knows how to prefix a write action with.

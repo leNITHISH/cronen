@@ -256,6 +256,12 @@ func (f *FakeFS) SetSymlink(path string) {
 
 // Lstat implements FS: Stat, except for paths marked with SetSymlink.
 func (f *FakeFS) Lstat(path string) (fs.FileInfo, error) {
+	f.mu.Lock()
+	_, isLink := f.links[filepath.Clean(path)]
+	f.mu.Unlock()
+	if isLink {
+		return fakeInfo{name: filepath.Base(path), link: true}, nil
+	}
 	fi, err := f.Stat(path)
 	if err != nil {
 		return nil, err
@@ -386,13 +392,13 @@ func (f *FakeFS) Stat(path string) (fs.FileInfo, error) {
 	if path == string(filepath.Separator) {
 		prefix = path
 	}
+	if perm, ok := f.dirs[path]; ok {
+		return fakeInfo{name: filepath.Base(path), dir: true, perm: perm}, nil
+	}
 	for p := range f.files {
 		if strings.HasPrefix(p, prefix) {
 			return fakeInfo{name: filepath.Base(path), dir: true}, nil
 		}
-	}
-	if _, ok := f.dirs[path]; ok {
-		return fakeInfo{name: filepath.Base(path), dir: true}, nil
 	}
 	for p := range f.dirs {
 		if strings.HasPrefix(p, prefix) {
@@ -412,6 +418,8 @@ type fakeInfo struct {
 	size int64
 	dir  bool
 	link bool
+	// perm, if set, is the permission bits Mode reports.
+	perm fs.FileMode
 	// atime is reported by AccessTime.
 	atime time.Time
 }
@@ -422,6 +430,8 @@ func (i fakeInfo) Name() string { return i.name }
 func (i fakeInfo) Size() int64  { return i.size }
 func (i fakeInfo) Mode() fs.FileMode {
 	switch {
+	case i.dir && i.perm != 0:
+		return fs.ModeDir | i.perm
 	case i.dir:
 		return fs.ModeDir | 0o755
 	case i.link:
