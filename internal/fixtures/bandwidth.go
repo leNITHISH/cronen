@@ -1,7 +1,6 @@
 package fixtures
 
 import (
-	"strings"
 	"time"
 
 	"github.com/leNITHISH/cronen/internal/bandwidth"
@@ -69,22 +68,4 @@ func DemoPrefetchSamples() []bandwidth.Sample {
 // nmcliResult is the fake result of nmcli printing the contents of file.
 func nmcliResult(file string) system.FakeResult {
 	return system.FakeResult{Stdout: Bytes(file)}
-}
-
-// qlRepo answers pacman -Ql for whether names are all in the repo -Ql fixture.
-func qlRepo(names []string) (system.FakeResult, bool) {
-	var out strings.Builder
-	for _, n := range names {
-		found := false
-		for l := range strings.Lines(string(Bytes(PacmanQlRepo))) {
-			if strings.HasPrefix(l, n+" ") {
-				out.WriteString(l)
-				found = true
-			}
-		}
-		if !found {
-			return system.FakeResult{}, false
-		}
-	}
-	return system.FakeResult{Stdout: []byte(out.String())}, true
 }

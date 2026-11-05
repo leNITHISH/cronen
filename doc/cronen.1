@@ -96,6 +96,11 @@ Also works with
 and
 .BR \-\-json .
 .TP
+.B \-\-scan\-linkage
+Read the ELF files of every installed package and list the libraries nothing
+provides (what a partial upgrade leaves behind). Exits 20 if anything is broken,
+0 if not, 1 on an error or Ctrl-C. The TUI's B key (Housekeeping) runs the same scan.
+.TP
 .B \-\-version
 Print the version and exit.
 .TP
@@ -371,6 +376,15 @@ Turn on option B of the install helper (experimental): install a repository pack
 from the Arch Linux Archive snapshot of the day of the last full upgrade. Needs
 .BR fakeroot .
 Off unless set to true.
+.TP
+.BR partial_check " (default true)"
+Run
+.B pacman \-Qu
+against the real database to detect a database synced without upgrading, and mark
+partial upgrades in the History and Packages screens.
+.TP
+.BR linkage_skip " (default empty)"
+More directory globs the broken-linkage scan leaves out.
 .PP
 Example:
 .PP

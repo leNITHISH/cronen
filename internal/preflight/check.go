@@ -31,9 +31,12 @@ const (
 	CheckMetered       ID = "metered"
 	CheckReboot        ID = "reboot-pending"
 	CheckKeyring       ID = "keyring"
+	// CheckPartial is raised by the partial-upgrade detector (M18), not by
+	// Check: see Add.
+	CheckPartial ID = "partial-upgrade"
 )
 
-var checkOrder = []ID{CheckBootUnmounted, CheckSpace, CheckLock, CheckMirror, CheckMetered, CheckReboot, CheckKeyring}
+var checkOrder = []ID{CheckPartial, CheckBootUnmounted, CheckSpace, CheckLock, CheckMirror, CheckMetered, CheckReboot, CheckKeyring}
 
 // Problem is one thing wrong with the system, shown as a global banner.
 type Problem struct {
@@ -172,6 +175,18 @@ func Check(f Facts) []Problem {
 			int(f.Now.Sub(f.LastUpgrade)/(24*time.Hour)))})
 	}
 
+	slices.SortStableFunc(ps, func(a, b Problem) int {
+		return cmp.Or(cmp.Compare(b.Severity, a.Severity),
+			cmp.Compare(slices.Index(checkOrder, a.Check), slices.Index(checkOrder, b.Check)))
+	})
+	return ps
+}
+
+// Add inserts a problem found elsewhere (the partial-upgrade detector) into
+// the list Check returned, keeping the order: most severe first, then by
+// check.
+func Add(ps []Problem, p Problem) []Problem {
+	ps = append(slices.Clone(ps), p)
 	slices.SortStableFunc(ps, func(a, b Problem) int {
 		return cmp.Or(cmp.Compare(b.Severity, a.Severity),
 			cmp.Compare(slices.Index(checkOrder, a.Check), slices.Index(checkOrder, b.Check)))

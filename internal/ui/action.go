@@ -194,7 +194,7 @@ func (m Model) handleActionKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if a.kind == ops.KindDowngrade {
 		return m.handleDowngradeKey(msg)
 	}
-	if a.kind == ops.KindPacdiff || a.kind == ops.KindPrefetch {
+	if a.kind == ops.KindPacdiff || a.kind == ops.KindPrefetch || a.kind == ops.KindRebuild {
 		if s == "y" {
 			return m, m.runAction()
 		}
@@ -281,6 +281,8 @@ func (m *Model) handleActionDone(msg actionDoneMsg) tea.Cmd {
 		m.actionNotice = "✗ " + actionVerb(msg.kind) + " failed (" + msg.err.Error() + ")"
 	case msg.kind == ops.KindPacdiff:
 		m.actionNotice = "✓ pacdiff finished"
+	case msg.kind == ops.KindRebuild:
+		m.actionNotice = "✓ rebuilt " + strings.Join(msg.names, ", ") + " · scan again with B to check"
 	case msg.kind == ops.KindPrefetch:
 		m.actionNotice = "✓ prefetched " + pacman.FormatSize(msg.tx.DownloadBytes) + " into the package cache · the upgrade installs it without downloading"
 		st := m.opts.State.Clone()
@@ -315,6 +317,8 @@ func actionVerb(k ops.Kind) string {
 		return "downgrade"
 	case ops.KindPrefetch:
 		return "prefetch"
+	case ops.KindRebuild:
+		return "rebuild"
 	}
 	return "removal"
 }
@@ -330,6 +334,8 @@ func actionTitle(a *pendingAction) string {
 		return "Downgrade " + strings.Join(a.names, ", ") + " from the package cache?"
 	case ops.KindPrefetch:
 		return "Download the pending updates now?"
+	case ops.KindRebuild:
+		return "Rebuild " + strings.Join(a.names, ", ") + " with your AUR helper?"
 	}
 	return "Remove " + plural(len(a.names), "package", "packages") + "?"
 }

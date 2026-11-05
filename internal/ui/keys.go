@@ -39,10 +39,14 @@ type KeyMap struct {
 	Install key.Binding
 	// Downgrade installs an older cached version of a package.
 	Downgrade key.Binding
-	Back      key.Binding
-	Refresh   key.Binding
-	Help      key.Binding
-	Quit      key.Binding
+	// Scan runs the broken-linkage scan; Rebuild hands off the suggested
+	// rebuild of broken foreign packages (both on the housekeeping screen).
+	Scan    key.Binding
+	Rebuild key.Binding
+	Back    key.Binding
+	Refresh key.Binding
+	Help    key.Binding
+	Quit    key.Binding
 
 	// Accept ends filter input, keeping the filter.
 	Accept key.Binding
@@ -154,6 +158,14 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("D"),
 			key.WithHelp("D", "downgrade from cache"),
 		),
+		Scan: key.NewBinding(
+			key.WithKeys("B"),
+			key.WithHelp("B", "broken-linkage scan (housekeeping)"),
+		),
+		Rebuild: key.NewBinding(
+			key.WithKeys("b"),
+			key.WithHelp("b", "rebuild broken AUR packages (housekeeping)"),
+		),
 		Back: key.NewBinding(
 			key.WithKeys("esc"),
 			key.WithHelp("esc", "back"),
@@ -194,7 +206,7 @@ func (k KeyMap) ShortHelp() []key.Binding {
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Top, k.Bottom},
-		{k.HalfDown, k.HalfUp, k.Focus, k.Filter, k.Screens, k.Mark, k.CycleFilter, k.CycleSort, k.Remove, k.Pacdiff, k.Downgrade},
+		{k.HalfDown, k.HalfUp, k.Focus, k.Filter, k.Screens, k.Mark, k.CycleFilter, k.CycleSort, k.Remove, k.Pacdiff, k.Downgrade, k.Scan, k.Rebuild},
 		{k.News, k.MarkRead, k.Upstream, k.Changelog, k.Diff},
 		{k.Acknowledge, k.ShowAcked},
 		{k.Upgrade, k.Prefetch, k.Install, k.Refresh, k.Back, k.Help, k.Quit},

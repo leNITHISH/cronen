@@ -53,3 +53,16 @@ func TestArchiveInstallState(t *testing.T) {
 		t.Fatalf("v1: %v", err)
 	}
 }
+
+func TestPartialConfig(t *testing.T) {
+	if !Default().PartialCheck {
+		t.Fatal("partial_check must be on by default")
+	}
+	cfg, err := Parse([]byte("partial_check = false\nlinkage_skip = [\"/opt/mine\", \"[\"]\n"))
+	if cfg.PartialCheck {
+		t.Error("partial_check = false ignored")
+	}
+	if len(cfg.LinkageSkip) != 1 || cfg.LinkageSkip[0] != "/opt/mine" || err == nil {
+		t.Errorf("linkage_skip = %v, err %v: want the valid glob kept and the bad one reported", cfg.LinkageSkip, err)
+	}
+}

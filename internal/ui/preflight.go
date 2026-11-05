@@ -100,6 +100,11 @@ func (m Model) updatePreflight(msg tea.Msg) (tea.Model, tea.Cmd) {
 // assessPreflight re-runs the checks after any data arrived.
 func (m *Model) assessPreflight() {
 	m.pf.problems = nil
+	if m.cfg.PartialCheck && m.part.loaded {
+		// The partial-upgrade warning is its own source: it shows without
+		// the system facts.
+		defer func() { m.pf.problems = summary.AddPartial(m.pf.problems, m.part.info) }()
+	}
 	if !m.preflightEnabled() || !m.pf.factsLoaded {
 		return
 	}

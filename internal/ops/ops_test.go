@@ -3,6 +3,7 @@ package ops
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -243,5 +244,27 @@ func TestPacdiffPlan(t *testing.T) {
 	}
 	if _, err := PacdiffPlan([]string{"sudo\n", "pacdiff"}, []string{"x"}); err == nil {
 		t.Error("newline accepted")
+	}
+}
+
+func TestRebuildArgv(t *testing.T) {
+	got, err := RebuildArgv("paru", []string{"paru", "foo-git"})
+	if err != nil || !slices.Equal(got, []string{"paru", "-S", "--", "paru", "foo-git"}) {
+		t.Errorf("got %v, %v", got, err)
+	}
+	for _, bad := range [][]string{{"-S"}, {"a b"}, {"Foo"}, {"x;y"}, {}} {
+		if _, err := RebuildArgv("paru", bad); err == nil {
+			t.Errorf("RebuildArgv(%q) accepted", bad)
+		}
+	}
+	if _, err := RebuildArgv("", []string{"x"}); err == nil {
+		t.Error("no helper accepted")
+	}
+	if _, err := RebuildArgv("paru; rm", []string{"x"}); err == nil {
+		t.Error("shell metacharacters in the helper accepted")
+	}
+	p, err := RebuildPlan("yay", []string{"x"})
+	if err != nil || p.Kind != KindRebuild || p.Blocked() || p.Token() != "" {
+		t.Errorf("plan = %+v, %v", p, err)
 	}
 }

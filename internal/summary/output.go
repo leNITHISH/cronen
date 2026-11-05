@@ -74,6 +74,9 @@ func (s Summary) Text() string {
 			}
 		}
 	}
+	if line := PartialLine(s.PartialUpgrades, s.loc); line != "" {
+		lines = append(lines, icon(risk.Info)+" "+line)
+	}
 	if s.Previewed {
 		lines = append(lines, "transaction: "+s.transactionLine())
 		if s.Bandwidth.Shown() {
@@ -140,6 +143,8 @@ func (s Summary) JSON() []byte {
 		ETASeconds    *int64        `json:"eta_seconds,omitempty"`
 		Prefetched    int64         `json:"prefetched_bytes"`
 		Metered       bool          `json:"metered"`
+		Partial       bool          `json:"partial_upgrade"`
+		BrokenLinkage *int          `json:"broken_linkage,omitempty"`
 		Errors        []string      `json:"errors,omitempty"`
 	}{
 		Updates:       s.Updates(),
@@ -162,6 +167,11 @@ func (s Summary) JSON() []byte {
 		RebootPending: s.RebootPending,
 		Prefetched:    s.Transaction.PrefetchedBytes,
 		Metered:       s.Metered.Metered,
+	}
+	v.Partial = s.Partial.DBSynced()
+	if s.Partial.LinkageKnown {
+		n := len(s.Partial.Linkage.Broken)
+		v.BrokenLinkage = &n
 	}
 	if s.Previewed {
 		if s.Bandwidth.DaysKnown {

@@ -275,7 +275,50 @@ history = true             # the History screen (pacman.log) and the cache looku
 metered_warn_mib = 100     # warn on a metered connection above this download; 0 turns the check off
 prefetch_command = ""      # replaces "checkupdates -d" for F; run as written, add sudo yourself
 archive_install = false    # install helper option B (experimental); see "Install helper"
+partial_check = true       # pacman -Qu on the real database, History marks and the ~ badge
+linkage_skip = []          # more directory globs the broken-linkage scan leaves out
 ```
+
+### Partial-upgrade detector
+
+A partial upgrade is `pacman -Sy X` (or `-Syy`, `-S -y`, `--sync --refresh`, from
+pacman, paru or yay) without `-u`: the databases move on, the system doesn't.
+cronen looks for three things, all read-only:
+
+- **The database was synced without upgrading.** `pacman -Qu` against the real
+  database (no sync) lists packages with newer versions waiting. That raises a
+  warning banner, counts as exit code `20` for `--check`, and is `--json`'s
+  `partial_upgrade`. It becomes critical (exit `30`) when the last linkage scan
+  found damage.
+- **History.** The History screen marks transactions that synced without
+  upgrading and installed something (`~`); the header says "2 partial upgrades
+  since your last full upgrade (Oct 3: pacman -Sy discord)", and the Packages
+  screen gets a `~` column for the packages they installed or upgraded, until the
+  next full upgrade.
+- **Broken linkage.** `B` on the Housekeeping screen (Esc cancels), or
+  `cronen --scan-linkage`, reads the ELF files of every installed package and
+  reports each library that is installed in a different version than the one a
+  program needs, which is what a partial upgrade or a soname bump leaves
+  ("/usr/bin/foo (foo 1.2-1) needs libbar.so.3, which no installed package
+  provides" while libbar.so.2 is there). Only these count as broken.
+  A library installed in no version is most likely an optional feature (a
+  plugin whose optional dependency was never installed): it is counted as
+  "unresolved, probably an optional feature", listed with `--verbose`, and never
+  changes the exit code or the severity. A library next to the file that needs
+  it, or in a RUNPATH directory of another file of the same package, is found.
+  `--scan-linkage` exits `20` if anything is broken, `0` if not, `1` on an error. Libraries are looked up the way the
+  loader does: RUNPATH/RPATH (`$ORIGIN` expanded), `/etc/ld.so.conf` and
+  `/etc/ld.so.conf.d/*`, then `/usr/lib` (`/usr/lib32` for 32-bit files). ELF
+  data is cached per package version in `$XDG_CACHE_HOME/cronen/linkage.json`;
+  plugin directories that are only `dlopen`ed are skipped (a table in
+  `internal/linkage/skip.go`, extended by `linkage_skip`). `--json` reports
+  `broken_linkage` only while a cached scan matches the installed packages.
+
+Suggested fixes: for a broken repo package, the full upgrade (or a reinstall from
+the cache at the installed version, shown as a command); for a broken foreign
+package, a rebuild with your AUR helper (`b`, after a confirmation), offered only
+when no repo updates are pending. Otherwise cronen says "upgrade first, then
+rebuild".
 
 Rebuild detection (needs `preview` and `aur`) flags the update behind each
 installed AUR package that will need a rebuild after the upgrade: one that

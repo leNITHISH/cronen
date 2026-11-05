@@ -90,6 +90,19 @@ func (m Model) actionView(w int) string {
 		return strings.Join(lines, "\n")
 	}
 
+	if a.kind == ops.KindRebuild {
+		add(" This runs: " + s.Bold.Render(strings.Join(a.plan.Command, " ")))
+		add(" " + s.Subtle.Render("Your AUR helper builds and installs these; there is no pacman dry run for that. No repo updates are pending, so the rebuild links against the libraries that are installed now."))
+		add("")
+		add(" " + s.Bold.Render(plural(len(a.names), "package", "packages")))
+		for _, n := range a.names {
+			add("   " + n)
+		}
+		add("")
+		add(" Press " + s.Bold.Render("y") + " to run it, " + s.Bold.Render("esc") + " to cancel.")
+		return strings.Join(lines, "\n")
+	}
+
 	add(" Dry run: " + s.Subtle.Render(strings.Join(quoteFormat(ops.DryArgvOrNil(a.opts, a.names)), " ")))
 	add(" Options: " + optionLine(a.opts, a.plan.Token() != ""))
 	add("")

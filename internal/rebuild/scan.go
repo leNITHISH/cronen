@@ -74,34 +74,75 @@ func ScanNeeds(ctx context.Context, op system.Opener, files []string) ([]Need, e
 	return out, nil
 }
 
-// needsOf reads the DT_NEEDED entries of one file, or nothing if it can't
-// be read or isn't ELF.
-func needsOf(op system.Opener, path string) (needs []Need) {
+// ELFInfo is what the linkage scan and the rebuild scan read from an ELF
+// file's dynamic section.
+type ELFInfo struct {
+	// Class32 reports a 32-bit file.
+	Class32 bool
+	// Needed are the DT_NEEDED entries, in order.
+	Needed []string
+	// RunPath are the DT_RUNPATH directories, or the DT_RPATH ones when
+	// there is no DT_RUNPATH (the dynamic loader ignores RPATH then).
+	// $ORIGIN is not expanded.
+	RunPath []string
+}
+
+// ReadELF reads the dynamic section of the file at path. ok is false for
+// files that are missing, aren't regular, can't be read, aren't ELF or have
+// no dynamic section (static programs). It never panics on a corrupt file.
+func ReadELF(op system.Opener, path string) (info ELFInfo, ok bool) {
 	f, err := op.Open(path)
 	if err != nil {
-		return nil
+		return ELFInfo{}, false
 	}
 	defer func() { _ = f.Close() }()
 	// A hostile or corrupt file must never take cronen down.
 	defer func() {
 		if recover() != nil {
-			needs = nil
+			info, ok = ELFInfo{}, false
 		}
 	}()
 
 	e, err := elf.NewFile(f)
 	if err != nil {
-		return nil
+		return ELFInfo{}, false
 	}
 	libs, err := e.ImportedLibraries()
 	if err != nil {
+		return ELFInfo{}, false
+	}
+	info.Class32 = e.Class == elf.ELFCLASS32
+	info.Needed = libs
+	for _, tag := range []elf.DynTag{elf.DT_RUNPATH, elf.DT_RPATH} {
+		vals, err := e.DynString(tag)
+		if err != nil || len(vals) == 0 {
+			continue
+		}
+		for _, v := range vals {
+			for _, d := range strings.Split(v, ":") {
+				if d != "" {
+					info.RunPath = append(info.RunPath, d)
+				}
+			}
+		}
+		break
+	}
+	return info, true
+}
+
+// needsOf reads the DT_NEEDED entries of one file, or nothing if it can't
+// be read or isn't ELF.
+func needsOf(op system.Opener, path string) []Need {
+	info, ok := ReadELF(op, path)
+	if !ok {
 		return nil
 	}
 	arch := "64"
-	if e.Class == elf.ELFCLASS32 {
+	if info.Class32 {
 		arch = "32"
 	}
-	for _, l := range libs {
+	var needs []Need
+	for _, l := range info.Needed {
 		needs = append(needs, Need{Lib: l, Arch: arch})
 	}
 	return needs

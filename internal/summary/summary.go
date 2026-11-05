@@ -19,6 +19,7 @@ import (
 	"github.com/leNITHISH/cronen/internal/mirror"
 	"github.com/leNITHISH/cronen/internal/news"
 	"github.com/leNITHISH/cronen/internal/pacman"
+	"github.com/leNITHISH/cronen/internal/partial"
 	"github.com/leNITHISH/cronen/internal/preflight"
 	"github.com/leNITHISH/cronen/internal/rebuild"
 	"github.com/leNITHISH/cronen/internal/risk"
@@ -216,6 +217,14 @@ type Summary struct {
 	// Previewed. Metered is what NetworkManager says about the connection.
 	Bandwidth BandwidthInfo
 	Metered   MeteredInfo
+	// Partial is what the partial-upgrade detector found, set when
+	// PartialChecked. PartialUpgrades are the logged `-Sy X` transactions
+	// since the last full upgrade.
+	Partial         PartialInfo
+	PartialChecked  bool
+	PartialUpgrades []partial.Transaction
+	// loc is the time zone dates are shown in.
+	loc *time.Location
 	// Errors are the sources that failed. The rest of the summary holds
 	// what the others found.
 	Errors []error
@@ -250,6 +259,8 @@ func Gather(ctx context.Context, src Sources) Summary {
 		factsErr, mirrorErr      error
 		mir                      mirror.Result
 		metered                  MeteredInfo
+		part                     PartialInfo
+		partErr                  error
 	)
 	wg.Go(func() {
 		repo, repoErr = pacman.CheckUpdates(ctx, src.Runner)
@@ -283,6 +294,11 @@ func Gather(ctx context.Context, src Sources) Summary {
 	if MeteredEnabled(src.Config) {
 		wg.Go(func() { metered = LoadMetered(ctx, src.Runner, src.FS) })
 	}
+	if src.Config.PartialCheck {
+		wg.Go(func() {
+			part, partErr = LoadPartial(ctx, PartialSources{Runner: src.Runner, FS: src.FS, CacheDir: src.CacheDir, Location: loc})
+		})
+	}
 	wg.Go(func() { items, newsErr = news.Fetch(ctx, src.Fetcher, false) })
 	// An unreadable log only makes the last upgrade unknown, and a missing
 	// pacdiff only hides the .pacnew count, as in the TUI.
@@ -290,11 +306,11 @@ func Gather(ctx context.Context, src Sources) Summary {
 	wg.Go(func() { pacnew, _ = LoadPacnew(ctx, src.Runner) })
 	wg.Wait()
 
-	var s Summary
+	s := Summary{loc: loc}
 	if newsErr != nil {
 		newsErr = fmt.Errorf("news: %w", newsErr)
 	}
-	for _, err := range []error{repoErr, aurErr, newsErr, txErr, factsErr, mirrorErr, rebuildErr} {
+	for _, err := range []error{repoErr, aurErr, newsErr, txErr, factsErr, mirrorErr, rebuildErr, partErr} {
 		if err != nil {
 			s.Errors = append(s.Errors, err)
 		}
@@ -315,6 +331,11 @@ func Gather(ctx context.Context, src Sources) Summary {
 		facts.Metered, facts.MeteredDevice = metered.Metered, metered.Device
 		s.Preflight = AssessPreflight(facts, txp, mp, LastUpgrade(lastLog, src.State), src.Config, t)
 		s.RebootPending = facts.RebootPending
+	}
+	if src.Config.PartialCheck && partErr == nil {
+		s.Partial, s.PartialChecked = part, true
+		s.Preflight = AddPartial(s.Preflight, part)
+		s.PartialUpgrades = part.PartialSince(LastUpgrade(lastLog, src.State))
 	}
 	s.Metered = metered
 	if txp != nil {
@@ -386,7 +407,9 @@ func (s Summary) ExitCode() int {
 		return ExitError
 	case len(s.Interventions) > 0 || CriticalProblems(s.Preflight) > 0:
 		return ExitIntervention
-	case len(s.Flagged) > 0:
+	case len(s.Flagged) > 0 || s.Partial.DBSynced():
+		// A database synced without upgrading is attention-worthy even
+		// with nothing flagged (critical, with damage, is handled above).
 		return ExitAttention
 	case s.Updates() > 0:
 		return ExitUpdates
