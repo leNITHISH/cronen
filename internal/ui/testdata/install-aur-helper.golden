@@ -1,0 +1,60 @@
+ cronen                                                       1 vulnerable, no fix · last upgrade: 2 days ago 
+  1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                                
+ 2 days behind · 18 packages · 886 MiB · no estimate yet                                                      
+ ⚠ 1 news item requires manual intervention — press n to read                                                 
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Install htop, paru                                                                                           
+                                                                                                              
+ Why not `pacman -Sy htop`? It syncs the database and installs one package on a system                        
+ that isn't fully upgraded: a partial upgrade. The package is built against libraries newer                   
+ than yours, and things break later. cronen never does that.                                                  
+      https://wiki.archlinux.org/title/System_maintenance#Partial_upgrades_are_unsupported                    
+                                                                                                              
+ ▶ A  Full upgrade, then install htop, paru recommended                                                       
+      Dry run: pacman -Sup --dbpath /tmp/checkup-db-1000 --logfile /dev/null --noconfirm --print-format       
+      '%n %v %r %s' -- htop                                                                                   
+      This runs: paru -Syu -- htop paru                                                                       
+      Download: 886 MiB (20 packages) · estimated time: no estimate yet                                       
+      ⚠ paru comes from the AUR: paru builds it, and cronen does not preview that. Read its PKGBUILD.         
+      htop 3.4.1-1 · extra · 187 KiB                                                                          
+      19 packages · the rest of the upgrade                                                                   
+        egl-wayland2 1.0.0-1                                                                                  
+        firefox 144.0.1-1                                                                                     
+        glibc 2.42+r33+gc7ce5b4c0b7f-1                                                                        
+        gnupg 1:2.4.8-2                                                                                       
+        iptables-nft 1:1.8.11-3                                                                               
+        libnl 3.11.0-1                                                                                        
+        … and 13 more                                                                                         
+                                                                                                              
+   B  htop, paru as of your last full upgrade experimental                                                    
+      unavailable: repository packages only: paru is AUR                                                      
+                                                                                                              
+ Press y to run option A, b for option B, esc to cancel and do nothing.                                       
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Install htop, paru                                                 a/b option  y run  j/k scroll  esc cancel 

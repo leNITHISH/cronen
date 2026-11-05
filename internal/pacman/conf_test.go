@@ -53,3 +53,30 @@ func TestParallelDownloads(t *testing.T) {
 		})
 	}
 }
+
+func TestDBPath(t *testing.T) {
+	for _, c := range []struct{ conf, want string }{
+		{"", "/var/lib/pacman"},
+		{"[options]\nDBPath = /srv/pacman/\n", "/srv/pacman"},
+		{"[options]\n#DBPath = /x\n", "/var/lib/pacman"},
+		{"[core]\nDBPath = /x\n", "/var/lib/pacman"},
+		{"[options]\nDBPath = relative\n", "/var/lib/pacman"},
+	} {
+		if got := DBPath([]byte(c.conf)); got != c.want {
+			t.Errorf("%q: got %q, want %q", c.conf, got, c.want)
+		}
+	}
+}
+
+func TestParseQu(t *testing.T) {
+	got, err := ParseQu([]byte("a 1-1 -> 2-1\nb 1-1 -> 1-2 [ignored]\n\nc 1:1-1 -> 1:2-1\n"))
+	if err != nil || len(got) != 2 || got[0].Name != "a" || got[1].NewVersion != "1:2-1" {
+		t.Fatalf("got %v, %v", got, err)
+	}
+	if _, err := ParseQu([]byte("garbage\n")); err == nil {
+		t.Fatal("garbage accepted")
+	}
+	if _, err := ParseQu([]byte("a 1-1 -> 2-1 [weird]\n")); err == nil {
+		t.Fatal("unknown suffix accepted")
+	}
+}

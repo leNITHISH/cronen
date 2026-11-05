@@ -3,11 +3,14 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -16,6 +19,7 @@ import (
 
 	"github.com/leNITHISH/cronen/internal/config"
 	"github.com/leNITHISH/cronen/internal/fixtures"
+	"github.com/leNITHISH/cronen/internal/ops"
 	"github.com/leNITHISH/cronen/internal/pacman"
 	"github.com/leNITHISH/cronen/internal/summary"
 	"github.com/leNITHISH/cronen/internal/system"
@@ -32,6 +36,8 @@ type options struct {
 	waybar  bool
 	demo    bool
 	version bool
+	// install holds the package names of `cronen install <pkg>...`.
+	install []string
 }
 
 // version is set at build time with -ldflags "-X main.version=...". A
@@ -49,6 +55,7 @@ func versionString() string {
 }
 
 const usageHeader = `Usage: cronen [--demo] [--check | --json [--waybar]]
+       cronen [--demo] install <package>...
 
 Shows pending repo and AUR updates, unread Arch news and anything that needs
 attention before you run pacman -Syu. cronen only reads; it never runs
@@ -69,8 +76,13 @@ Exit codes of --check:
 --json always exits 0 once it has printed; failures are in its "errors".
 Bad flags exit 2.
 
+cronen install opens the TUI in the install helper ("I need X now"): it offers
+the full upgrade plus the package, or (experimental, archive_install = true)
+the package as of your last full upgrade. It never runs pacman -Sy <package>.
+
 Examples:
   cronen                  open the TUI
+  cronen install htop     install a package the safe way
   cronen --demo           try the TUI on sample data
   cronen --check          one-shot summary for scripts or a timer
   cronen --json --waybar  output for a waybar custom module
@@ -102,7 +114,19 @@ func parseFlags(args []string, stdout io.Writer) (options, error) {
 		return o, err
 	}
 	if fs.NArg() > 0 {
-		return o, fmt.Errorf("unexpected arguments: %v", fs.Args())
+		if fs.Arg(0) != "install" {
+			return o, fmt.Errorf("unexpected arguments: %v", fs.Args())
+		}
+		o.install = fs.Args()[1:]
+		if len(o.install) == 0 {
+			return o, errors.New("install needs at least one package name")
+		}
+		if err := ops.CheckInstallNames(o.install); err != nil {
+			return o, fmt.Errorf("install: %w", err)
+		}
+		if o.check || o.json || o.waybar {
+			return o, errors.New("install can't be combined with --check, --json or --waybar")
+		}
 	}
 	if o.waybar && !o.json {
 		return o, errors.New("--waybar requires --json")
@@ -171,7 +195,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, teaOpts .
 	}
 
 	opts := append([]tea.ProgramOption{tea.WithContext(ctx), tea.WithOutput(stdout)}, teaOpts...)
-	if _, err := tea.NewProgram(ui.New(e.uiOptions(ctx)), opts...).Run(); err != nil {
+	if _, err := tea.NewProgram(ui.New(e.uiOptions(ctx, o.install)), opts...).Run(); err != nil {
 		_, _ = fmt.Fprintln(stderr, "cronen:", err)
 		return 1
 	}
@@ -198,7 +222,11 @@ type env struct {
 	loc      *time.Location
 	// home is the user's home directory, for ~/ in extra_cache_dirs.
 	home string
-	exec func(argv []string, done tea.ExecCallback) tea.Cmd
+	// archiveBase is where the install helper's option B makes its fresh
+	// directories, and nonce names them.
+	archiveBase string
+	nonce       func() string
+	exec        func(argv []string, done tea.ExecCallback) tea.Cmd
 }
 
 // demoEnv serves fixture data only: no config, state or cache is read or
@@ -212,17 +240,19 @@ func demoEnv() env {
 		st.AddPrefetchSample(x)
 	}
 	return env{
-		state:   st,
-		demo:    true,
-		runner:  fixtures.Runner(),
-		fetcher: fixtures.Fetcher(),
-		fs:      fixtures.FS(),
-		disk:    fixtures.Disk(),
-		syncDB:  fixtures.SyncDBPath,
-		opener:  fixtures.Opener(),
-		cfg:     config.Default(),
-		now:     func() time.Time { return fixtures.Now },
-		loc:     time.UTC,
+		state:       st,
+		demo:        true,
+		runner:      fixtures.Runner(),
+		fetcher:     fixtures.Fetcher(),
+		fs:          fixtures.FS(),
+		disk:        fixtures.Disk(),
+		syncDB:      fixtures.SyncDBPath,
+		opener:      fixtures.Opener(),
+		cfg:         config.Default(),
+		archiveBase: fixtures.ArchiveBase,
+		nonce:       demoNonce(),
+		now:         func() time.Time { return fixtures.Now },
+		loc:         time.UTC,
 		exec: func(_ []string, done tea.ExecCallback) tea.Cmd {
 			return func() tea.Msg { return done(nil) }
 		},
@@ -261,6 +291,8 @@ func realEnv(stderr io.Writer) env {
 	e.statePath = paths.State
 	e.fetcher = system.NewHTTPClient(paths.CacheDir)
 	e.cacheDir = paths.CacheDir
+	e.archiveBase = filepath.Join(paths.CacheDir, "archive")
+	e.nonce = randomNonce
 	return e
 }
 
@@ -295,7 +327,7 @@ func (e env) recordPending(s summary.Summary, stderr io.Writer) {
 	}
 }
 
-func (e env) uiOptions(ctx context.Context) ui.Options {
+func (e env) uiOptions(ctx context.Context, install []string) ui.Options {
 	cfg := e.cfg
 	return ui.Options{
 		Demo:      e.demo,
@@ -314,6 +346,10 @@ func (e env) uiOptions(ctx context.Context) ui.Options {
 		Home:      e.home,
 		Now:       e.now,
 		Location:  e.loc,
+
+		Install:     install,
+		ArchiveBase: e.archiveBase,
+		Nonce:       e.nonce,
 	}
 }
 
@@ -330,5 +366,24 @@ func (e env) sources() summary.Sources {
 		CacheDir: e.cacheDir,
 		Now:      e.now,
 		Location: e.loc,
+	}
+}
+
+// randomNonce is 8 random bytes in hex, for a new archive directory's name.
+// An empty result (no randomness) makes option B refuse.
+func randomNonce() string {
+	var b [8]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(b[:])
+}
+
+// demoNonce counts, so the demo's fake filesystem never sees a name twice.
+func demoNonce() func() string {
+	n := 0
+	return func() string {
+		n++
+		return fmt.Sprintf("demo%04d", n)
 	}
 }

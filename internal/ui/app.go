@@ -17,6 +17,7 @@ import (
 	"github.com/leNITHISH/cronen/internal/aur"
 	"github.com/leNITHISH/cronen/internal/config"
 	"github.com/leNITHISH/cronen/internal/news"
+	"github.com/leNITHISH/cronen/internal/ops"
 	"github.com/leNITHISH/cronen/internal/pacman"
 	"github.com/leNITHISH/cronen/internal/rebuild"
 	"github.com/leNITHISH/cronen/internal/risk"
@@ -69,6 +70,16 @@ type Options struct {
 	// Location is the time zone of pacman.log timestamps and of dates
 	// shown in the UI. Nil means time.Local.
 	Location *time.Location
+
+	// Install holds the package names of `cronen install <pkg>...`: the
+	// TUI opens straight into the install helper for them.
+	Install []string
+	// ArchiveBase is $XDG_CACHE_HOME/cronen/archive, where option B makes
+	// its fresh directories. Empty turns option B off.
+	ArchiveBase string
+	// Nonce returns random hex for a new archive directory's name. Nil
+	// turns option B off.
+	Nonce func() string
 }
 
 type screen int
@@ -82,6 +93,7 @@ const (
 	screenPackages
 	screenHistory
 	screenHousekeeping
+	screenInstall
 )
 
 type focus int
@@ -202,6 +214,9 @@ type Model struct {
 	dlBefore    int64
 	dlBeforeSet bool
 
+	// inst is the install helper (nil when closed); see install.go.
+	inst *installFlow
+
 	reviews  map[string]reviewState
 	diffView viewport.Model
 	diffName string
@@ -237,6 +252,15 @@ func New(opts Options) Model {
 	m.setStyles(true)
 	m.markLoading()
 	m.layout()
+	if len(opts.Install) > 0 {
+		// cronen install <pkg>...: the helper is the first screen. Its
+		// lookup starts in Init.
+		m.inst = &installFlow{stage: instResolving, names: opts.Install, seq: 1, input: m.newInstallInput()}
+		m.screen = screenInstall
+		if err := ops.CheckInstallNames(opts.Install); err != nil {
+			m.inst.stage, m.inst.err = instFailed, err
+		}
+	}
 	return m
 }
 
@@ -327,6 +351,9 @@ func (m Model) loadCmds(fresh bool) []tea.Cmd {
 // Init implements tea.Model.
 func (m Model) Init() tea.Cmd {
 	cmds := append(m.loadCmds(false), m.spinner.Tick, tea.RequestBackgroundColor)
+	if m.inst != nil && m.inst.stage == instResolving {
+		cmds = append(cmds, m.resolveInstallCmd(m.inst.seq, m.inst.names))
+	}
 	return tea.Batch(cmds...)
 }
 
@@ -507,12 +534,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case upgradedMsg:
 		return m, m.handleUpgraded(msg)
 
+	case installResolvedMsg:
+		m.handleInstallResolved(msg)
+		return m, nil
+
+	case installPreparedMsg:
+		m.handleInstallPrepared(msg)
+		return m, nil
+
+	case installDoneMsg:
+		return m, m.handleInstallDone(msg)
+
 	case tea.KeyPressMsg:
 		m.flash("", false)
 		if m.filtering {
 			return m.handleFilterKey(msg)
 		}
 		return m.handleKey(msg)
+	}
+	if m.screen == screenInstall && m.inst != nil && m.inst.stage == instInput {
+		// Pastes into the name prompt.
+		var cmd tea.Cmd
+		m.inst.input, cmd = m.inst.input.Update(msg)
+		return m, cmd
 	}
 	if m.filtering {
 		// Pastes and the like.
@@ -542,6 +586,9 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 	if m.screen == screenDiff {
 		return m.handleDiffKey(msg)
+	}
+	if m.screen == screenInstall && m.inst != nil {
+		return m.handleInstallKey(msg)
 	}
 
 	switch {
@@ -641,6 +688,8 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, k.Prefetch) && m.screen == screenUpdates:
 		m.requestPrefetch()
 		return m, nil
+	case key.Matches(msg, k.Install) && m.screen == screenUpdates:
+		return m, m.openInstall()
 	case key.Matches(msg, k.Upgrade):
 		m.requestUpgrade()
 		return m, nil
@@ -870,11 +919,14 @@ func (m Model) View() tea.View {
 		lines = append(lines, m.styles.Rule.Render(strings.Repeat("─", w)))
 		lines = append(lines, fitBlock(m.housekeepingView(w, bh), w, bh)...)
 		lines = append(lines, m.styles.Rule.Render(strings.Repeat("─", w)))
-	case screenHelp, screenConfirm, screenDiff:
+	case screenHelp, screenConfirm, screenDiff, screenInstall:
 		body := m.help.FullHelpView(m.keys.FullHelp())
-		if m.screen == screenConfirm {
+		switch {
+		case m.screen == screenInstall && m.inst != nil:
+			body = m.installView(w)
+		case m.screen == screenConfirm:
 			body = m.confirmView(w)
-		} else {
+		default:
 			body += "\n\n " + m.styles.Subtle.Render(helpNote)
 		}
 		if m.screen == screenDiff {
@@ -950,6 +1002,9 @@ func (m Model) statusLine(w int) string {
 	if m.filtering {
 		hints := helpHint(m.keys.Accept) + "  esc clear"
 		return spread(" "+m.filter.View(), m.styles.Subtle.Render(hints)+" ", w)
+	}
+	if m.screen == screenInstall {
+		return spread(m.installTitle(), m.styles.Subtle.Render(m.installHints())+" ", w)
 	}
 	if m.screen == screenConfirm && m.act != nil {
 		return spread(" "+actionTitle(m.act), m.styles.Subtle.Render("esc cancel")+" ", w)

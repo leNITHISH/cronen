@@ -47,6 +47,13 @@ func TestFlags(t *testing.T) {
 		{[]string{"--check", "--json"}, 2},
 		{[]string{"--bogus"}, 2},
 		{[]string{"extra"}, 2},
+		{[]string{"install"}, 2},
+		{[]string{"install", "-Sy"}, 2},
+		{[]string{"install", "htop;id"}, 2},
+		{[]string{"install", "Htop"}, 2},
+		{[]string{"install", "htop", "htop"}, 2},
+		{[]string{"--check", "install", "htop"}, 2},
+		{[]string{"--json", "install", "htop"}, 2},
 	}
 	for _, tt := range tests {
 		t.Run(strings.Join(tt.args, " "), func(t *testing.T) {
@@ -179,5 +186,34 @@ func TestRecordPending(t *testing.T) {
 	d.recordPending(s, io.Discard)
 	if _, err := d.fs.ReadFile(d.statePath); err == nil {
 		t.Error("demo mode wrote the state file")
+	}
+}
+
+// cronen install opens the helper on the demo data, whose fake system
+// resolves htop; y in demo mode runs nothing.
+func TestDemoInstallRunsNothing(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var stdout, stderr bytes.Buffer
+	code := run(ctx, []string{"--demo", "install", "htop"}, &stdout, &stderr,
+		tea.WithInput(strings.NewReader("\x03")),
+		tea.WithWindowSize(100, 30),
+	)
+	if code != 0 || ctx.Err() != nil {
+		t.Fatalf("exit code %d, ctx %v, stderr: %s", code, ctx.Err(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Install htop") {
+		t.Errorf("output does not show the helper: %q", stdout.String())
+	}
+}
+
+func TestInstallIsInTheUsage(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := run(context.Background(), []string{"--help"}, &stdout, &stderr); code != 0 {
+		t.Fatal(code)
+	}
+	if !strings.Contains(stdout.String(), "cronen [--demo] install <package>...") || !strings.Contains(stdout.String(), "never runs pacman -Sy <package>") {
+		t.Errorf("usage: %s", stdout.String())
 	}
 }

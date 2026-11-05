@@ -7,6 +7,11 @@ cronen \- see what pacman \-Syu is about to do before you run it
 .RB [ \-\-check " | " \-\-json " [" \-\-waybar ]]
 .br
 .B cronen
+.RB [ \-\-demo ]
+.B install
+.IR package ...
+.br
+.B cronen
 .BR \-\-help " | " \-\-version
 .SH DESCRIPTION
 .B cronen
@@ -136,6 +141,16 @@ On the updates screen: prefetch, run
 (or
 .BR prefetch_command )
 to download the pending packages now (confirmation first).
+.TP
+.B I
+On the updates screen: the install helper ("I need X now"). Offers the full upgrade plus
+the package, or (with
+.BR archive_install )
+the package as of the last full upgrade. It never runs
+.B pacman \-Sy
+or
+.B pacman \-S
+against the real database.
 .TP
 .B n
 News screen.
@@ -350,6 +365,12 @@ Replaces
 for the prefetch key. Split on whitespace and run as written: add
 .B sudo
 yourself if it needs it.
+.TP
+.BR archive_install " (default false)"
+Turn on option B of the install helper (experimental): install a repository package
+from the Arch Linux Archive snapshot of the day of the last full upgrade. Needs
+.BR fakeroot .
+Off unless set to true.
 .PP
 Example:
 .PP

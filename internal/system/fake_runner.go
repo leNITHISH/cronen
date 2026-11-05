@@ -57,8 +57,8 @@ func (f *FakeRunner) Calls() []string {
 func (f *FakeRunner) Run(ctx context.Context, name string, args ...string) ([]byte, int, error) {
 	line := commandLine(name, args)
 
-	if name == "pacman" {
-		if msg := invalidPacman(args); msg != "" {
+	if name == "pacman" || name == "fakeroot" {
+		if msg := invalidPacmanCall(name, args); msg != "" {
 			f.mu.Lock()
 			f.calls = append(f.calls, line)
 			f.mu.Unlock()
@@ -90,6 +90,24 @@ func (f *FakeRunner) Run(ctx context.Context, name string, args ...string) ([]by
 	return r.Stdout, 0, nil
 }
 
+// invalidPacmanCall checks a pacman call, or a `fakeroot -- pacman ...` call
+// (which is how cronen syncs a temporary database as a normal user). Without
+// fakeroot, pacman refuses the operations that need root, as real pacman
+// does when run by a normal user.
+func invalidPacmanCall(name string, args []string) string {
+	if name == "fakeroot" {
+		rest := args
+		if len(rest) > 0 && rest[0] == "--" {
+			rest = rest[1:]
+		}
+		if len(rest) == 0 || rest[0] != "pacman" {
+			return ""
+		}
+		return invalidPacman(rest[1:], true)
+	}
+	return invalidPacman(args, false)
+}
+
 // invalidPacman returns the error real pacman gives for an option
 // combination it refuses, or "" for a combination it accepts or that the
 // fake doesn't know about. It makes a dry run or hand-off built with a
@@ -99,8 +117,16 @@ func (f *FakeRunner) Run(ctx context.Context, name string, args ...string) ([]by
 //   - only one operation (-D -F -Q -R -S -T -U) may be used at a time;
 //   - -n (--nosave) belongs to -R and can't be combined with -p (--print);
 //   - -U takes none of the sync and remove options: -y, -u, -s, -n, -c
-//     (and the like) are invalid with it.
-func invalidPacman(args []string) string {
+//     (and the like) are invalid with it;
+//   - -S with -y (a database refresh) or -c (clean) needs root, even with
+//     -p: "you cannot perform this operation unless you are root". Run as a
+//     normal user it fails; under fakeroot it works. That is why the
+//     install helper only ever refreshes a temporary database, through
+//     fakeroot, and why a plain `pacman -Sy` can't be produced by a test;
+//   - -p and -w can't be used together ("--print" and "--downloadonly");
+//   - only the sync options cronen knows (-y -u -p -w -d -v -s -c -i -l -g
+//     -q) are accepted after -S, so a typo in an argv builder shows up.
+func invalidPacman(args []string, fakeroot bool) string {
 	var ops []byte
 	var cluster string
 	for _, a := range args {
@@ -128,6 +154,21 @@ func invalidPacman(args []string) string {
 		case 'R':
 			if strings.Contains(cluster, "n") && strings.Contains(cluster, "p") {
 				return "invalid option: '--nosave' and '--print' may not be used together"
+			}
+		case 'S':
+			// The cluster after S holds the sync options. A cluster of its
+			// own (-y, -u) counts too.
+			has := func(c string) bool { return strings.Contains(cluster, c) }
+			if (has("y") || has("c")) && !fakeroot {
+				return "you cannot perform this operation unless you are root."
+			}
+			if has("p") && has("w") {
+				return "invalid option: '--print' and '--downloadonly' may not be used together"
+			}
+			for _, c := range []byte(strings.TrimPrefix(cluster, "S")) {
+				if !strings.ContainsRune("yupwdvscilgq", rune(c)) && c != 'S' {
+					return "invalid option: '-" + string(c) + "' is not valid with -S"
+				}
 			}
 		case 'U':
 			for _, c := range []byte(strings.TrimPrefix(cluster, "U")) {

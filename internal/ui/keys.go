@@ -35,6 +35,8 @@ type KeyMap struct {
 	Pacdiff key.Binding
 	// Prefetch downloads the pending packages now, to install later.
 	Prefetch key.Binding
+	// Install opens the install helper ("I need X now").
+	Install key.Binding
 	// Downgrade installs an older cached version of a package.
 	Downgrade key.Binding
 	Back      key.Binding
@@ -144,6 +146,10 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("F"),
 			key.WithHelp("F", "prefetch: download updates now"),
 		),
+		Install: key.NewBinding(
+			key.WithKeys("I"),
+			key.WithHelp("I", "install helper: I need X now"),
+		),
 		Downgrade: key.NewBinding(
 			key.WithKeys("D"),
 			key.WithHelp("D", "downgrade from cache"),
@@ -191,6 +197,6 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.HalfDown, k.HalfUp, k.Focus, k.Filter, k.Screens, k.Mark, k.CycleFilter, k.CycleSort, k.Remove, k.Pacdiff, k.Downgrade},
 		{k.News, k.MarkRead, k.Upstream, k.Changelog, k.Diff},
 		{k.Acknowledge, k.ShowAcked},
-		{k.Upgrade, k.Prefetch, k.Refresh, k.Back, k.Help, k.Quit},
+		{k.Upgrade, k.Prefetch, k.Install, k.Refresh, k.Back, k.Help, k.Quit},
 	}
 }

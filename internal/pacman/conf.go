@@ -74,3 +74,32 @@ func ParallelDownloads(conf []byte) (n int, set bool) {
 	}
 	return n, set
 }
+
+// DefaultDBPath is pacman's database directory when DBPath isn't set.
+const DefaultDBPath = "/var/lib/pacman"
+
+// DBPath returns the DBPath of the [options] section, without a trailing
+// slash, or DefaultDBPath.
+func DBPath(conf []byte) string {
+	inOptions := false
+	dir := DefaultDBPath
+	sc := bufio.NewScanner(bytes.NewReader(conf))
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if i := strings.IndexByte(line, '#'); i >= 0 {
+			line = strings.TrimSpace(line[:i])
+		}
+		switch {
+		case line == "":
+		case strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]"):
+			inOptions = line == "[options]"
+		case inOptions:
+			if key, val, ok := strings.Cut(line, "="); ok && strings.TrimSpace(key) == "DBPath" {
+				if v := strings.TrimRight(strings.TrimSpace(val), "/"); strings.HasPrefix(v, "/") {
+					dir = v
+				}
+			}
+		}
+	}
+	return dir
+}

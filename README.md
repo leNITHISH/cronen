@@ -74,6 +74,7 @@ documents everything, including the config keys.
 | `space` | Updates, Packages, Housekeeping: mark / unmark the selected package or orphan |
 | `X` | Updates, Packages, Housekeeping: remove the marked packages or orphans (dry run and confirmation first) |
 | `F` | Updates: prefetch, download the pending packages now and install them later (confirmation first) |
+| `I` | Updates: install helper, "I need X now" (also `cronen install <package>...`) |
 | `D` | Packages, History: downgrade the selected package to an older version from the package cache (dry run and confirmation first) |
 | `P` | Housekeeping: merge `.pacnew` files with `pacdiff` (confirmation first) |
 | `m` | mark the selected news item read (on the updates screen: the news behind the selected package's flags) |
@@ -273,6 +274,7 @@ housekeeping = true        # the Housekeeping screen's .pacnew diffs, cache size
 history = true             # the History screen (pacman.log) and the cache lookup behind D
 metered_warn_mib = 100     # warn on a metered connection above this download; 0 turns the check off
 prefetch_command = ""      # replaces "checkupdates -d" for F; run as written, add sudo yourself
+archive_install = false    # install helper option B (experimental); see "Install helper"
 ```
 
 Rebuild detection (needs `preview` and `aur`) flags the update behind each
@@ -372,6 +374,38 @@ Under the tab bar, the updates line says what the upgrade costs: `47 days behind
 - **ParallelDownloads.** When `ParallelDownloads` isn't set (or is 1) in
   `/etc/pacman.conf`, pacman downloads one file at a time; the Housekeeping screen and
   the upgrade modal suggest `ParallelDownloads = 5`. cronen doesn't edit the file.
+
+### Install helper
+
+`cronen install <package>...` (or `I` on the updates screen) is for "I need X now" on a
+system that is behind. It never runs `pacman -Sy X`, or `pacman -S X` against the real
+database: that is a partial upgrade. Names are validated like every other name, and
+looked up in the database checkupdates synced (and in the AUR when `aur_helper` is
+set). Two options are shown side by side, and nothing runs until a dry run as you
+succeeded and you press `y`:
+
+- **A. Full upgrade, then X** (recommended, selected by default).
+  Dry run: `pacman -Sup --dbpath <checkupdates db> … -- X`. Hand-off:
+  `<privilege_command> pacman -Syu -- X`, or `paru -Syu -- X` / `yay -Syu -- X` with
+  `aur_helper` set (which also covers AUR packages). `upgrade_command` is not used.
+- **B. X as of your last full upgrade** (experimental, repository packages only, off
+  unless `archive_install = true`). It needs `fakeroot` (`base-devel`) and a last full
+  upgrade time in `pacman.log`. Pressing `b` makes a fresh `0700` directory under
+  `$XDG_CACHE_HOME/cronen/archive/` for each of the two candidate days (the upgrade day
+  and the next), each with a `local` symlink to your real local database and a
+  generated `pacman.conf`, syncs them from the Arch Linux Archive as you with
+  `fakeroot -- pacman -Sy --dbpath <dir> --config <dir>/pacman.conf`, and keeps the day
+  where `pacman -Qu` lists the fewest differing packages (the modal lists them).
+  The generated config keeps your `[options]` and enables only `core`, `extra` and
+  `multilib` (if enabled), each with just the archive `Server`; custom repositories,
+  every `Include` line, `DBPath` and `XferCommand` are left out, and the modal says so.
+  Hand-off: `<privilege_command> pacman -S --dbpath <dir> --config <dir>/pacman.conf -- X`.
+  Because that lock lives in the temporary directory, cronen checks that
+  `/var/lib/pacman/db.lck` doesn't exist, and that the directory and config are
+  unchanged, right before the hand-off. Directories are not deleted afterwards.
+
+State records "X installed from the archive (day)"; `pacman.log` (History) shows the
+transaction.
 
 ### AUR review
 
