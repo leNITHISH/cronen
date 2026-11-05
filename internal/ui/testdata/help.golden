@@ -3,21 +3,21 @@
  2 days behind · 18 packages · 886 MiB · no estimate yet                                            
  ⚠ 1 news item requires manual intervention — press n to read                                       
 ────────────────────────────────────────────────────────────────────────────────────────────────────
-k/↑ up        ctrl+d half page down                              n news            …                
-j/↓ down      ctrl+u half page up                                m mark news read                   
-g   top       tab    switch pane                                 o open upstream                    
-G   bottom    /      filter packages                             c open changelog                   
-              1-5    switch screen                               d review AUR diff                  
+k/↑ up        ctrl+d half page down                                n news            …              
+j/↓ down      ctrl+u half page up                                  m mark news read                 
+g   top       tab    switch pane                                   o open upstream                  
+G   bottom    /      filter packages                               c open changelog                 
+              1-5    switch screen                                 d review AUR diff                
               space  mark                                                                           
               f      package filter                                                                 
               s      package sort (updates: by download size)                                       
               X      remove marked (preview first)                                                  
               P      merge .pacnew (housekeeping)                                                   
               D      downgrade from cache                                                           
+              B      broken-linkage scan (housekeeping)                                             
+              b      rebuild broken AUR packages (housekeeping)                                     
                                                                                                     
  Security data comes from security.archlinux.org, which can lag: a hint, not a guarantee.           
-                                                                                                    
-                                                                                                    
                                                                                                     
                                                                                                     
                                                                                                     

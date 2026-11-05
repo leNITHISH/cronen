@@ -246,7 +246,9 @@ func (m *Model) handlePackagesKey(k tea.KeyPressMsg) (tea.Cmd, bool) {
 }
 
 // pkgBadges are the flags of a package: E explicit or D dependency, F
-// foreign, O orphan. Each has a fixed column.
+// foreign, O orphan, and ~ for a package a partial upgrade (pacman -Sy X)
+// installed or upgraded since the last full upgrade. Each has a fixed
+// column.
 func (m Model) pkgBadges(pkg pacman.LocalPackage) string {
 	b := []byte("D  ")
 	if pkg.Explicit {
@@ -258,7 +260,23 @@ func (m Model) pkgBadges(pkg pacman.LocalPackage) string {
 	if m.localDB.Orphans[pkg.Name] {
 		b[2] = 'O'
 	}
+	if m.badgeWidth() == 4 {
+		// The ~ column exists only while a partial upgrade is on record,
+		// so the usual layout doesn't lose a cell to it.
+		b = append(b, ' ')
+		if m.partialPackages()[pkg.Name] {
+			b[3] = '~'
+		}
+	}
 	return string(b)
+}
+
+// badgeWidth is the width of the badge column: 3, or 4 with the ~ column.
+func (m Model) badgeWidth() int {
+	if len(m.partialPackages()) > 0 {
+		return 4
+	}
+	return 3
 }
 
 // minPkgName is how wide the name column must stay before the others give
@@ -267,8 +285,8 @@ const minPkgName = 14
 
 // pkgColumns decides which optional columns fit in w cells: version, size,
 // install date, dropped from the right when the name would get too narrow.
-func pkgColumns(w int) (version, size, date bool) {
-	const fixed = 2 + 2 + 1 + 3 // cursor, mark, gap, badges
+func pkgColumns(w, badges int) (version, size, date bool) {
+	fixed := 2 + 2 + 1 + badges // cursor, mark, gap, badges
 	version, size, date = true, true, true
 	room := func() int {
 		n := w - fixed
@@ -311,8 +329,8 @@ func (m Model) packagesListView(w, h int) string {
 		return ""
 	}
 	p := m.pkgs
-	vc, sc, dc := pkgColumns(w)
-	nameW := w - (2 + 2 + 1 + 3)
+	vc, sc, dc := pkgColumns(w, m.badgeWidth())
+	nameW := w - (2 + 2 + 1 + m.badgeWidth())
 	header := "    "
 	cols := func(version, size, date string) string {
 		var s string

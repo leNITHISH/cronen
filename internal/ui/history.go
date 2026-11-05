@@ -254,6 +254,10 @@ func (m Model) historyListView(w, h int) string {
 			if tx.Interrupted {
 				counts = "⚠ " + counts
 			}
+			if partialTx(tx) {
+				// Synced the databases without upgrading.
+				counts = "~ " + counts
+			}
 			cmd := tx.Command
 			if cmd == "" {
 				cmd = "(no command logged)"
@@ -314,6 +318,9 @@ func (m Model) historyDetail(row histRow, w int) string {
 		b.WriteString(" " + wrapIndent(m.styles.Warn.Render("⚠ interrupted: pacman.log has no \"transaction completed\" for it"), w-2, 3) + "\n")
 	case !tx.End.IsZero():
 		b.WriteString(" " + m.styles.Subtle.Render("completed after "+tx.End.Sub(tx.Start).Round(time.Second).String()) + "\n")
+	}
+	if partialTx(tx) {
+		b.WriteString(" " + wrapIndent(m.styles.Warn.Render("~ partial upgrade: this refreshed the sync databases without upgrading (-y without -u) and installed something. Packages built against newer libraries than the ones installed can break."), w-2, 3) + "\n")
 	}
 	if tx.Implicit {
 		b.WriteString(" " + m.styles.Subtle.Render("(this log has no \"transaction started\" line for it)") + "\n")

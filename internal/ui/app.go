@@ -186,6 +186,9 @@ type Model struct {
 	localDB  *pacman.LocalDB
 	pkgs     packagesPane
 
+	// part is the partial-upgrade detector; see partial.go.
+	part partialState
+
 	// histSec and hist are pacman.log read into transactions, and the
 	// History screen; see history.go.
 	histSec section
@@ -309,6 +312,7 @@ func (m *Model) markLoading() {
 	m.issuesSec = section{loading: m.cfg.KnownIssues && m.cfg.Preview}
 	m.localSec = section{loading: m.cfg.PackageBrowser}
 	m.histSec = section{loading: m.cfg.History}
+	m.part.sec = section{loading: m.cfg.PartialCheck}
 	m.hk.diffSec = section{}
 	m.hk.cacheSec = section{loading: m.cfg.Housekeeping}
 	m.hk.unitsSec = section{loading: m.cfg.Housekeeping}
@@ -316,7 +320,7 @@ func (m *Model) markLoading() {
 }
 
 func (m Model) anyLoading() bool {
-	for _, s := range []section{m.repoSec, m.aurSec, m.newsSec, m.logSec, m.pacnewSec, m.previewSec, m.rebuildSec, m.localSec, m.histSec, m.hk.diffSec, m.hk.cacheSec, m.hk.unitsSec} {
+	for _, s := range []section{m.repoSec, m.aurSec, m.newsSec, m.logSec, m.pacnewSec, m.previewSec, m.rebuildSec, m.localSec, m.histSec, m.part.sec, m.hk.diffSec, m.hk.cacheSec, m.hk.unitsSec} {
 		if s.loading {
 			return true
 		}
@@ -341,6 +345,9 @@ func (m Model) loadCmds(fresh bool) []tea.Cmd {
 	}
 	if m.cfg.History {
 		cmds = append(cmds, loadHistory(m.opts.FS, m.cfg.ExtraCacheDirs, m.opts.Home, m.location(), m.gen))
+	}
+	if m.cfg.PartialCheck {
+		cmds = append(cmds, loadPartial(ctx, m.opts.Runner, m.opts.FS, m.opts.CacheDir, m.location(), m.gen))
 	}
 	cmds = append(cmds, loadNet(ctx, m.opts.Runner, m.opts.FS, summary.MeteredEnabled(m.cfg), m.gen))
 	cmds = append(cmds, m.mirrorCmds(fresh)...)
@@ -463,6 +470,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case historyMsg:
 		return m, m.handleHistory(msg)
+
+	case partialMsg:
+		return m, m.handlePartial(msg)
+
+	case linkageMsg:
+		return m, m.handleLinkage(msg)
+
+	case linkageTickMsg:
+		return m, m.handleLinkageTick(msg)
 
 	case versionsMsg:
 		m.handleVersions(msg)
@@ -813,6 +829,9 @@ func (m Model) chromeHeight() int {
 	if m.bw.Shown() {
 		h++
 	}
+	if m.partialLine(0) != "" {
+		h++
+	}
 	return h
 }
 
@@ -897,6 +916,9 @@ func (m Model) View() tea.View {
 	var lines []string
 	lines = append(lines, m.headerLine(w), m.tabBar(w))
 	if line := m.bandwidthLine(w); line != "" {
+		lines = append(lines, line)
+	}
+	if line := m.partialLine(w); line != "" {
 		lines = append(lines, line)
 	}
 	if n := len(m.result.Interventions); n > 0 {

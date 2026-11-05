@@ -130,6 +130,12 @@ func (m *Model) handleHousekeepingKey(k tea.KeyPressMsg) (tea.Cmd, bool) {
 	keys, h := m.keys, &m.hk
 	orphans := m.orphanNames()
 	switch {
+	case key.Matches(k, keys.Back) && m.scanning():
+		m.cancelScan()
+	case key.Matches(k, keys.Scan):
+		return m.startScan(), true
+	case key.Matches(k, keys.Rebuild):
+		m.startRebuild()
 	case key.Matches(k, keys.Down):
 		h.sel = clamp(h.sel+1, 0, max(0, len(orphans)-1))
 	case key.Matches(k, keys.Up):
@@ -334,6 +340,10 @@ func (m Model) housekeepingLines(w int) ([]string, int) {
 	for _, v := range m.result.Vulnerable {
 		add("   " + s.Warn.Render("⚠") + " " + risk.VulnerableReason(v))
 	}
+
+	// Partial upgrades and broken linkage. Last, as the scan's list of
+	// broken files can be long.
+	m.linkageLines(add, title)
 	return lines, selLine
 }
 
