@@ -110,7 +110,9 @@ func tx(start string, cmd string, changes ...pacman.Change) pacman.LogTransactio
 }
 
 func TestFind(t *testing.T) {
-	install := func(n string) pacman.Change { return pacman.Change{Action: pacman.ActionInstalled, Name: n, New: "1-1"} }
+	install := func(n string) pacman.Change {
+		return pacman.Change{Action: pacman.ActionInstalled, Name: n, New: "1-1"}
+	}
 	upgrade := func(n string) pacman.Change {
 		return pacman.Change{Action: pacman.ActionUpgraded, Name: n, Old: "1-1", New: "1-2"}
 	}
@@ -118,7 +120,7 @@ func TestFind(t *testing.T) {
 		tx("2026-10-20T10:00:00+05:30", "pacman -Syu", upgrade("glibc"), upgrade("zlib")),
 		tx("2026-10-03T09:00:00+05:30", "pacman -Sy discord", install("discord"), upgrade("zlib"), install("discord")),
 		tx("2026-10-09T09:00:00-07:00", "yay -S -y vlc", install("vlc")),
-		tx("2026-10-10T09:00:00+00:00", "pacman -Sy", /* nothing to install */),
+		tx("2026-10-10T09:00:00+00:00", "pacman -Sy" /* nothing to install */),
 		tx("2026-10-11T09:00:00+00:00", "pacman -Sy htop", pacman.Change{Action: pacman.ActionRemoved, Name: "htop", Old: "1-1"}),
 		tx("2026-10-12T09:00:00+00:00", "", install("x")),
 	}

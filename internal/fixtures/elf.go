@@ -11,6 +11,22 @@ import (
 // imported libraries. A hand-built fixture, a few hundred bytes, in place of
 // a checked-in binary.
 func ELF(class64 bool, needed ...string) []byte {
+	return ELFWith(ELFOptions{Class64: class64}, needed...)
+}
+
+// ELFOptions adds a search path to a fixture ELF file.
+type ELFOptions struct {
+	Class64 bool
+	// RunPath is written as DT_RUNPATH (or DT_RPATH with RPath set),
+	// colon-separated as in real files ("$ORIGIN/../lib"). Empty writes
+	// none.
+	RunPath string
+	RPath   bool
+}
+
+// ELFWith is ELF with a RUNPATH or RPATH.
+func ELFWith(opt ELFOptions, needed ...string) []byte {
+	class64 := opt.Class64
 	le := binary.LittleEndian
 
 	// Section data.
@@ -19,6 +35,11 @@ func ELF(class64 bool, needed ...string) []byte {
 	for i, n := range needed {
 		offsets[i] = uint32(len(dynstr))
 		dynstr = append(append(dynstr, n...), 0)
+	}
+	runOff := uint32(0)
+	if opt.RunPath != "" {
+		runOff = uint32(len(dynstr))
+		dynstr = append(append(dynstr, opt.RunPath...), 0)
 	}
 	shstrtab := []byte("\x00.dynstr\x00.dynamic\x00.shstrtab\x00")
 	const nameDynstr, nameDynamic, nameShstrtab = 1, 9, 18
@@ -42,6 +63,13 @@ func ELF(class64 bool, needed ...string) []byte {
 	var dynamic []byte
 	for _, o := range offsets {
 		dynamic = append(dynamic, entry(1, uint64(o))...) // DT_NEEDED
+	}
+	if opt.RunPath != "" {
+		tag := uint64(29) // DT_RUNPATH
+		if opt.RPath {
+			tag = 15 // DT_RPATH
+		}
+		dynamic = append(dynamic, entry(tag, uint64(runOff))...)
 	}
 	dynamic = append(dynamic, entry(5, 0)...)                    // DT_STRTAB
 	dynamic = append(dynamic, entry(10, uint64(len(dynstr)))...) // DT_STRSZ
