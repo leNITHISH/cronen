@@ -39,6 +39,7 @@ var lastUsed = map[string]time.Time{
 
 func setBandwidthFS(f *system.FakeFS) {
 	for p, t := range lastUsed {
+		_ = f.WriteFile(p, nil, 0o644)
 		f.SetAccessTime(p, t)
 	}
 }
@@ -56,7 +57,8 @@ func DemoUpgradeSamples() []bandwidth.Sample {
 	return out
 }
 
-// DemoPrefetchSamples: the download speed the demo estimate is built on.
+// DemoPrefetchSamples are the prefetches the demo estimate measures the
+// download speed with.
 func DemoPrefetchSamples() []bandwidth.Sample {
 	return []bandwidth.Sample{
 		{Time: Now.AddDate(0, 0, -90), Bytes: 600 << 20, Packages: 60, Seconds: 600 / 1.5},

@@ -111,7 +111,9 @@ func (m *Model) assessPreflight() {
 	if m.pf.mirrorLoaded && m.cfg.MirrorCheck {
 		mir = &m.pf.mirror
 	}
-	m.pf.problems = summary.AssessPreflight(m.pf.facts, tx, mir, m.lastFullUpgrade(), m.cfg, m.now())
+	facts := m.pf.facts
+	facts.Metered, facts.MeteredDevice = m.net.metered.Metered, m.net.metered.Device
+	m.pf.problems = summary.AssessPreflight(facts, tx, mir, m.lastFullUpgrade(), m.cfg, m.now())
 }
 
 // preflightBanner is the banner line for the preflight problems, most

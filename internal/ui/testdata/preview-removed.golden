@@ -1,5 +1,6 @@
  cronen (demo)                                      1 vulnerable, no fix · last upgrade: 2 days ago 
   1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ 2 days behind · 18 packages · 886 MiB · no estimate yet                                            
  ⚠ 1 news item requires manual intervention — press n to read                                       
 ────────────────────────────────────────┬───────────────────────────────────────────────────────────
  NEEDS ATTENTION (12)                   │ iptables                                                  
@@ -34,7 +35,6 @@
 ▸ iptables                   replaced   │                                                           
  HELD (1)                               │                                                           
   bash                5.3.3-1→5.3.3-2 ℹ │                                                           
-                                        │                                                           
                                         │                                                           
                                         │                                                           
                                         │                                                           

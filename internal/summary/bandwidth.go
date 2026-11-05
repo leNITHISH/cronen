@@ -12,7 +12,7 @@ import (
 	"github.com/leNITHISH/cronen/internal/system"
 )
 
-// Where the network facts live.
+// RoutePath is the kernel routing table, where the default route is read.
 const RoutePath = "/proc/net/route"
 
 // MeteredInfo is what NetworkManager says about the connection carrying the
@@ -168,20 +168,75 @@ func ParallelDownloadsHint(fsys system.FS) string {
 	return "pacman downloads one package at a time: set `ParallelDownloads = 5` in " + pacman.ConfPath + " to speed it up (cronen doesn't edit the file)."
 }
 
-// PrefetchArgv builds the prefetch hand-off for the current system. The
-// privilege command is added only when the user can't write to any package
-// cache directory, which is when checkupdates -d would fail without it.
-// Needs checking on Arch: whether checkupdates -d needs root at all; see
-// the M16 pull request.
-func PrefetchArgv(fsys system.FS, cfg config.Config) ([]string, error) {
-	needsRoot := true
-	// An unreadable pacman.conf means the default cache directory.
+// cacheNeedsRoot reports that the current user can't write to any package
+// cache directory, which is when checkupdates -d would fail without the
+// privilege command. An unreadable pacman.conf means the default cache
+// directory.
+//
+// Needs checking on Arch: whether checkupdates -d needs root at all, and so
+// whether this is the right test; see the M16 pull request.
+func cacheNeedsRoot(fsys system.FS) bool {
 	conf, _ := fsys.ReadFile(pacman.ConfPath)
 	for _, dir := range pacman.CacheDirs(conf) {
 		if fsys.Writable(dir) {
-			needsRoot = false
-			break
+			return false
 		}
 	}
-	return ops.PrefetchArgv(cfg.PrivilegeArgv(), needsRoot, cfg.PrefetchCommand)
+	return true
+}
+
+// PrefetchArgv builds the prefetch hand-off for the current system: the
+// privilege command is added only when it is needed.
+func PrefetchArgv(fsys system.FS, cfg config.Config) ([]string, error) {
+	return ops.PrefetchArgv(cfg.PrivilegeArgv(), cacheNeedsRoot(fsys), cfg.PrefetchCommand)
+}
+
+// PrefetchPlan is the plan of the prefetch hand-off. previewed and download
+// come from the transaction preview, which is its dry run: with no preview,
+// or nothing left to download, there is no plan.
+func PrefetchPlan(fsys system.FS, cfg config.Config, previewed bool, download int64) (ops.Plan, error) {
+	return ops.PrefetchPlan(ops.PrefetchInput{
+		Priv: cfg.PrivilegeArgv(), NeedsRoot: cacheNeedsRoot(fsys), Override: cfg.PrefetchCommand,
+		Previewed: previewed, Download: download,
+	})
+}
+
+// MountsPath is where the mounts are listed.
+const MountsPath = "/proc/self/mounts"
+
+// maxUsageFiles caps how many files of one package are statted.
+const maxUsageFiles = 200
+
+// LoadLastUsed finds when an installed package was last used: the newest
+// access time among its files in bin directories and its .desktop files.
+// ok is false when nothing says: no such files, files on a noatime mount
+// (where access times are never updated and any date would be a lie), or
+// anything unreadable.
+//
+// Needs checking on Arch: that /proc/self/mounts lists relatime for the
+// root filesystem, and that access times of /usr/bin files are real. See
+// the M16 pull request.
+func LoadLastUsed(ctx context.Context, r system.Runner, fsys system.FS, name string) (t time.Time, ok bool) {
+	mounts, err := fsys.ReadFile(MountsPath)
+	if err != nil {
+		return time.Time{}, false
+	}
+	files, err := pacman.PackageFiles(ctx, r, []string{name})
+	if err != nil {
+		return time.Time{}, false
+	}
+	var accesses []bandwidth.Access
+	for _, f := range bandwidth.UsageFiles(files[name]) {
+		if len(accesses) >= maxUsageFiles {
+			break
+		}
+		fi, err := fsys.Stat(f)
+		if err != nil {
+			continue
+		}
+		if at, ok := system.AccessTime(fi); ok {
+			accesses = append(accesses, bandwidth.Access{Path: f, Time: at})
+		}
+	}
+	return bandwidth.LastUsed(accesses, bandwidth.ParseMounts(mounts))
 }

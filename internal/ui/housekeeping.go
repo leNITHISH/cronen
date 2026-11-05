@@ -214,6 +214,12 @@ func (m Model) housekeepingLines(w int) ([]string, int) {
 	for _, p := range m.pf.problems {
 		add("   " + s.Severity(p.Severity).Render(severityIcon(p.Severity)) + " " + p.Message)
 	}
+	if m.net.metered.Metered && !m.metered() {
+		add("   " + s.Subtle.Render("ℹ the connection ("+m.net.metered.Device+") is metered; downloads under "+itoa(m.cfg.MeteredWarnMiB)+" MiB aren't flagged"))
+	}
+	if m.net.hint != "" {
+		add("   " + s.Subtle.Render("ℹ "+m.net.hint))
+	}
 	if m.pf.factsLoaded && m.pf.facts.RebootPending {
 		add("   " + s.Warn.Render("⚠ reboot pending: the running kernel "+m.pf.facts.RunningKernel+" was replaced"))
 	}

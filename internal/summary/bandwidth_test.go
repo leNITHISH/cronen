@@ -236,3 +236,38 @@ func TestParallelDownloadsHint(t *testing.T) {
 		t.Errorf("unreadable pacman.conf: %q", h)
 	}
 }
+
+func TestLoadLastUsed(t *testing.T) {
+	ctx := context.Background()
+	// The fixture system mounts / with relatime; firefox's newest file was
+	// used 2 days ago, vim's 130 days ago, and ripgrep's files have no time.
+	r, fsys := fixtures.Runner(), fixtures.FS()
+	got, ok := LoadLastUsed(ctx, r, fsys, "firefox")
+	if !ok || !got.Equal(fixtures.Now.AddDate(0, 0, -2)) {
+		t.Errorf("firefox = %v, %v", got, ok)
+	}
+	if got, ok = LoadLastUsed(ctx, r, fsys, "vim"); !ok || !got.Equal(fixtures.Now.AddDate(0, 0, -130)) {
+		t.Errorf("vim = %v, %v", got, ok)
+	}
+	if _, ok = LoadLastUsed(ctx, r, fsys, "ripgrep"); ok {
+		t.Error("ripgrep has no access times and must show none")
+	}
+	if _, ok = LoadLastUsed(ctx, r, fsys, "nosuchpkg"); ok {
+		t.Error("an unknown package must show none")
+	}
+
+	// Under noatime the date is hidden, however recent the atime looks.
+	noatime := system.NewFakeFS(map[string][]byte{
+		MountsPath:       []byte("/dev/sda1 / ext4 rw,noatime 0 0\n"),
+		"/usr/bin/vim":   nil,
+		"/usr/bin/other": nil,
+	})
+	noatime.SetAccessTime("/usr/bin/vim", fixtures.Now)
+	if _, ok = LoadLastUsed(ctx, r, noatime, "vim"); ok {
+		t.Error("noatime mount must hide last used")
+	}
+	// Unreadable mounts: hidden too.
+	if _, ok = LoadLastUsed(ctx, r, system.NewFakeFS(nil), "vim"); ok {
+		t.Error("unknown mounts must hide last used")
+	}
+}

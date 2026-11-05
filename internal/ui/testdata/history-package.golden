@@ -1,5 +1,6 @@
  cronen                                             1 vulnerable, no fix · last upgrade: 2 days ago 
   1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ 2 days behind · 18 packages · 886 MiB · no estimate yet                                            
  ⚠ 1 news item requires manual intervention — press n to read                                       
 ────────────────────────────────────────────────────────────┬───────────────────────────────────────
     when        package                                     │ 2026-10-12 02:25:01                   
@@ -17,7 +18,6 @@
                                                             │ downgraded  ⟳ reinstalled  - removed  
                                                             │ ● the old version is still in the     
                                                             │ package cache: D can downgrade to it  
-                                                            │                                       
                                                             │                                       
                                                             │                                       
                                                             │                                       

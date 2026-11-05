@@ -1,5 +1,6 @@
  cronen (demo)                                              
   1 Updates   2 News   3 Packages   4 History   5 Housekeep…
+ 2 days behind · 18 packages · 886 MiB · no estimate yet    
  ⚠ 1 news item requires manual intervention — press n to re…
 ────────────────────────────────────┬───────────────────────
     name            version      EFO│ alsa-lib 1.2.14-1     
@@ -15,6 +16,5 @@
     gnupg           2.4.8-1      E  │   alsa-lib ←          
     gtk3            3.24.51-1    D  │     spotify           
     kmod            34.2-1       D  │     (explicit)        
-    libarchive      3.8.2-1      D  │                       
 ────────────────────────────────────┴───────────────────────
  47 packages · show: all · sort: name                       

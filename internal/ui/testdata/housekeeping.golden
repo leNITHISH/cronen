@@ -1,11 +1,13 @@
  cronen (demo)                                      1 vulnerable, no fix · last upgrade: 2 days ago 
   1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ 2 days behind · 18 packages · 886 MiB · no estimate yet                                            
  ⚠ 1 news item requires manual intervention — press n to read                                       
  ‼ /boot is in fstab but not mounted while linux updates: mount it before upgrading. The kernel wou…
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                                                                                                     
  Preflight                                                                                          
    ‼ /boot is in fstab but not mounted while linux updates: mount it before upgrading. The kernel w…
+   ℹ pacman downloads one package at a time: set `ParallelDownloads = 5` in /etc/pacman.conf to spe…
                                                                                                     
  Orphans (4) · 142 MiB, 142 MiB marked                                                              
   ▸ ☑ libgbm-compat 1.0-1 102 KiB                                                                   
@@ -34,7 +36,5 @@
                                                                                                     
  Vulnerable, no fix yet (1)                                                                         
    ⚠ sudo 1.9.17.p2-1 is affected by AVG-2930 (High) and no fix is available yet                    
-                                                                                                    
-                                                                                                    
 ────────────────────────────────────────────────────────────────────────────────────────────────────
  housekeeping · 4 orphans marked of 4 · 1 .pacnew                                                   

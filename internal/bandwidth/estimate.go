@@ -206,17 +206,17 @@ func count(n int, one, many string) string {
 
 // Duration formats a duration roughly: "<1 min", "14 min", "1 h 20 min".
 func Duration(d time.Duration) string {
-	min := int((d + 30*time.Second) / time.Minute)
+	mins := int((d + 30*time.Second) / time.Minute)
 	switch {
 	case d < 30*time.Second:
 		return "<1 min"
-	case min < 60:
-		return fmt.Sprintf("%d min", min)
+	case mins < 60:
+		return fmt.Sprintf("%d min", mins)
 	}
 	// Past an hour, five minutes is the resolution that means anything.
-	min = (min + 2) / 5 * 5
-	if min%60 == 0 {
-		return fmt.Sprintf("%d h", min/60)
+	mins = (mins + 2) / 5 * 5
+	if mins%60 == 0 {
+		return fmt.Sprintf("%d h", mins/60)
 	}
-	return fmt.Sprintf("%d h %d min", min/60, min%60)
+	return fmt.Sprintf("%d h %d min", mins/60, mins%60)
 }

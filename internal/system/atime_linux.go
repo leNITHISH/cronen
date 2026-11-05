@@ -11,7 +11,7 @@ func sysAccessTime(fi fs.FileInfo) (time.Time, bool) {
 	if !ok {
 		return time.Time{}, false
 	}
-	return time.Unix(int64(st.Atim.Sec), int64(st.Atim.Nsec)), true
+	return time.Unix(st.Atim.Unix()), true
 }
 
 func sysWritable(path string) bool {

@@ -1,5 +1,6 @@
  cronen (demo)                                      1 vulnerable, no fix · last upgrade: 2 days ago 
   1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ 2 days behind · 18 packages · 886 MiB · no estimate yet                                            
  ⚠ 1 news item requires manual intervention — press n to read                                       
  ‼ /boot is in fstab but not mounted while linux updates: mount it before upgrading. The kernel wou…
 ────────────────────────────────────────┬───────────────────────────────────────────────────────────
@@ -25,6 +26,5 @@
   paru                2.1.0-1→2.1.0-2   │                                                           
   visual-studio-code… 1.105.0→1.105.1   │                                                           
   gnome-shell-extension-l… not in AUR ? │                                                           
-  neovim-git                      VCS   │                                                           
 ────────────────────────────────────────┴───────────────────────────────────────────────────────────
  18 updates · 886 MiB ↓ · +26 MiB · 12 flagged · 2 unread news · 1 .pacnew           ? help  q quit 

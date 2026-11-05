@@ -1,5 +1,6 @@
  cronen (demo)                                      1 vulnerable, no fix · last upgrade: 2 days ago 
   1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ 2 days behind · 18 packages · 886 MiB · no estimate yet                                            
  ⚠ 1 news item requires manual intervention — press n to read                                       
  ‼ 2 preflight problems (U lists them): /boot is in fstab but not mounted while linux updates: moun…
 ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -17,14 +18,13 @@
                                                                                                     
  18 updates · 12 flagged · kernel update: reboot afterwards                                         
                                                                                                     
+ Download: 886 MiB · estimated time: no estimate yet                                                
+ ℹ pacman downloads one package at a time: set `ParallelDownloads = 5` in /etc/pacman.conf to       
+    speed it up (cronen doesn't edit the file).                                                     
+                                                                                                    
  This runs: sudo pacman -Syu                                                                        
  demo: nothing is run                                                                               
                                                                                                     
  Press y to upgrade, n or esc to cancel.                                                            
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
 ────────────────────────────────────────────────────────────────────────────────────────────────────
  Upgrade?                                                                   y upgrade  n/esc cancel 

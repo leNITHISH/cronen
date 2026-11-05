@@ -191,6 +191,17 @@ type Model struct {
 	actionNotice string
 	actionErr    bool
 
+	// net, bw and lastUsed are the bandwidth helper's data: the metered
+	// check and ParallelDownloads hint, what the upgrade costs, and the
+	// "last used" lookups. timing is the hand-off in progress, and dlBefore
+	// the download size before a removal, to show what it saved.
+	net         netState
+	bw          summary.BandwidthInfo
+	lastUsed    map[string]lastUsedResult
+	timing      handoffTiming
+	dlBefore    int64
+	dlBeforeSet bool
+
 	reviews  map[string]reviewState
 	diffView viewport.Model
 	diffName string
@@ -218,6 +229,7 @@ func New(opts Options) Model {
 		detail:   viewport.New(),
 		newsView: viewport.New(),
 		reviews:  map[string]reviewState{},
+		lastUsed: map[string]lastUsedResult{},
 		diffView: viewport.New(),
 	}
 	m.filter.Prompt = "/"
@@ -306,6 +318,7 @@ func (m Model) loadCmds(fresh bool) []tea.Cmd {
 	if m.cfg.History {
 		cmds = append(cmds, loadHistory(m.opts.FS, m.cfg.ExtraCacheDirs, m.opts.Home, m.location(), m.gen))
 	}
+	cmds = append(cmds, loadNet(ctx, m.opts.Runner, m.opts.FS, summary.MeteredEnabled(m.cfg), m.gen))
 	cmds = append(cmds, m.mirrorCmds(fresh)...)
 	cmds = append(cmds, m.housekeepingCmds()...)
 	return cmds
@@ -323,6 +336,7 @@ func (m *Model) refresh() tea.Cmd {
 	m.freshLoad = true
 	m.markLoading()
 	m.archweb = map[string]archwebResult{}
+	m.lastUsed = map[string]lastUsedResult{}
 	m.reviews, m.freshGen = map[string]reviewState{}, m.gen
 	cmds := m.loadCmds(true)
 	if !m.spinning {
@@ -381,15 +395,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.previewSec = section{err: msg.err}
 		m.previewed = msg.err == nil
 		m.tx = msg.tx
+		extra := m.previewArrived(msg)
 		m.txUpdates = map[string]pacman.UpdateDetail{}
 		for _, u := range msg.tx.Updates {
 			m.txUpdates[u.Name] = u
 		}
 		if msg.err != nil || !m.wantsRebuild() {
 			m.clearRebuild()
-			return m, tea.Batch(m.changed(), m.startIssues())
+			return m, tea.Batch(m.changed(), m.startIssues(), extra)
 		}
-		return m, tea.Batch(m.changed(), m.startIssues(), m.loadRebuild(msg.tx))
+		return m, tea.Batch(m.changed(), m.startIssues(), m.loadRebuild(msg.tx), extra)
 
 	case rebuildMsg:
 		if msg.gen != m.gen {
@@ -398,6 +413,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.rebuildSec = section{err: msg.err}
 		m.rebuilds = msg.findings
 		return m, m.changed()
+
+	case netMsg:
+		return m, m.handleNet(msg)
+
+	case lastUsedMsg:
+		return m, m.handleLastUsed(msg)
 
 	case factsMsg, mirrorMsg:
 		return m.updatePreflight(msg)
@@ -611,6 +632,15 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, m.openLink(false)
 	case key.Matches(msg, k.Changelog):
 		return m, m.openLink(true)
+	case key.Matches(msg, k.CycleSort) && m.screen == screenUpdates:
+		return m, m.toggleSizeSort()
+	case key.Matches(msg, k.Mark) && m.screen == screenUpdates:
+		return m, m.markUpdate()
+	case key.Matches(msg, k.Remove) && m.screen == screenUpdates:
+		return m, m.removeMarked()
+	case key.Matches(msg, k.Prefetch) && m.screen == screenUpdates:
+		m.requestPrefetch()
+		return m, nil
 	case key.Matches(msg, k.Upgrade):
 		m.requestUpgrade()
 		return m, nil
@@ -708,6 +738,10 @@ func (m *Model) changed() tea.Cmd {
 	m.result = summary.AssessAUR(m.result, m.aurPkgs, m.opts.State, m.reviewMap())
 	m.result = summary.AssessAcknowledgements(m.result, m.opts.State)
 	m.assessPreflight()
+	m.bw = summary.BandwidthInfo{}
+	if m.previewed {
+		m.bw = summary.Bandwidth(m.tx, m.lastFullUpgrade(), m.now(), m.opts.State)
+	}
 
 	m.newsPane.move(0, len(m.newsItems))
 	// The banner may have appeared or gone, changing the body height.
@@ -725,6 +759,9 @@ func (m Model) chromeHeight() int {
 		h++
 	}
 	if m.noticeText() != "" {
+		h++
+	}
+	if m.bw.Shown() {
 		h++
 	}
 	return h
@@ -810,6 +847,9 @@ func (m Model) View() tea.View {
 	w, h := m.size()
 	var lines []string
 	lines = append(lines, m.headerLine(w), m.tabBar(w))
+	if line := m.bandwidthLine(w); line != "" {
+		lines = append(lines, line)
+	}
 	if n := len(m.result.Interventions); n > 0 {
 		lines = append(lines, fitLine(m.styles.Banner.Render(bannerText(n)), w))
 	}
@@ -965,6 +1005,12 @@ func (m Model) statusLine(w int) string {
 	}
 	if n := len(m.pacnew); n > 0 {
 		parts = append(parts, plural(n, ".pacnew", ".pacnew"))
+	}
+	if m.screen == screenUpdates && m.updates.bySize {
+		parts = append(parts, "by size")
+	}
+	if n := len(m.pkgs.marked); n > 0 && m.screen == screenUpdates {
+		parts = append(parts, itoa(n)+" marked")
 	}
 	switch m.screen {
 	case screenPackages:

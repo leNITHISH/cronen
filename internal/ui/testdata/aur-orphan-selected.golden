@@ -1,21 +1,21 @@
  cronen (demo)                                      1 vulnerable, no fix · last upgrade: 2 days ago 
   1 Updates   2 News   3 Packages   4 History   5 Housekeeping                                      
+ 2 days behind · 18 packages · 886 MiB · no estimate yet                                            
  ⚠ 1 news item requires manual intervention — press n to read                                       
 ────────────────────────────────────────┬───────────────────────────────────────────────────────────
-  linux-api-headers       6.16→6.16.1 ℹ │ bash                                                      
-  linux-headers             6.17→6.18 ℹ │ 5.3.3-1 → 5.3.3-2                                         
-  mesa                  25.2.4→25.2.5 ℹ │                                                           
-  systemd                 258.1→258.2 ℹ │ Why flagged:                                              
-  vulkan-icd-loader   1.4.328→1.4.330 ℹ │  • Held by IgnorePkg: 5.3.3-1 → 5.3.3-2. Holding          
- REPO (4)                               │    packages is a partial upgrade.                         
-  firefox              144.0→144.0.1 🛡  │                                                           
-  gnupg             2.4.8-1→1:2.4.8-2   │ Held back:                                                
-  openssh              10.0p1→10.2p1 🛡  │  • not part of this upgrade: IgnorePkg or IgnoreGroup     
-  vim               9.1.1800→9.1.1850   │    keeps it at 5.3.3-1                                    
- AUR (5 + 1 VCS)                        │                                                           
-  paru                2.1.0-1→2.1.0-2   │ Links:                                                    
-  visual-studio-code… 1.105.0→1.105.1   │  • not found on archlinux.org                             
-  gnome-shell-extension-l… not in AUR ? │                                                           
+  linux-headers             6.17→6.18 ℹ │ bash                                                      
+  mesa                  25.2.4→25.2.5 ℹ │ 5.3.3-1 → 5.3.3-2                                         
+  systemd                 258.1→258.2 ℹ │                                                           
+  vulkan-icd-loader   1.4.328→1.4.330 ℹ │ Why flagged:                                              
+ REPO (4)                               │  • Held by IgnorePkg: 5.3.3-1 → 5.3.3-2. Holding          
+  firefox              144.0→144.0.1 🛡  │    packages is a partial upgrade.                         
+  gnupg             2.4.8-1→1:2.4.8-2   │                                                           
+  openssh              10.0p1→10.2p1 🛡  │ Held back:                                                
+  vim               9.1.1800→9.1.1850   │  • not part of this upgrade: IgnorePkg or IgnoreGroup     
+ AUR (5 + 1 VCS)                        │    keeps it at 5.3.3-1                                    
+  paru                2.1.0-1→2.1.0-2   │                                                           
+  visual-studio-code… 1.105.0→1.105.1   │ Links:                                                    
+  gnome-shell-extension-l… not in AUR ? │  • not found on archlinux.org                             
   neovim-git                      VCS   │                                                           
   python-pywal               orphaned ? │                                                           
   ttf-ms-fonts            out of date ? │                                                           
