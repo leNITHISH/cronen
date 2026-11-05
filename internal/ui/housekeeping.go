@@ -129,7 +129,13 @@ func (m Model) markedOrphans() []string {
 func (m *Model) handleHousekeepingKey(k tea.KeyPressMsg) (tea.Cmd, bool) {
 	keys, h := m.keys, &m.hk
 	orphans := m.orphanNames()
+	snaps := m.snapshotRows()
+	rows := len(orphans) + len(snaps)
 	switch {
+	case key.Matches(k, keys.Snapshot):
+		m.startSnapshotNow()
+	case key.Matches(k, keys.Restore):
+		m.startSnapshotRestore()
 	case key.Matches(k, keys.Back) && m.scanning():
 		m.cancelScan()
 	case key.Matches(k, keys.Scan):
@@ -137,25 +143,35 @@ func (m *Model) handleHousekeepingKey(k tea.KeyPressMsg) (tea.Cmd, bool) {
 	case key.Matches(k, keys.Rebuild):
 		m.startRebuild()
 	case key.Matches(k, keys.Down):
-		h.sel = clamp(h.sel+1, 0, max(0, len(orphans)-1))
+		h.sel = clamp(h.sel+1, 0, max(0, rows-1))
 	case key.Matches(k, keys.Up):
-		h.sel = clamp(h.sel-1, 0, max(0, len(orphans)-1))
+		h.sel = clamp(h.sel-1, 0, max(0, rows-1))
 	case key.Matches(k, keys.Top):
 		h.sel = 0
 	case key.Matches(k, keys.Bottom):
-		h.sel = max(0, len(orphans)-1)
+		h.sel = max(0, rows-1)
 	case key.Matches(k, keys.HalfDown):
 		h.offset += max(1, m.bodyHeight()/2)
 	case key.Matches(k, keys.HalfUp):
 		h.offset = max(0, h.offset-max(1, m.bodyHeight()/2))
 	case key.Matches(k, keys.Mark):
-		if h.sel < len(orphans) {
+		if h.sel >= len(orphans) && h.sel < rows {
+			if m.snap.marked == nil {
+				m.snap.marked = map[string]bool{}
+			}
+			n := snaps[h.sel-len(orphans)].Name
+			m.snap.marked[n] = !m.snap.marked[n]
+		} else if h.sel < len(orphans) {
 			if h.unmarked == nil {
 				h.unmarked = map[string]bool{}
 			}
 			n := orphans[h.sel]
 			h.unmarked[n] = !h.unmarked[n]
 		}
+	case key.Matches(k, keys.Remove) && h.sel >= len(orphans) && len(snaps) > 0:
+		// The cursor is on the Snapshots list: X deletes the marked
+		// snapshots (preview: the commands, then y).
+		m.startSnapshotDelete()
 	case key.Matches(k, keys.Remove):
 		names := m.markedOrphans()
 		if len(names) == 0 {
@@ -275,6 +291,11 @@ func (m Model) housekeepingLines(w int) ([]string, int) {
 		}
 	}
 
+	// Snapshots. Nothing is shown when no tool is installed.
+	if sl := m.snapshotLines(w, add, title, func() int { return len(lines) }, len(orphans)); sl >= 0 {
+		selLine = sl
+	}
+
 	// .pacnew files.
 	switch {
 	case m.pacnewSec.loading:
@@ -389,6 +410,9 @@ func (m Model) housekeepingStatus() []string {
 	}
 	if n := len(m.pacnew); n > 0 {
 		parts = append(parts, plural(n, ".pacnew", ".pacnew"))
+	}
+	if n := len(m.markedSnapshots()); n > 0 {
+		parts = append(parts, plural(n, "snapshot", "snapshots")+" marked")
 	}
 	return parts
 }

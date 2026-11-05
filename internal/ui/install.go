@@ -130,6 +130,7 @@ func (m *Model) openInstall() tea.Cmd {
 	}
 	f := &installFlow{stage: instInput, input: m.newInstallInput()}
 	m.inst = f
+	m.resetSnapshotChoice()
 	m.screen, m.focus = screenInstall, focusList
 	return f.input.Focus()
 }
@@ -282,6 +283,8 @@ func (m Model) handleInstallKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		f.sel = ops.OptionUpgrade
 	case s == "b":
 		return m, m.selectArchive()
+	case s == "t" && f.sel == ops.OptionUpgrade:
+		m.toggleSnapshot()
 	case s == "y":
 		return m, m.runInstall()
 	case key.Matches(msg, m.keys.Down):
@@ -358,11 +361,21 @@ func (m *Model) runInstall() tea.Cmd {
 			return done
 		})
 	}
-	// Option A is a full upgrade: it is recorded like one.
+	if m.wantSnapshot() {
+		// Chain the snapshot, then the upgrade (see handleSnapshotStep).
+		// The helper stays open to come back to if the snapshot fails.
+		return m.startSnapshotFirst(flowInstall, f.a.Packages)
+	}
+	return m.handoffInstallA(plan.Command)
+}
+
+// handoffInstallA hands the terminal to option A's command. It is a full
+// upgrade: it is recorded like one.
+func (m *Model) handoffInstallA(command []string) tea.Cmd {
 	m.closeInstall()
 	m.upgrade = upgradeOutcome{reboot: m.result.RebootRequired}
 	m.timing = handoffTiming{}
-	return m.opts.Exec(plan.Command, func(err error) tea.Msg { return upgradedMsg{err: err} })
+	return m.opts.Exec(command, func(err error) tea.Msg { return upgradedMsg{err: err} })
 }
 
 // handleInstallDone records an archive install and reloads everything.
@@ -396,6 +409,9 @@ func (m Model) installHints() string {
 	case m.inst.stage == instInput:
 		return "enter look up  esc cancel"
 	case m.inst.stage == instReady:
+		if m.snapOffered() && m.inst.sel == ops.OptionUpgrade {
+			return "a/b option  t snapshot  y run  j/k scroll  esc cancel"
+		}
 		return "a/b option  y run  j/k scroll  esc cancel"
 	}
 	return "esc cancel"
@@ -501,6 +517,10 @@ func (m Model) optionAView(add func(string)) {
 	m.itemList(add, p)
 	for _, wn := range p.Warnings {
 		add("      " + s.Warn.Render("⚠ "+wn))
+	}
+	m.addSnapshotOption(add, "      ", p.Packages, p.Command)
+	if m.snap.failure != nil {
+		add("      Press " + s.Bold.Render("y") + " to install without a snapshot, " + s.Bold.Render("t") + " to try the snapshot again, " + s.Bold.Render("esc") + " to cancel.")
 	}
 }
 

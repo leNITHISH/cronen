@@ -11,6 +11,9 @@ import (
 // confirmView is the upgrade confirmation: unread news requiring manual
 // intervention first, then what will run.
 func (m Model) confirmView(w int) string {
+	if m.snapAct != nil {
+		return m.snapActionView(w)
+	}
 	if m.act != nil {
 		return m.actionView(w)
 	}
@@ -48,11 +51,16 @@ func (m Model) confirmView(w int) string {
 	add("")
 	m.addBandwidth(add)
 	add("")
+	m.addSnapshotOption(add, " ", len(m.result.Packages), m.cfg.UpgradeArgv())
 	add(" This runs: " + s.Bold.Render(strings.Join(m.cfg.UpgradeArgv(), " ")))
 	if m.opts.Demo {
 		add(" " + s.Subtle.Render("demo: nothing is run"))
 	}
 	add("")
+	if m.snap.failure != nil {
+		add(" Press " + s.Bold.Render("y") + " to upgrade without a snapshot, " + s.Bold.Render("t") + " to try the snapshot again, " + s.Bold.Render("esc") + " to cancel.")
+		return strings.Join(lines, "\n")
+	}
 	add(" Press " + s.Bold.Render("y") + " to upgrade, " + s.Bold.Render("n") + " or " + s.Bold.Render("esc") + " to cancel.")
 	return strings.Join(lines, "\n")
 }

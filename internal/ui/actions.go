@@ -246,17 +246,30 @@ func (m Model) filterQuery() string {
 
 // requestUpgrade opens the confirm modal.
 func (m *Model) requestUpgrade() {
+	m.resetSnapshotChoice()
 	m.screen, m.focus = screenConfirm, focusList
 }
 
 // startUpgrade hands the terminal to the upgrade command.
 func (m *Model) startUpgrade() tea.Cmd {
-	m.screen = screenUpdates
 	argv := m.cfg.UpgradeArgv()
 	if m.opts.Exec == nil || len(argv) == 0 {
+		m.screen = screenUpdates
 		m.flash("upgrading isn't available here", true)
 		return nil
 	}
+	if m.wantSnapshot() {
+		// Chain two hand-offs: the snapshot now, and the upgrade from
+		// handleSnapshotStep, only if the snapshot exited 0. The modal
+		// stays up until then, to come back to if it fails.
+		return m.startSnapshotFirst(flowUpgrade, len(m.result.Packages))
+	}
+	m.screen = screenUpdates
+	return m.handoffUpgrade(argv)
+}
+
+// handoffUpgrade hands the terminal to the upgrade command.
+func (m *Model) handoffUpgrade(argv []string) tea.Cmd {
 	m.upgrade = upgradeOutcome{reboot: m.result.RebootRequired}
 	m.timing = handoffTiming{started: m.now(), tx: m.tx, previewed: m.previewed}
 	return m.opts.Exec(argv, func(err error) tea.Msg { return upgradedMsg{err: err} })

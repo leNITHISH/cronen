@@ -54,7 +54,7 @@ func run(t *testing.T, m Model, cmd tea.Cmd) Model {
 		for _, c := range msg {
 			m = run(t, m, c)
 		}
-	case repoMsg, aurMsg, netMsg, lastUsedMsg, localDBMsg, newsMsg, logMsg, pacnewMsg, previewMsg, securityMsg, issuesMsg, rebuildMsg, factsMsg, mirrorMsg, archwebMsg, openedMsg, stateSavedMsg, upgradedMsg, aurLogMsg, aurDiffMsg, pacnewDiffMsg, cacheMsg, unitsMsg, dryRunMsg, actionDoneMsg, historyMsg, partialMsg, linkageMsg, versionsMsg, installResolvedMsg, installPreparedMsg, installDoneMsg:
+	case repoMsg, aurMsg, netMsg, lastUsedMsg, localDBMsg, newsMsg, logMsg, pacnewMsg, previewMsg, securityMsg, issuesMsg, rebuildMsg, factsMsg, mirrorMsg, archwebMsg, openedMsg, stateSavedMsg, upgradedMsg, aurLogMsg, aurDiffMsg, pacnewDiffMsg, cacheMsg, unitsMsg, dryRunMsg, actionDoneMsg, historyMsg, partialMsg, linkageMsg, versionsMsg, installResolvedMsg, installPreparedMsg, installDoneMsg, snapshotsMsg, snapshotStepMsg, snapSeqMsg:
 		m = send(t, m, msg)
 	}
 	return m
