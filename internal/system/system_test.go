@@ -429,3 +429,42 @@ func TestFakeRunnerRejectsInvalidPacmanOptions(t *testing.T) {
 		}
 	}
 }
+
+// The fake runner refuses what real pacman refuses, so an argv builder that
+// produces such a combination fails in tests, not on a user's machine.
+func TestFakeRunnerRejectsInvalidSyncCombinations(t *testing.T) {
+	ctx := context.Background()
+	f := NewFakeRunner()
+	f.Handler = func(string) (FakeResult, bool) { return FakeResult{}, true }
+	bad := [][]string{
+		{"pacman", "-Sy"},                 // a refresh needs root
+		{"pacman", "-Syu", "--", "x"},     // so does -Syu run as the user
+		{"pacman", "-Syp"},                // even with -p
+		{"pacman", "-Sc"},                 // clean needs root
+		{"pacman", "-Spw", "--", "x"},     // --print and --downloadonly
+		{"pacman", "-SQ"},                 // two operations
+		{"pacman", "-Sz"},                 // unknown sync option
+		{"pacman", "-Rnsp", "--", "x"},    // -n with -p
+		{"pacman", "-Upy", "--", "x.zst"}, // -y is not a -U option
+		{"fakeroot", "--", "pacman", "-Spw", "--", "x"},
+	}
+	for _, argv := range bad {
+		_, code, err := f.Run(ctx, argv[0], argv[1:]...)
+		var exitErr *ExitError
+		if code != 1 || !errors.As(err, &exitErr) {
+			t.Errorf("%v: got %d, %v; want pacman's refusal", argv, code, err)
+		}
+	}
+	good := [][]string{
+		{"pacman", "-Sup", "--dbpath", "/x", "--", "y"},
+		{"pacman", "-Sp", "--dbpath", "/x", "--", "y"},
+		{"pacman", "-Qu", "--dbpath", "/x"},
+		{"fakeroot", "--", "pacman", "-Sy", "--dbpath", "/x"},
+		{"fakeroot", "--version"},
+	}
+	for _, argv := range good {
+		if _, code, err := f.Run(ctx, argv[0], argv[1:]...); code != 0 || err != nil {
+			t.Errorf("%v: got %d, %v", argv, code, err)
+		}
+	}
+}
