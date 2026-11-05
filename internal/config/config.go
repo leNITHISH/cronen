@@ -118,6 +118,16 @@ type Config struct {
 	// installing a package from the Arch Linux Archive snapshot of the day of
 	// the last full upgrade. It is off unless set to true.
 	ArchiveInstall bool `toml:"archive_install"`
+
+	// PartialCheck enables the partial-upgrade detector: `pacman -Qu`
+	// against the real database (a database synced without upgrading), and
+	// the History and Packages marks for `-Sy X` transactions. With it off,
+	// cronen runs neither.
+	PartialCheck bool `toml:"partial_check"`
+	// LinkageSkip are extra directory globs the broken-linkage scan leaves
+	// out, on top of the built-in list of dlopen-only plugin directories
+	// (see internal/linkage).
+	LinkageSkip []string `toml:"linkage_skip"`
 }
 
 // Privilege commands cronen knows how to prefix a write action with.
@@ -156,6 +166,7 @@ func Default() Config {
 		Housekeeping:     true,
 		History:          true,
 		MeteredWarnMiB:   100,
+		PartialCheck:     true,
 	}
 }
 
@@ -245,12 +256,13 @@ func Parse(data []byte) (Config, error) {
 		cfg.MeteredWarnMiB = def.MeteredWarnMiB
 	}
 
-	var err1, err2, err3, err4 error
+	var err1, err2, err3, err4, err5 error
 	cfg.Watchlist, err1 = validGlobs("watchlist", cfg.Watchlist)
 	cfg.IgnoreMajor, err2 = validGlobs("ignore_major", cfg.IgnoreMajor)
 	cfg.Protected, err3 = validGlobs("protected", cfg.Protected)
 	cfg.ExtraCacheDirs, err4 = validGlobs("extra_cache_dirs", cfg.ExtraCacheDirs)
-	errs = append(errs, err1, err2, err3, err4)
+	cfg.LinkageSkip, err5 = validGlobs("linkage_skip", cfg.LinkageSkip)
+	errs = append(errs, err1, err2, err3, err4, err5)
 
 	return cfg, errors.Join(errs...)
 }

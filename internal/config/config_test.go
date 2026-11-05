@@ -194,6 +194,7 @@ known_issues = false
 				tt.want.Housekeeping = true
 				tt.want.History = true
 				tt.want.MeteredWarnMiB = 100
+				tt.want.PartialCheck = true
 			}
 			switch {
 			case tt.wantErr == "" && err != nil:
