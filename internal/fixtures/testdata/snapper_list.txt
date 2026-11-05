@@ -1,0 +1,7 @@
+ # | Type   | Pre # | Date                     | User | Cleanup | Description                          | Userdata
+---+--------+-------+--------------------------+------+---------+--------------------------------------+---------
+0  | single |       |                          | root |         | current                              |
+1* | single |       | Fri Sep 18 19:02:11 2026 | root | number  | before the September upgrade         |
+2  | pre    |       | Tue Oct 20 19:02:30 2026 | root | number  | pacman -Syu                          | important=no
+3  | post   | 2     | Tue Oct 20 19:09:41 2026 | root | number  | pacman -Syu                          |
+4  | single |       | Sun Nov  1 08:00:00 2026 | root | number  | cronen: before -Syu (41 packages)    |

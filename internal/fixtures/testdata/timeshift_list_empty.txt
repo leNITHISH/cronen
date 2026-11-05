@@ -1,0 +1,7 @@
+Mounted '/dev/nvme0n1p2' at '/run/timeshift/4711/backup'
+Device : /dev/nvme0n1p2
+Mode   : RSYNC
+Device is OK
+0 snapshots, 212.4 GB free
+
+No snapshots found
