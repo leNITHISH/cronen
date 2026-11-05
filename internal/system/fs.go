@@ -32,6 +32,8 @@ type FS interface {
 	// subdirectories), sorted by name. A missing directory reports an
 	// error matching fs.ErrNotExist.
 	ReadDir(path string) ([]fs.FileInfo, error)
+	// Writable reports whether the current user can write to path.
+	Writable(path string) bool
 	// Glob returns the paths matching a filepath.Match pattern, sorted.
 	Glob(pattern string) ([]string, error)
 }
@@ -124,6 +126,9 @@ type FakeFS struct {
 	sizes map[string]int64
 	// symlinks are the paths Lstat reports as symbolic links.
 	symlinks map[string]bool
+	// writable and atimes are set by SetWritable and SetAccessTime.
+	writable map[string]bool
+	atimes   map[string]time.Time
 }
 
 // SetSymlink makes Lstat report the file at path as a symbolic link (Stat
@@ -259,7 +264,7 @@ func (f *FakeFS) Stat(path string) (fs.FileInfo, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if b, ok := f.files[path]; ok {
-		return fakeInfo{name: filepath.Base(path), size: f.sizeOf(path, b)}, nil
+		return fakeInfo{name: filepath.Base(path), size: f.sizeOf(path, b), atime: f.atimes[path]}, nil
 	}
 	prefix := path + string(filepath.Separator)
 	if path == string(filepath.Separator) {
@@ -278,7 +283,11 @@ type fakeInfo struct {
 	size int64
 	dir  bool
 	link bool
+	// atime is reported by AccessTime.
+	atime time.Time
 }
+
+func (i fakeInfo) AccessTime() time.Time { return i.atime }
 
 func (i fakeInfo) Name() string { return i.name }
 func (i fakeInfo) Size() int64  { return i.size }
@@ -294,3 +303,47 @@ func (i fakeInfo) Mode() fs.FileMode {
 func (i fakeInfo) ModTime() time.Time { return time.Time{} }
 func (i fakeInfo) IsDir() bool        { return i.dir }
 func (i fakeInfo) Sys() any           { return nil }
+
+// AccessTime returns the last access time of a file from its FileInfo, as
+// returned by FS.Stat. ok is false when the platform or the FS doesn't say.
+// Whether the time means anything depends on how the filesystem is mounted
+// (noatime never updates it); see internal/bandwidth.
+func AccessTime(fi fs.FileInfo) (time.Time, bool) {
+	if a, ok := fi.(interface{ AccessTime() time.Time }); ok {
+		t := a.AccessTime()
+		return t, !t.IsZero()
+	}
+	return sysAccessTime(fi)
+}
+
+// Writable reports whether the current user can write to path (a file or
+// directory), for the real filesystem. It is how cronen decides whether
+// a hand-off needs the privilege command.
+func (OSFS) Writable(path string) bool { return sysWritable(path) }
+
+// Writable reports whether path was marked writable with SetWritable.
+func (f *FakeFS) Writable(path string) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.writable[filepath.Clean(path)]
+}
+
+// SetWritable marks a path as writable by the current user.
+func (f *FakeFS) SetWritable(path string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.writable == nil {
+		f.writable = map[string]bool{}
+	}
+	f.writable[filepath.Clean(path)] = true
+}
+
+// SetAccessTime sets the access time Stat reports for the file at path.
+func (f *FakeFS) SetAccessTime(path string, t time.Time) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.atimes == nil {
+		f.atimes = map[string]time.Time{}
+	}
+	f.atimes[filepath.Clean(path)] = t
+}
