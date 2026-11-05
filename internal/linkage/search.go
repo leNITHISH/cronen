@@ -44,13 +44,13 @@ type Searcher struct {
 type Status int
 
 const (
-	// Found: the library exists.
+	// Found means the library exists.
 	Found Status = iota
-	// Mismatch: the soname is not installed but another version of the same
+	// Mismatch means the soname is not installed but another version of the same
 	// library (same base name up to ".so") is. This is what a partial
 	// upgrade or a soname bump looks like.
 	Mismatch
-	// Missing: no version of the library is installed. That is usually an
+	// Missing means no version of the library is installed. That is usually an
 	// optional feature whose dependency was never installed, and is no sign
 	// of damage.
 	Missing
