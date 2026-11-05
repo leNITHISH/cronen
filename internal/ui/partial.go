@@ -36,6 +36,7 @@ type partialState struct {
 // linkageRun is a scan in progress. Its counters are written by the scan's
 // goroutines and read by the UI's ticks.
 type linkageRun struct {
+	ctx         context.Context
 	cancel      context.CancelFunc
 	done, total atomic.Int64
 }
@@ -96,7 +97,7 @@ func (m *Model) startScan() tea.Cmd {
 		return nil
 	}
 	ctx, cancel := context.WithCancel(m.ctx())
-	run := &linkageRun{cancel: cancel}
+	run := &linkageRun{ctx: ctx, cancel: cancel}
 	m.part.run, m.part.scanErr = run, nil
 	src := summary.LinkageSources{
 		Runner: m.opts.Runner, Opener: m.opts.Opener, FS: m.opts.FS, CacheDir: m.opts.CacheDir,
@@ -187,10 +188,12 @@ func (m Model) fixes() []linkage.Fix {
 	in := linkage.FixInput{
 		Broken:      m.part.info.Linkage.Broken,
 		PendingRepo: len(m.repo),
-		Priv:        m.cfg.PrivilegeArgv(),
-		AURHelper:   m.cfg.AURHelper,
-		Foreign:     map[string]bool{},
-		Cached:      map[string]string{},
+		// checkupdates failed (or hasn't answered): nobody knows, so no rebuild.
+		PendingUnknown: m.repoSec.err != nil || m.repoSec.loading,
+		Priv:           m.cfg.PrivilegeArgv(),
+		AURHelper:      m.cfg.AURHelper,
+		Foreign:        map[string]bool{},
+		Cached:         map[string]string{},
 	}
 	if m.localDB != nil {
 		for n := range m.localDB.Foreign {
@@ -308,4 +311,13 @@ func oneLineUI(s string) string {
 		}
 		return r
 	}, s)
+}
+
+// cancelCtxErr reports whether the scan's context was cancelled: it is
+// nil until cancel was called. Tests use it.
+func (r *linkageRun) cancelCtxErr() error {
+	if r.ctx == nil {
+		return nil
+	}
+	return r.ctx.Err()
 }

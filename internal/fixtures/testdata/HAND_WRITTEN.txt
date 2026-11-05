@@ -151,3 +151,19 @@ M17, install helper (hand-written, NOT captured; pending capture from a real sys
 Which archive day is the best match, whether `fakeroot -- pacman -Sy --dbpath ... --config ...`
 works as a normal user, and whether `pacman -S --dbpath --config` updates the real local
 database through the symlink were NOT checked: see the M17 pull request.
+
+M18, partial-upgrade detector (hand-written in code, NOT captured; pending capture from a
+real system):
+
+  internal/fixtures/partial.go
+      pacman -Qu (real database, no --dbpath): exit 1 with no output, as pacman does when
+        nothing is pending
+      pacman -Q: pacman_Qm.txt plus three repo packages
+      /etc/ld.so.conf (with an include), /etc/ld.so.conf.d/x.conf and a few /usr/lib/lib*.so
+        files; /usr/bin/paru's DT_NEEDED libalpm.so.15 is deliberately absent
+  ELF files come from fixtures.ELF/ELFWith (built in memory).
+  Pacman.log lines with `-Sy X` variants are inline in the tests.
+
+Whether `pacman -Qu` works against the real database as a normal user, what the ld.so.conf
+files of a real system hold, and which plugin directories really are dlopen-only (the
+skip table in internal/linkage/skip.go) were NOT checked: see the M18 pull request.

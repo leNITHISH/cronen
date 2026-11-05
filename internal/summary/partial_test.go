@@ -23,7 +23,7 @@ func quietSources(t *testing.T, qu system.FakeResult) Sources {
 	t.Helper()
 	src := fixtureSources()
 	src.State.MarkRead(firmwareGUID, nvidiaGUID)
-	r := fixtures_runner()
+	r := fixturesRunner()
 	r.Set("checkupdates", system.FakeResult{Code: 2})
 	r.Set("pacman -Qu", qu)
 	src.Runner = r
@@ -32,7 +32,7 @@ func quietSources(t *testing.T, qu system.FakeResult) Sources {
 	return src
 }
 
-func fixtures_runner() *system.FakeRunner { return fixtureSources().Runner.(*system.FakeRunner) }
+func fixturesRunner() *system.FakeRunner { return fixtureSources().Runner.(*system.FakeRunner) }
 
 func TestPartialExitCodes(t *testing.T) {
 	synced := system.FakeResult{Stdout: []byte("zlib 1.3-1 -> 1.3.1-1\nbash 5.3.3-1 -> 5.3.3-2 [ignored]\n")}
