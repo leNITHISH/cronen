@@ -385,6 +385,30 @@ partial upgrades in the History and Packages screens.
 .TP
 .BR linkage_skip " (default empty)"
 More directory globs the broken-linkage scan leaves out.
+.TP
+.BR snapshots " (default true)"
+Look for Timeshift or snapper, offer a snapshot before upgrading and show the Snapshots
+section of the Housekeeping screen. Nothing is shown when neither is installed.
+.TP
+.BR snapshot_tool " (default empty)"
+.BR timeshift ", " snapper " or empty to use whichever is installed (Timeshift first)."
+.TP
+.BR snapshot_before_upgrade " (default ask)"
+.BR ask :
+tick "take a snapshot first" when a tool is found and no pacman hook (timeshift-autosnap, snap-pac)
+already snapshots.
+.BR always " or " never .
+.TP
+.BR snapshot_max_age_days " (default 7)"
+Preflight warns when the newest known snapshot is older than this many days.
+.TP
+.BR snapshot_list_sudo " (default false)"
+Allow
+.B sudo \-n timeshift \-\-list
+(read-only) to list Timeshift snapshots. Without it only the snapshots cronen took are listed.
+.TP
+.BR snapper_config " (default root)"
+The snapper config snapshots are taken of and listed from.
 .PP
 Example:
 .PP

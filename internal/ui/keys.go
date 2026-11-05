@@ -49,10 +49,10 @@ type KeyMap struct {
 	Snapshot key.Binding
 	Restore  key.Binding
 	Tick     key.Binding
-	Back    key.Binding
-	Refresh key.Binding
-	Help    key.Binding
-	Quit    key.Binding
+	Back     key.Binding
+	Refresh  key.Binding
+	Help     key.Binding
+	Quit     key.Binding
 
 	// Accept ends filter input, keeping the filter.
 	Accept key.Binding

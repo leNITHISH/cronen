@@ -179,10 +179,10 @@ func (m *Model) handleSnapshotStep(msg snapshotStepMsg) tea.Cmd {
 		if f == nil || f.a.Blocked() || len(f.a.Command) == 0 {
 			return save
 		}
-		return tea.Batch(save, m.handoffInstallA(f.a.Command), m.reloadSnapshots())
+		return tea.Batch(save, m.handoffInstallA(f.a.Command))
 	}
 	m.screen = screenUpdates
-	return tea.Batch(save, m.handoffUpgrade(m.cfg.UpgradeArgv()), m.reloadSnapshots())
+	return tea.Batch(save, m.handoffUpgrade(m.cfg.UpgradeArgv()))
 }
 
 // addSnapshotOption adds the snapshot line, the hook note, the chain and a
@@ -681,4 +681,3 @@ func snapActionTitle(a *snapAction) string {
 	}
 	return "Take a snapshot?"
 }
-
