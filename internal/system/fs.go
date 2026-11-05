@@ -36,6 +36,13 @@ type FS interface {
 	Writable(path string) bool
 	// Glob returns the paths matching a filepath.Match pattern, sorted.
 	Glob(pattern string) ([]string, error)
+	// MkdirNew creates one directory that must not exist yet, with exactly
+	// perm (no umask loosening), and fails if it does. Its parent must
+	// exist. It is how cronen gets a directory nobody else prepared.
+	MkdirNew(path string, perm fs.FileMode) error
+	// Symlink creates the symbolic link newname pointing at oldname. It
+	// fails if newname exists.
+	Symlink(oldname, newname string) error
 }
 
 // OSFS is the real FS, backed by package os.
@@ -109,6 +116,20 @@ func (OSFS) ReadDir(path string) ([]fs.FileInfo, error) {
 	return out, nil
 }
 
+// MkdirNew implements FS: os.Mkdir (which fails on an existing path), then
+// Chmod so the umask can't have made the mode looser or stricter than asked.
+func (OSFS) MkdirNew(path string, perm fs.FileMode) error {
+	if err := os.Mkdir(path, perm); err != nil {
+		return err
+	}
+	return os.Chmod(path, perm)
+}
+
+// Symlink implements FS.
+func (OSFS) Symlink(oldname, newname string) error {
+	return os.Symlink(oldname, newname)
+}
+
 // Glob implements FS.
 func (OSFS) Glob(pattern string) ([]string, error) {
 	return filepath.Glob(pattern)
@@ -129,6 +150,97 @@ type FakeFS struct {
 	// writable and atimes are set by SetWritable and SetAccessTime.
 	writable map[string]bool
 	atimes   map[string]time.Time
+	// dirs are the directories made with MkdirNew and their modes, and
+	// links the symbolic links made with Symlink and their targets. perms
+	// are the modes files were written with.
+	dirs  map[string]fs.FileMode
+	links map[string]string
+	perms map[string]fs.FileMode
+}
+
+// DirMode returns the mode a directory made with MkdirNew has.
+func (f *FakeFS) DirMode(path string) (fs.FileMode, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	m, ok := f.dirs[filepath.Clean(path)]
+	return m, ok
+}
+
+// FileMode returns the mode a file was last written with by WriteFile.
+func (f *FakeFS) FileMode(path string) (fs.FileMode, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	m, ok := f.perms[filepath.Clean(path)]
+	return m, ok
+}
+
+// LinkTarget returns what a symbolic link made with Symlink points at.
+func (f *FakeFS) LinkTarget(path string) (string, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	t, ok := f.links[filepath.Clean(path)]
+	return t, ok
+}
+
+// Dirs returns the directories made with MkdirNew, sorted.
+func (f *FakeFS) Dirs() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]string, 0, len(f.dirs))
+	for d := range f.dirs {
+		out = append(out, d)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func (f *FakeFS) existsLocked(path string) bool {
+	if _, ok := f.files[path]; ok {
+		return true
+	}
+	if _, ok := f.dirs[path]; ok {
+		return true
+	}
+	if _, ok := f.links[path]; ok {
+		return true
+	}
+	prefix := path + string(filepath.Separator)
+	for p := range f.files {
+		if strings.HasPrefix(p, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// MkdirNew implements FS: it fails if path exists, and records the mode.
+func (f *FakeFS) MkdirNew(path string, perm fs.FileMode) error {
+	path = filepath.Clean(path)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.existsLocked(path) {
+		return &fs.PathError{Op: "mkdir", Path: path, Err: fs.ErrExist}
+	}
+	if f.dirs == nil {
+		f.dirs = map[string]fs.FileMode{}
+	}
+	f.dirs[path] = perm
+	return nil
+}
+
+// Symlink implements FS: it fails if newname exists, and records the link.
+func (f *FakeFS) Symlink(oldname, newname string) error {
+	newname = filepath.Clean(newname)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.existsLocked(newname) {
+		return &fs.PathError{Op: "symlink", Path: newname, Err: fs.ErrExist}
+	}
+	if f.links == nil {
+		f.links = map[string]string{}
+	}
+	f.links[newname] = oldname
+	return nil
 }
 
 // SetSymlink makes Lstat report the file at path as a symbolic link (Stat
@@ -242,13 +354,17 @@ func (f *FakeFS) ReadFile(path string) ([]byte, error) {
 }
 
 // WriteFile implements FS.
-func (f *FakeFS) WriteFile(path string, data []byte, _ fs.FileMode) error {
+func (f *FakeFS) WriteFile(path string, data []byte, perm fs.FileMode) error {
 	if path == "" {
 		return &fs.PathError{Op: "write", Path: path, Err: errors.New("empty path")}
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.files[filepath.Clean(path)] = append([]byte(nil), data...)
+	if f.perms == nil {
+		f.perms = map[string]fs.FileMode{}
+	}
+	f.perms[filepath.Clean(path)] = perm
 	return nil
 }
 
@@ -271,6 +387,19 @@ func (f *FakeFS) Stat(path string) (fs.FileInfo, error) {
 		prefix = path
 	}
 	for p := range f.files {
+		if strings.HasPrefix(p, prefix) {
+			return fakeInfo{name: filepath.Base(path), dir: true}, nil
+		}
+	}
+	if _, ok := f.dirs[path]; ok {
+		return fakeInfo{name: filepath.Base(path), dir: true}, nil
+	}
+	for p := range f.dirs {
+		if strings.HasPrefix(p, prefix) {
+			return fakeInfo{name: filepath.Base(path), dir: true}, nil
+		}
+	}
+	for p := range f.links {
 		if strings.HasPrefix(p, prefix) {
 			return fakeInfo{name: filepath.Base(path), dir: true}, nil
 		}

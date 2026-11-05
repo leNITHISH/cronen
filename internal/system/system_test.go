@@ -98,11 +98,11 @@ func TestFakeRunner(t *testing.T) {
 		t.Fatalf("broken: got %d, %v", code, err)
 	}
 
-	if _, _, err = f.Run(ctx, "pacman", "-Syu"); !errors.Is(err, ErrUnexpectedCommand) {
+	if _, _, err = f.Run(ctx, "pacman", "-Qu"); !errors.Is(err, ErrUnexpectedCommand) {
 		t.Fatalf("unexpected command: got %v", err)
 	}
 
-	want := []string{"vercmp 1.0-1 2.0-1", "checkupdates", "broken", "pacman -Syu"}
+	want := []string{"vercmp 1.0-1 2.0-1", "checkupdates", "broken", "pacman -Qu"}
 	if got := f.Calls(); strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Fatalf("calls = %q, want %q", got, want)
 	}
