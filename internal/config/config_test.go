@@ -195,6 +195,7 @@ known_issues = false
 				tt.want.History = true
 				tt.want.MeteredWarnMiB = 100
 				tt.want.PartialCheck = true
+				tt.want.Snapshots, tt.want.SnapshotBeforeUpgrade, tt.want.SnapshotMaxAgeDays, tt.want.SnapperConfig = true, SnapshotAsk, 7, "root"
 			}
 			switch {
 			case tt.wantErr == "" && err != nil:

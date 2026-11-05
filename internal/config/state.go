@@ -46,6 +46,20 @@ type ArchiveInstall struct {
 	At     time.Time `json:"at"`
 }
 
+// SnapshotRecord is a snapshot cronen took before an upgrade. Timeshift
+// prints the new snapshot's name to the terminal the hand-off owns, where
+// cronen can't read it, so a record has a time, the tool and the comment,
+// not a name: it counts towards "how old is the newest snapshot", and it
+// is all there is to list for Timeshift when listing needs root.
+type SnapshotRecord struct {
+	At      time.Time `json:"at"`
+	Tool    string    `json:"tool"`
+	Comment string    `json:"comment"`
+}
+
+// maxSnapshotRecords is how many snapshot records state keeps.
+const maxSnapshotRecords = 50
+
 // maxArchiveInstalls is how many archive installs state keeps.
 const maxArchiveInstalls = 20
 
@@ -65,6 +79,19 @@ type State struct {
 	upgrades, prefetches []bandwidth.Sample
 	sizes                []bandwidth.Size
 	archive              []ArchiveInstall
+	snapshots            []SnapshotRecord
+}
+
+// Snapshots returns the snapshots cronen took, oldest first.
+func (s State) Snapshots() []SnapshotRecord { return slices.Clone(s.snapshots) }
+
+// AddSnapshot records a snapshot cronen took, keeping the last 50. Records
+// without a time or a tool are ignored.
+func (s *State) AddSnapshot(r SnapshotRecord) {
+	if r.At.IsZero() || r.Tool == "" {
+		return
+	}
+	s.snapshots = keepLast(append(slices.Clone(s.snapshots), r), maxSnapshotRecords)
 }
 
 // ArchiveInstalls returns the recorded archive installs, oldest first.
@@ -100,6 +127,8 @@ type stateFile struct {
 	PendingSizes    []bandwidth.Size   `json:"pending_sizes,omitempty"`
 	// ArchiveInstalls was added in version 2 (M17).
 	ArchiveInstalls []ArchiveInstall `json:"archive_installs,omitempty"`
+	// Snapshots was added in version 2 (M19).
+	Snapshots []SnapshotRecord `json:"snapshots,omitempty"`
 }
 
 // IsRead reports whether the news item with this GUID was marked read.
@@ -134,6 +163,7 @@ func (s State) Clone() State {
 	c.prefetches = slices.Clone(s.prefetches)
 	c.sizes = slices.Clone(s.sizes)
 	c.archive = s.ArchiveInstalls()
+	c.snapshots = s.Snapshots()
 	return c
 }
 
@@ -284,7 +314,7 @@ func (s State) MarshalJSON() ([]byte, error) {
 	f := stateFile{
 		Version: stateVersion, ReadNews: s.ReadNews(), Maintainers: s.Maintainers(), Acknowledgements: s.Acknowledgements(),
 		UpgradeSamples: s.upgrades, PrefetchSamples: s.prefetches, PendingSizes: s.sizes,
-		ArchiveInstalls: s.archive,
+		ArchiveInstalls: s.archive, Snapshots: s.snapshots,
 	}
 	if !s.LastUpgrade.IsZero() {
 		t := s.LastUpgrade
@@ -324,6 +354,9 @@ func (s *State) UnmarshalJSON(data []byte) error {
 	}
 	for _, x := range f.ArchiveInstalls {
 		s.AddArchiveInstall(x)
+	}
+	for _, x := range f.Snapshots {
+		s.AddSnapshot(x)
 	}
 	return nil
 }

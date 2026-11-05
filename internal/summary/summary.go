@@ -223,6 +223,9 @@ type Summary struct {
 	Partial         PartialInfo
 	PartialChecked  bool
 	PartialUpgrades []partial.Transaction
+	// Snapshot is what the snapshot helper found. It has no tool unless one
+	// was detected.
+	Snapshot SnapshotInfo
 	// loc is the time zone dates are shown in.
 	loc *time.Location
 	// Errors are the sources that failed. The rest of the summary holds
@@ -261,6 +264,8 @@ func Gather(ctx context.Context, src Sources) Summary {
 		metered                  MeteredInfo
 		part                     PartialInfo
 		partErr                  error
+		snap                     SnapshotInfo
+		snapErr                  error
 	)
 	wg.Go(func() {
 		repo, repoErr = pacman.CheckUpdates(ctx, src.Runner)
@@ -299,6 +304,13 @@ func Gather(ctx context.Context, src Sources) Summary {
 			part, partErr = LoadPartial(ctx, PartialSources{Runner: src.Runner, FS: src.FS, CacheDir: src.CacheDir, Location: loc})
 		})
 	}
+	if src.Config.Snapshots {
+		wg.Go(func() {
+			snap, snapErr = LoadSnapshots(ctx, SnapshotSources{
+				Runner: src.Runner, FS: src.FS, Disk: src.Disk, Config: src.Config, State: src.State, Location: loc,
+			})
+		})
+	}
 	wg.Go(func() { items, newsErr = news.Fetch(ctx, src.Fetcher, false) })
 	// An unreadable log only makes the last upgrade unknown, and a missing
 	// pacdiff only hides the .pacnew count, as in the TUI.
@@ -310,7 +322,7 @@ func Gather(ctx context.Context, src Sources) Summary {
 	if newsErr != nil {
 		newsErr = fmt.Errorf("news: %w", newsErr)
 	}
-	for _, err := range []error{repoErr, aurErr, newsErr, txErr, factsErr, mirrorErr, rebuildErr, partErr} {
+	for _, err := range []error{repoErr, aurErr, newsErr, txErr, factsErr, mirrorErr, rebuildErr, partErr, snapErr} {
 		if err != nil {
 			s.Errors = append(s.Errors, err)
 		}
@@ -336,6 +348,10 @@ func Gather(ctx context.Context, src Sources) Summary {
 		s.Partial, s.PartialChecked = part, true
 		s.Preflight = AddPartial(s.Preflight, part)
 		s.PartialUpgrades = part.PartialSince(LastUpgrade(lastLog, src.State))
+	}
+	s.Snapshot = snap
+	if src.Config.Preflight {
+		s.Preflight = AddSnapshot(s.Preflight, snap, src.Config, t)
 	}
 	s.Metered = metered
 	if txp != nil {

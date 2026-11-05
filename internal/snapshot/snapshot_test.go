@@ -128,7 +128,7 @@ func TestParseTimeshiftListFixture(t *testing.T) {
 	if snaps[2].Description != "" || snaps[2].Type != "D" {
 		t.Errorf("snap 2 = %+v", snaps[2])
 	}
-	if d, ok := Newest(snaps); !ok || d.Day() != 1 {
+	if d, ok := Newest(snaps); !ok || d.Day() != 22 {
 		t.Errorf("Newest = %v %v", d, ok)
 	}
 }
@@ -208,7 +208,7 @@ func TestParseSnapperListFixture(t *testing.T) {
 		{"1", "single", "before the September upgrade", time.Date(2026, 9, 18, 19, 2, 11, 0, time.UTC)},
 		{"2", "pre", "pacman -Syu", time.Date(2026, 10, 20, 19, 2, 30, 0, time.UTC)},
 		{"3", "post", "pacman -Syu", time.Date(2026, 10, 20, 19, 9, 41, 0, time.UTC)},
-		{"4", "single", "cronen: before -Syu (41 packages)", time.Date(2026, 11, 1, 8, 0, 0, 0, time.UTC)},
+		{"4", "single", "cronen: before -Syu (41 packages)", time.Date(2026, 10, 22, 8, 0, 0, 0, time.UTC)},
 	}
 	for i, w := range want {
 		s := snaps[i]

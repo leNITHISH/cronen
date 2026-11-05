@@ -145,6 +145,7 @@ func (s Summary) JSON() []byte {
 		Metered       bool          `json:"metered"`
 		Partial       bool          `json:"partial_upgrade"`
 		BrokenLinkage *int          `json:"broken_linkage,omitempty"`
+		LastSnapshot  string        `json:"last_snapshot,omitempty"`
 		Errors        []string      `json:"errors,omitempty"`
 	}{
 		Updates:       s.Updates(),
@@ -172,6 +173,9 @@ func (s Summary) JSON() []byte {
 	if s.Partial.LinkageKnown {
 		n := len(s.Partial.Linkage.Broken)
 		v.BrokenLinkage = &n
+	}
+	if s.Snapshot.Found() && !s.Snapshot.Last.IsZero() {
+		v.LastSnapshot = s.Snapshot.Last.UTC().Format(time.RFC3339)
 	}
 	if s.Previewed {
 		if s.Bandwidth.DaysKnown {
