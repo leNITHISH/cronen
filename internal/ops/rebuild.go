@@ -3,8 +3,13 @@ package ops
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 )
+
+// helperName is what an AUR helper command may look like: a bare program
+// name, never a path or anything a shell would read.
+var helperName = regexp.MustCompile(`^[a-z][a-z0-9_-]*$`)
 
 // RebuildArgv is the hand-off that rebuilds foreign packages whose
 // libraries are gone: <aur helper> -S -- <names>. Names are validated and
@@ -13,7 +18,7 @@ func RebuildArgv(helper string, names []string) ([]string, error) {
 	if helper == "" {
 		return nil, errors.New("no AUR helper configured (aur_helper)")
 	}
-	if ShellMeta(helper) {
+	if !helperName.MatchString(helper) {
 		return nil, fmt.Errorf("refusing command %q", helper)
 	}
 	if err := CheckNames(names); err != nil {
